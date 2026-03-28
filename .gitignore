@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+dist/
+out/
+build/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Turbo
+.turbo/
+
+# Editors
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+.venv/
+*.egg-info/
+.uv/
+
+# Docker
+postgres_data/
