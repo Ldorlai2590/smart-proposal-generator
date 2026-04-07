@@ -1,16 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, Download, Mail, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, Download, Mail, Share2, Plus, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import type { ClientData } from './Step1Client'
 import type { ProposalSections } from './Step3Generate'
 
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
   resumenEjecutivo: 'Resumen Ejecutivo',
-  problema: 'Problema',
-  solucion: 'Solución',
+  problema: 'El Problema',
+  solucion: 'Nuestra Solución',
   alcance: 'Alcance del Proyecto',
   timeline: 'Cronograma',
   inversion: 'Inversión',
@@ -18,43 +19,9 @@ const SECTION_LABELS: Record<keyof ProposalSections, string> = {
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'resumenEjecutivo',
-  'problema',
-  'solucion',
-  'alcance',
-  'timeline',
-  'inversion',
-  'proximosPasos',
+  'resumenEjecutivo', 'problema', 'solucion', 'alcance',
+  'timeline', 'inversion', 'proximosPasos',
 ]
-
-interface SectionCardProps {
-  label: string
-  content: string
-}
-
-function SectionCard({ label, content }: SectionCardProps) {
-  const [expanded, setExpanded] = useState(true)
-  return (
-    <div className="border border-gray-100 rounded-xl overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-        onClick={() => setExpanded((e) => !e)}
-      >
-        <span className="text-sm font-medium text-gray-900">{label}</span>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-gray-400" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-gray-400" />
-        )}
-      </button>
-      {expanded && (
-        <div className="px-4 py-3">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content}</p>
-        </div>
-      )}
-    </div>
-  )
-}
 
 interface Step4ReviewProps {
   client: ClientData
@@ -68,7 +35,7 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
   async function handleExport(format: 'pdf' | 'docx') {
     setExporting(format)
     try {
-      const res = await fetch(`/api/proposals/export`, {
+      const res = await fetch('/api/proposals/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sections, client, format }),
@@ -87,57 +54,121 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
     }
   }
 
+  const today = new Date().toLocaleDateString('es-ES', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  })
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900">{client.company}</h3>
-          <p className="text-sm text-gray-500">{client.name}</p>
+    <div className="flex gap-6 items-start">
+      {/* Document preview */}
+      <div className="flex-1 min-w-0">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden">
+          {/* Document header */}
+          <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] px-10 py-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4 text-[#94A3B8]" />
+                  <span className="text-[#94A3B8] text-sm">{client.company}</span>
+                </div>
+                <h1 className="text-2xl font-bold text-white mb-1">Propuesta Comercial</h1>
+                <p className="text-[#94A3B8] text-sm">{today}</p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-[#1D9E75] flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
+                  {client.company.charAt(0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Document body */}
+          <div className="px-10 py-8 space-y-8 max-h-[520px] overflow-y-auto">
+            {SECTION_ORDER.map((key, i) => (
+              <div key={key}>
+                {i > 0 && <Separator className="mb-8" />}
+                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#1D9E75] bg-[#e6f7f2] px-2 py-0.5 rounded">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  {SECTION_LABELS[key]}
+                </h2>
+                <p className="text-base text-gray-600 leading-relaxed whitespace-pre-wrap">
+                  {sections[key]}
+                </p>
+              </div>
+            ))}
+
+            {/* Footer */}
+            <div className="pt-4 pb-2 text-center">
+              <Badge variant="secondary" className="text-xs text-gray-400">
+                Generado con Claude AI · SmartSPG
+              </Badge>
+            </div>
+          </div>
         </div>
-        <Badge variant="default">Lista para exportar</Badge>
       </div>
 
-      <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-        {SECTION_ORDER.map((key) => (
-          <SectionCard key={key} label={SECTION_LABELS[key]} content={sections[key]} />
-        ))}
-      </div>
+      {/* Actions sidebar */}
+      <div className="w-52 flex-shrink-0 sticky top-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Exportar
+          </p>
 
-      <div className="border-t border-gray-100 pt-4 space-y-3">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Exportar como</p>
-        <div className="flex gap-3">
           <Button
-            variant="outline"
-            className="flex-1"
+            className="w-full justify-start gap-2 bg-[#1D9E75] hover:bg-[#158a63] text-white"
+            size="sm"
             onClick={() => handleExport('pdf')}
             disabled={!!exporting}
           >
             <FileText className="h-4 w-4" />
             {exporting === 'pdf' ? 'Generando...' : 'PDF'}
           </Button>
+
           <Button
             variant="outline"
-            className="flex-1"
+            className="w-full justify-start gap-2"
+            size="sm"
             onClick={() => handleExport('docx')}
             disabled={!!exporting}
           >
             <Download className="h-4 w-4" />
-            {exporting === 'docx' ? 'Generando...' : 'Word'}
+            {exporting === 'docx' ? 'Generando...' : 'Word (.docx)'}
           </Button>
-          <Button variant="outline" className="flex-1" disabled>
+
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2"
+            size="sm"
+            disabled
+          >
             <Mail className="h-4 w-4" />
-            Email
+            Enviar por email
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            size="sm"
+            disabled
+          >
+            <Share2 className="h-4 w-4" />
+            Compartir link
+          </Button>
+
+          <Separator />
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={onBack}
+          >
+            <Plus className="h-4 w-4" />
+            Nueva propuesta
           </Button>
         </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} size="lg">
-          Atrás
-        </Button>
-        <Button size="lg" className="flex-1" onClick={() => window.location.href = '/dashboard/proposals'}>
-          Finalizar
-        </Button>
       </div>
     </div>
   )
