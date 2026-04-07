@@ -19,5 +19,5 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          git remote add hf https://pagosmunnich:$HF_TOKEN@huggingface.co/spaces/pagosmunnich/smart-proposal-generator
+          git remote add hf https://LGiraldo:$HF_TOKEN@huggingface.co/spaces/LGiraldo/smart-proposal-gen
           git push hf HEAD:main --force
