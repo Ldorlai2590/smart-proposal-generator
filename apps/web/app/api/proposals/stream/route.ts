@@ -14,7 +14,7 @@ const ProposalSectionSchema = z.object({
 })
 
 const RequestSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string(),
   clientName: z.string(),
   company: z.string(),
   industry: z.string(),
@@ -33,37 +33,23 @@ export async function POST(req: Request) {
   const body = await req.json()
   const input = RequestSchema.parse(body)
 
-  const systemPrompt = `Eres un experto consultor de negocios que genera propuestas comerciales profesionales en español para el mercado LATAM.
+  const system = `Eres un experto consultor de negocios que genera propuestas comerciales profesionales en español para el mercado LATAM.
 
 Genera propuestas persuasivas, estructuradas y personalizadas. Usa un tono ${input.tono}.
 Cada sección debe ser concisa pero completa. Usa el contexto del cliente para personalizar cada parte.
 Empresa: ${input.company} | Industria: ${input.industry}`
 
-  const result = streamObject({
-    model: anthropic('claude-sonnet-4-5'),
-    schema: ProposalSectionSchema,
-    messages: [
-      {
-        role: 'system',
-        content: [
-          {
-            type: 'text',
-            text: systemPrompt,
-            experimental_providerMetadata: {
-              anthropic: { cacheControl: { type: 'ephemeral' } },
-            },
-          },
-        ],
-      },
-      {
-        role: 'user',
-        content: `Genera una propuesta comercial completa para ${input.clientName} de ${input.company}.
+  const prompt = `Genera una propuesta comercial completa para ${input.clientName} de ${input.company}.
 
 Problema a resolver: ${input.problema}
 ${input.budget ? `Presupuesto estimado: ${input.budget}` : ''}
-${input.timeline ? `Timeline deseado: ${input.timeline}` : ''}`,
-      },
-    ],
+${input.timeline ? `Timeline deseado: ${input.timeline}` : ''}`
+
+  const result = streamObject({
+    model: anthropic('claude-sonnet-4-5'),
+    schema: ProposalSectionSchema,
+    system,
+    prompt,
   })
 
   return result.toTextStreamResponse()
