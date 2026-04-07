@@ -1,27 +1,30 @@
 from io import BytesIO
 from docx import Document
-from docx.shared import Pt, RGBColor
+
+SECTION_LABELS: dict[str, str] = {
+    "resumenEjecutivo": "Resumen Ejecutivo",
+    "problema": "El Problema",
+    "solucion": "Nuestra Solución",
+    "alcance": "Alcance del Proyecto",
+    "timeline": "Cronograma",
+    "inversion": "Inversión",
+    "proximosPasos": "Próximos Pasos",
+}
+SECTION_ORDER = ["resumenEjecutivo", "problema", "solucion", "alcance", "timeline", "inversion", "proximosPasos"]
 
 
-def generate_docx(sections: dict, client_name: str, company: str) -> bytes:
+def generate_docx(sections: dict[str, str], client_name: str, company: str) -> bytes:
     """Genera DOCX usando python-docx."""
     doc = Document()
 
-    # Titulo
-    title = doc.add_heading(f"Propuesta Comercial — {company}", 0)
+    doc.add_heading(f"Propuesta Comercial — {company}", 0)
+    subtitle = doc.add_paragraph(f"Preparada para: {client_name}")
+    subtitle.runs[0].italic = True
 
-    section_titles = {
-        "resumenEjecutivo": "Resumen Ejecutivo",
-        "problema": "El Problema",
-        "solucion": "Nuestra Solucion",
-        "alcance": "Alcance del Proyecto",
-        "timeline": "Cronograma",
-        "inversion": "Inversion",
-        "proximosPasos": "Proximos Pasos",
-    }
-
-    for key, heading in section_titles.items():
-        if content := sections.get(key):
+    for key in SECTION_ORDER:
+        content = sections.get(key, "")
+        if content:
+            heading = SECTION_LABELS[key]
             doc.add_heading(heading, level=1)
             doc.add_paragraph(content)
 

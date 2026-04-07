@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { FileText, Download, Mail, Share2, Plus, Building2 } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
+import { FileText, Download, Mail, Share2, Plus, Building2, Bold, Italic } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -23,6 +26,99 @@ const SECTION_ORDER: (keyof ProposalSections)[] = [
   'timeline', 'inversion', 'proximosPasos',
 ]
 
+interface SectionEditorProps {
+  sectionKey: keyof ProposalSections
+  initialContent: string
+  onChange: (key: keyof ProposalSections, text: string) => void
+}
+
+function SectionEditor({ sectionKey, initialContent, onChange }: SectionEditorProps) {
+  const [focused, setFocused] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: 'Escribe aquí...',
+      }),
+    ],
+    content: initialContent
+      ? `<p>${initialContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
+      : '',
+    editable: true,
+    onUpdate: ({ editor }) => {
+      onChange(sectionKey, editor.getText())
+    },
+    onFocus: () => setFocused(true),
+    onBlur: () => setFocused(false),
+  })
+
+  const showToolbar = focused || hovered
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Minimal toolbar — only visible on focus/hover */}
+      <div
+        className={`flex items-center gap-1 mb-1.5 transition-opacity duration-150 ${
+          showToolbar ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            editor?.chain().focus().toggleBold().run()
+          }}
+          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
+            editor?.isActive('bold') ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
+          }`}
+          title="Negrita"
+        >
+          <Bold className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            editor?.chain().focus().toggleItalic().run()
+          }}
+          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
+            editor?.isActive('italic') ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
+          }`}
+          title="Cursiva"
+        >
+          <Italic className="h-3.5 w-3.5" />
+        </button>
+        <div className="w-px h-3.5 bg-gray-200 mx-0.5" />
+        <span className="text-[10px] text-gray-300 select-none">editar</span>
+      </div>
+
+      <EditorContent
+        editor={editor}
+        className={`
+          text-base text-gray-600 leading-relaxed
+          rounded-md transition-colors duration-150
+          [&_.tiptap]:outline-none
+          [&_.tiptap]:min-h-[1.5em]
+          [&_.tiptap_p]:mb-3
+          [&_.tiptap_p:last-child]:mb-0
+          [&_.tiptap_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]
+          [&_.tiptap_.is-editor-empty:first-child::before]:text-gray-300
+          [&_.tiptap_.is-editor-empty:first-child::before]:float-left
+          [&_.tiptap_.is-editor-empty:first-child::before]:pointer-events-none
+          [&_.tiptap_.is-editor-empty:first-child::before]:h-0
+          ${focused ? 'bg-gray-50/60 rounded px-2 -mx-2' : ''}
+        `}
+      />
+    </div>
+  )
+}
+
 interface Step4ReviewProps {
   client: ClientData
   sections: ProposalSections
@@ -30,7 +126,15 @@ interface Step4ReviewProps {
 }
 
 export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
+  const [editedSections, setEditedSections] = useState<ProposalSections>(sections)
   const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null)
+
+  const handleSectionChange = useCallback(
+    (key: keyof ProposalSections, text: string) => {
+      setEditedSections((prev) => ({ ...prev, [key]: text }))
+    },
+    [],
+  )
 
   async function handleExport(format: 'pdf' | 'docx') {
     setExporting(format)
@@ -38,7 +142,7 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
       const res = await fetch('/api/proposals/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sections, client, format }),
+        body: JSON.stringify({ sections: editedSections, client, format }),
       })
       if (res.ok) {
         const blob = await res.blob()
@@ -93,9 +197,11 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
                   </span>
                   {SECTION_LABELS[key]}
                 </h2>
-                <p className="text-base text-gray-600 leading-relaxed whitespace-pre-wrap">
-                  {sections[key]}
-                </p>
+                <SectionEditor
+                  sectionKey={key}
+                  initialContent={sections[key] ?? ''}
+                  onChange={handleSectionChange}
+                />
               </div>
             ))}
 

@@ -14,6 +14,7 @@ from app.modules.proposals.handlers import (
     handle_update_sections,
     handle_list_proposals,
 )
+from app.modules.proposals.commands import UpdateProposalSectionsCommand
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -38,6 +39,12 @@ class CreateProposalRequest(BaseModel):
     context: dict = {}
 
 
+class UpdateSectionsRequest(BaseModel):
+    sections: dict
+    tokens_used: int = 0
+    model: str | None = None
+
+
 @router.post("/", response_model=ProposalResponse, status_code=201)
 async def create_proposal(
     body: CreateProposalRequest,
@@ -54,6 +61,26 @@ async def create_proposal(
         context=body.context,
     )
     return await handle_create_proposal(cmd, db)
+
+
+@router.patch("/{proposal_id}/sections", response_model=ProposalResponse)
+async def update_proposal_sections(
+    proposal_id: UUID,
+    body: UpdateSectionsRequest,
+    tenant_id: str = Depends(require_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    cmd = UpdateProposalSectionsCommand(
+        tenant_id=tenant_id,
+        proposal_id=proposal_id,
+        sections=body.sections,
+        tokens_used=body.tokens_used,
+        model=body.model,
+    )
+    proposal = await handle_update_sections(cmd, db)
+    await db.commit()
+    await db.refresh(proposal)
+    return proposal
 
 
 @router.get("/{proposal_id}", response_model=ProposalResponse)

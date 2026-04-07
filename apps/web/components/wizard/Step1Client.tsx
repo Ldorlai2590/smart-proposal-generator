@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, Plus, Building2, User, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Search, Plus, Building2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 export interface ClientData {
@@ -22,18 +23,51 @@ interface Step1ClientProps {
   onNext: (client: ClientData) => void
 }
 
+interface ApiClient {
+  id: string
+  tenant_id: string
+  name: string
+  company: string | null
+  email: string | null
+  industry: string | null
+  company_size: string | null
+  score: number
+}
+
+interface ApiListResponse {
+  items: ApiClient[]
+  total: number
+  page: number
+  per_page: number
+  pages: number
+}
+
 const INDUSTRIES = ['Tecnología', 'Retail', 'Salud', 'Educación', 'Finanzas', 'Manufactura', 'Logística', 'Otro']
 
-const MOCK_CLIENTS: ClientData[] = [
-  { id: '1', name: 'María López', company: 'TechCorp SA', email: 'maria@techcorp.com', industry: 'Tecnología', score: 85 },
-  { id: '2', name: 'Carlos Mendoza', company: 'Retail Plus', email: 'carlos@retailplus.com', industry: 'Retail', score: 72 },
-  { id: '3', name: 'Ana García', company: 'HealthMed', email: 'ana@healthmed.com', industry: 'Salud', score: 91 },
-]
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+const TENANT_HEADER = { 'X-Tenant-ID': 'dev-tenant', 'Content-Type': 'application/json' }
+
+function mapApiClient(c: ApiClient): ClientData {
+  return {
+    id: c.id,
+    name: c.name,
+    company: c.company ?? '',
+    email: c.email ?? undefined,
+    industry: c.industry ?? undefined,
+    companySize: c.company_size ?? undefined,
+    score: c.score,
+  }
+}
 
 export function Step1Client({ onNext }: Step1ClientProps) {
   const [query, setQuery] = useState('')
+  const [clients, setClients] = useState<ClientData[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [selected, setSelected] = useState<ClientData | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [newClient, setNewClient] = useState({
     name: '',
     company: '',
@@ -42,28 +76,80 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     companySize: '',
   })
 
-  const filtered = MOCK_CLIENTS.filter(
-    (c) =>
-      c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.company.toLowerCase().includes(query.toLowerCase()),
-  )
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function handleCreate() {
-    if (!newClient.name || !newClient.company) return
-    const client: ClientData = {
-      id: crypto.randomUUID(),
-      ...newClient,
-      isNew: true,
+  const fetchClients = useCallback(async (search: string) => {
+    setIsLoading(true)
+    setFetchError(null)
+    try {
+      const params = new URLSearchParams({ page: '1', per_page: '20' })
+      if (search) params.set('search', search)
+      const res = await fetch(`${API_BASE}/clients/?${params.toString()}`, { headers: TENANT_HEADER })
+      if (!res.ok) throw new Error(`Error ${res.status}`)
+      const data: ApiListResponse = await res.json()
+      setClients(data.items.map(mapApiClient))
+    } catch {
+      setFetchError('No se pudieron cargar los clientes. Verifique la conexión con la API.')
+      setClients([])
+    } finally {
+      setIsLoading(false)
     }
-    onNext(client)
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    fetchClients('')
+  }, [fetchClients])
+
+  // Debounced search
+  function handleQueryChange(value: string) {
+    setQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      fetchClients(value)
+    }, 300)
   }
+
+  async function handleCreate() {
+    if (!newClient.name || !newClient.company) return
+    setIsCreating(true)
+    setCreateError(null)
+    try {
+      const body = {
+        name: newClient.name,
+        company: newClient.company,
+        email: newClient.email || null,
+        industry: newClient.industry || null,
+        company_size: newClient.companySize || null,
+      }
+      const res = await fetch(`${API_BASE}/clients/`, {
+        method: 'POST',
+        headers: TENANT_HEADER,
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null)
+        throw new Error(detail?.detail ?? `Error ${res.status}`)
+      }
+      const created: ApiClient = await res.json()
+      const clientData: ClientData = { ...mapApiClient(created), isNew: true }
+      onNext(clientData)
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el cliente.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const noResults = !isLoading && clients.length === 0 && query !== ''
+  const emptyInitial = !isLoading && clients.length === 0 && query === ''
 
   if (showCreate) {
     return (
       <div className="space-y-5">
         <div className="flex items-center gap-2 mb-6">
           <button
-            onClick={() => setShowCreate(false)}
+            onClick={() => { setShowCreate(false); setCreateError(null) }}
             className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             ← Volver
@@ -136,14 +222,21 @@ export function Step1Client({ onNext }: Step1ClientProps) {
           </div>
         </div>
 
+        {createError && (
+          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {createError}
+          </div>
+        )}
+
         <div className="pt-2">
           <Button
             onClick={handleCreate}
-            disabled={!newClient.name || !newClient.company}
+            disabled={!newClient.name || !newClient.company || isCreating}
             className="w-full"
             size="lg"
           >
-            Crear cliente y continuar
+            {isCreating ? 'Creando...' : 'Crear cliente y continuar'}
           </Button>
         </div>
       </div>
@@ -158,14 +251,31 @@ export function Step1Client({ onNext }: Step1ClientProps) {
           className="pl-9"
           placeholder="Buscar cliente por nombre o empresa..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           autoFocus
         />
       </div>
 
       <div className="space-y-2 max-h-64 overflow-y-auto">
-        {filtered.length > 0 ? (
-          filtered.map((client) => (
+        {isLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100">
+                <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : fetchError ? (
+          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-6 justify-center">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {fetchError}
+          </div>
+        ) : clients.length > 0 ? (
+          clients.map((client) => (
             <button
               key={client.id}
               onClick={() => setSelected(selected?.id === client.id ? null : client)}
@@ -182,17 +292,19 @@ export function Step1Client({ onNext }: Step1ClientProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-gray-900 text-sm">{client.name}</p>
-                  {client.score && (
+                  {client.score != null && client.score > 0 && (
                     <Badge variant={client.score >= 80 ? 'default' : 'secondary'}>
                       {client.score}% oportunidad
                     </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                    <Building2 className="h-3 w-3" />
-                    {client.company}
-                  </span>
+                  {client.company && (
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <Building2 className="h-3 w-3" />
+                      {client.company}
+                    </span>
+                  )}
                   {client.industry && (
                     <span className="text-xs text-gray-400">{client.industry}</span>
                   )}
@@ -203,11 +315,25 @@ export function Step1Client({ onNext }: Step1ClientProps) {
               )}
             </button>
           ))
-        ) : (
-          <div className="text-center py-8 text-gray-500 text-sm">
-            No se encontraron clientes con &quot;{query}&quot;
+        ) : noResults ? (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-gray-500 text-sm">No se encontraron clientes con &quot;{query}&quot;</p>
+            <button
+              onClick={() => {
+                setNewClient((p) => ({ ...p, name: query }))
+                setShowCreate(true)
+              }}
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--color-brand)] hover:underline"
+            >
+              <Plus className="h-4 w-4" />
+              Crear &quot;{query}&quot; como nuevo cliente
+            </button>
           </div>
-        )}
+        ) : emptyInitial ? (
+          <div className="text-center py-8 text-gray-500 text-sm">
+            Aún no hay clientes registrados. Crea el primero.
+          </div>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-3 pt-2">

@@ -10,7 +10,6 @@ import {
   Users,
   BarChart3,
   ChevronLeft,
-  Settings,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -103,14 +102,6 @@ export function Sidebar() {
 
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-2 px-1')}>
           <UserButton afterSignOutUrl="/" />
-          {!collapsed && (
-            <Link
-              href="/settings"
-              className="ml-auto text-[#94A3B8] hover:text-[#F8FAFC] transition-colors p-1 rounded"
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
-          )}
         </div>
 
         {/* Collapse toggle */}

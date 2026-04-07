@@ -52,5 +52,37 @@ ${input.timeline ? `Timeline deseado: ${input.timeline}` : ''}`
     prompt,
   })
 
+  // Save to PostgreSQL after streaming completes (non-blocking)
+  const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+  result.object.then(async (sections) => {
+    try {
+      const createRes = await fetch(`${apiUrl}/proposals/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': orgId },
+        body: JSON.stringify({
+          client_id: input.clientId,
+          title: `Propuesta para ${input.company}`,
+          context: {
+            problema: input.problema,
+            budget: input.budget,
+            timeline: input.timeline,
+            tono: input.tono,
+          },
+        }),
+      })
+      if (createRes.ok) {
+        const { id } = await createRes.json()
+        await fetch(`${apiUrl}/proposals/${id}/sections`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': orgId },
+          body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
+        })
+      }
+    } catch {
+      // Non-blocking — log only, don't fail the stream
+      console.error('[stream] Failed to save proposal to DB')
+    }
+  })
+
   return result.toTextStreamResponse()
 }

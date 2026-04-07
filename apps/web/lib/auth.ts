@@ -12,3 +12,12 @@ export async function requireAuth() {
   if (!orgId) throw new Error('No organization selected')
   return { userId, tenantId: orgId }
 }
+
+export async function getApiHeaders(): Promise<HeadersInit> {
+  const { orgId } = await auth()
+  if (!orgId) throw new Error('No organization selected')
+  return {
+    'X-Tenant-ID': orgId,
+    'Content-Type': 'application/json',
+  }
+}
