@@ -3,20 +3,20 @@ import { Check, Minus } from 'lucide-react'
 
 const PLANS = [
   {
-    name: 'Free',
+    name: 'Starter',
     price: '$0',
-    period: '/mes',
-    description: 'Para probar la plataforma',
+    period: '',
+    description: '30 días gratis sin tarjeta',
     cta: 'Empezar gratis',
     ctaHref: '/sign-up',
     popular: false,
     features: [
-      { label: '3 propuestas / mes', included: true },
+      { label: '30 días gratis sin tarjeta', included: true },
+      { label: 'Hasta 20 propuestas', included: true },
       { label: '1 usuario', included: true },
-      { label: 'Templates básicos', included: true },
+      { label: 'Templates básicos + IA', included: true },
       { label: 'Export PDF', included: true },
-      { label: 'Analytics', included: false },
-      { label: 'Export Word', included: false },
+      { label: 'Analytics básico', included: true },
       { label: 'Soporte email', included: true },
       { label: 'API access', included: false },
     ],
@@ -25,11 +25,12 @@ const PLANS = [
     name: 'Pro',
     price: '$49',
     period: '/mes',
-    description: 'Para equipos de ventas activos',
-    cta: 'Empezar gratis',
+    description: '60 días gratis — 30 sin tarjeta + 30 con tarjeta',
+    cta: 'Empezar prueba de 60 días',
     ctaHref: '/sign-up',
     popular: true,
     features: [
+      { label: '60 días de prueba gratis', included: true },
       { label: 'Propuestas ilimitadas', included: true },
       { label: 'Hasta 5 usuarios', included: true },
       { label: 'Todos los templates + IA', included: true },
@@ -37,7 +38,6 @@ const PLANS = [
       { label: 'Analytics completo', included: true },
       { label: 'Envío por email', included: true },
       { label: 'Soporte prioritario', included: true },
-      { label: 'API access', included: false },
     ],
   },
   {
@@ -67,7 +67,9 @@ export function PricingTable() {
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Precios simples y transparentes</h2>
-          <p className="text-gray-500 text-lg">Sin sorpresas. Cancela cuando quieras.</p>
+          <p className="text-gray-500 text-lg">
+            Prueba <strong className="text-[#1D9E75]">60 días gratis</strong>: 30 sin tarjeta + 30 al añadirla. Cancela cuando quieras.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 items-start">

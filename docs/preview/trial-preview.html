@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Proposal Generator — Preview funcional</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, "Inter", "Segoe UI", Roboto, sans-serif; background: #F8FAFC; }
+  .brand { color: #1D9E75; }
+  .bg-brand { background: #1D9E75; }
+  .bg-brand-soft { background: rgba(29, 158, 117, 0.05); }
+  .border-brand { border-color: rgba(29, 158, 117, 0.3); }
+  .hover\:bg-brand-dark:hover { background: #158a63; }
+  .shimmer {
+    background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ============================================================ -->
+  <!-- Sidebar                                                        -->
+  <!-- ============================================================ -->
+  <aside class="w-60 border-r border-gray-200 bg-white p-4 flex flex-col flex-shrink-0">
+    <div class="flex items-center gap-2 mb-8 px-2">
+      <div class="h-8 w-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">S</div>
+      <span class="font-bold text-gray-900">SPG</span>
+    </div>
+    <nav class="flex flex-col gap-1 text-sm">
+      <a onclick="goto('dashboard')" data-nav="dashboard" class="nav-item cursor-pointer px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+      </a>
+      <a onclick="goto('proposals')" data-nav="proposals" class="nav-item cursor-pointer px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Propuestas
+      </a>
+      <a onclick="goto('clients')" data-nav="clients" class="nav-item cursor-pointer px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Clientes
+      </a>
+      <a onclick="goto('analytics')" data-nav="analytics" class="nav-item cursor-pointer px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Analytics
+      </a>
+      <a onclick="goto('billing')" data-nav="billing" class="nav-item cursor-pointer px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Billing
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ============================================================ -->
+  <!-- Main                                                          -->
+  <!-- ============================================================ -->
+  <main class="flex-1 overflow-y-auto">
+    <div class="max-w-5xl mx-auto p-6" id="app-root"></div>
+  </main>
+</div>
+
+<!-- ================================================================ -->
+<!-- JavaScript: router + vistas                                       -->
+<!-- ================================================================ -->
+<script>
+const state = {
+  page: 'dashboard',
+  wizardStep: 1,
+  client: null,
+  context: { problema: '', budget: 35000, template: 'consultoria' },
+  generating: false,
+  sections: null,
+  trial: {
+    stage: 'no_card',
+    daysLeft: 30,
+    proposalsUsed: 3,
+    proposalsQuota: 20,
+    cardOnFile: false,
+  },
+};
+
+const root = () => document.getElementById('app-root');
+
+function goto(page) {
+  state.page = page;
+  if (page === 'proposals') state.wizardStep = 1;
+  render();
+}
+
+function setStep(n) { state.wizardStep = n; render(); }
+
+function simulateGenerate() {
+  state.generating = true;
+  state.wizardStep = 3;
+  state.sections = null;
+  render();
+  setTimeout(() => {
+    state.sections = {
+      resumen: 'Transformación digital del proceso comercial de Acme con una plataforma de generación de propuestas impulsada por IA, reduciendo el tiempo por propuesta de 3h a 8 minutos.',
+      problema: 'El equipo de ventas enterprise de Acme dedica ~3 horas por propuesta, limitando el volumen mensual a ~8 propuestas. Esto representa ~60% de capacidad no utilizada y genera cuellos de botella en leads calientes.',
+      solucion: 'Implementación de Smart Proposal Generator con templates personalizados para Acme, integración CRM y entrenamiento del equipo. La IA generará borradores en segundos que el equipo solo necesita revisar y ajustar.',
+      alcance: '• Setup inicial y configuración multi-tenant\n• 3 templates personalizados por vertical\n• Integración con HubSpot\n• Entrenamiento de 5 vendedores\n• 30 días de soporte post-implementación',
+      timeline: 'Semanas 1-2: Setup y templates · Semanas 3-4: Integración CRM · Semana 5: Training · Semana 6: Go-live',
+      inversion: 'Setup único: $15,000 USD\nPlan Pro (5 usuarios): $49/mes\nTotal año 1: $15,588 USD',
+      proximos: 'Firma del acuerdo · Kickoff call · Onboarding de usuarios · Templates iniciales listos en 5 días hábiles',
+    };
+    state.generating = false;
+    render();
+  }, 2200);
+}
+
+// -------------------------------------------------------------------
+// Layouts
+// -------------------------------------------------------------------
+function render() {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const active = el.dataset.nav === state.page;
+    el.classList.toggle('bg-gray-100', active);
+    el.classList.toggle('text-gray-900', active);
+    el.classList.toggle('font-semibold', active);
+  });
+
+  const views = {
+    dashboard: renderDashboard,
+    proposals: renderProposals,
+    clients: renderClients,
+    analytics: renderAnalytics,
+    billing: renderBilling,
+  };
+  root().innerHTML = views[state.page]();
+  root().classList.remove('fade-in'); void root().offsetWidth; root().classList.add('fade-in');
+}
+
+// -------------------------------------------------------------------
+// Views
+// -------------------------------------------------------------------
+function renderDashboard() {
+  return `
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p class="text-sm text-gray-500 mt-1">Resumen de actividad comercial.</p>
+    </div>
+    <div class="grid grid-cols-4 gap-4 mb-6">
+      ${statCard('Propuestas este mes', '12', '+3 vs mes anterior', 'brand')}
+      ${statCard('Clientes activos', '28', '+5 nuevos', 'blue')}
+      ${statCard('Tasa conversión', '34%', '+8%', 'brand')}
+      ${statCard('Revenue potencial', '$248k', 'Pipeline abierto', 'purple')}
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-gray-900">Propuestas recientes</h2>
+        <button onclick="goto('proposals')" class="bg-brand hover:bg-brand-dark text-white text-xs font-semibold px-3 py-2 rounded-lg">+ Nueva propuesta</button>
+      </div>
+      <div class="divide-y divide-gray-100">
+        ${proposalRow('Acme Consulting', 'Transformación digital', 'Enviada', '$35,000', 'hace 2h')}
+        ${proposalRow('TechLatam', 'Plataforma e-commerce', 'Borrador', '$58,000', 'ayer')}
+        ${proposalRow('Munich Pagos', 'Integración pasarela', 'Aceptada', '$22,500', 'hace 3 días')}
+        ${proposalRow('Bosque Verde SA', 'Consultoría estratégica', 'En revisión', '$41,000', 'hace 5 días')}
+      </div>
+    </div>
+  `;
+}
+
+function statCard(label, value, trend, color) {
+  const colors = {
+    brand: 'text-[#1D9E75]', blue: 'text-blue-600', purple: 'text-purple-600',
+  };
+  return `
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-2">${label}</div>
+      <div class="text-2xl font-bold text-gray-900">${value}</div>
+      <div class="text-xs mt-1 ${colors[color]}">${trend}</div>
+    </div>
+  `;
+}
+
+function proposalRow(company, title, status, amount, when) {
+  const statusColors = {
+    'Enviada': 'bg-blue-100 text-blue-700',
+    'Borrador': 'bg-gray-100 text-gray-700',
+    'Aceptada': 'bg-green-100 text-green-700',
+    'En revisión': 'bg-amber-100 text-amber-700',
+  };
+  return `
+    <div class="flex items-center justify-between py-3">
+      <div>
+        <div class="font-semibold text-gray-900 text-sm">${company}</div>
+        <div class="text-xs text-gray-500">${title}</div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-xs font-semibold px-2 py-1 rounded-full ${statusColors[status]}">${status}</span>
+        <div class="text-sm font-bold text-gray-900 w-20 text-right">${amount}</div>
+        <div class="text-xs text-gray-400 w-20 text-right">${when}</div>
+      </div>
+    </div>
+  `;
+}
+
+// -------------------------------------------------------------------
+function renderProposals() {
+  return `
+    <div class="flex items-center justify-between mb-6">
+      <a onclick="goto('dashboard')" class="cursor-pointer flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">← Dashboard</a>
+      <div class="flex items-center gap-1">
+        ${[1,2,3,4].map(s => `<div class="h-1.5 rounded-full transition-all ${s<=state.wizardStep ? 'bg-brand w-8' : 'bg-gray-200 w-4'}"></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="flex gap-6 items-start">
+      <div class="w-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex-shrink-0">
+        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Progreso</div>
+        <div class="space-y-3 text-sm">
+          ${stepItem(1, 'Cliente')}
+          ${stepItem(2, 'Contexto')}
+          ${stepItem(3, 'Generación IA')}
+          ${stepItem(4, 'Revisar')}
+        </div>
+      </div>
+      <div class="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-8 min-w-0">
+        ${renderWizardStep()}
+      </div>
+    </div>
+  `;
+}
+
+function stepItem(n, label) {
+  const current = state.wizardStep;
+  const done = n < current;
+  const active = n === current;
+  const cls = done ? 'bg-brand text-white' : active ? 'bg-brand text-white' : 'border-2 border-gray-200 text-gray-400';
+  const txt = done ? '✓' : n;
+  const txtCls = done || active ? 'text-gray-900 font-medium' : 'text-gray-400';
+  return `<div class="flex items-center gap-2"><div class="h-5 w-5 rounded-full flex items-center justify-center text-xs ${cls}">${txt}</div><span class="${txtCls}">${label}</span></div>`;
+}
+
+function renderWizardStep() {
+  if (state.wizardStep === 1) return renderStep1();
+  if (state.wizardStep === 2) return renderStep2();
+  if (state.wizardStep === 3) return renderStep3();
+  if (state.wizardStep === 4) return renderStep4();
+}
+
+function renderStep1() {
+  const clients = [
+    { name: 'Acme Consulting', industry: 'SaaS', score: 87 },
+    { name: 'TechLatam', industry: 'E-commerce', score: 72 },
+    { name: 'Bosque Verde SA', industry: 'Servicios', score: 65 },
+  ];
+  return `
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Selecciona un cliente</h1>
+      <p class="text-sm text-gray-500 mt-1">Elige un cliente existente o crea uno nuevo.</p>
+    </div>
+    <input type="text" placeholder="Buscar cliente..." class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]">
+    <div class="space-y-2 mb-6">
+      ${clients.map((c,i) => `
+        <div onclick="selectClient(${i})" class="border ${state.client===i?'border-brand bg-brand-soft':'border-gray-200'} rounded-xl p-4 cursor-pointer hover:border-brand transition-colors flex items-center justify-between">
+          <div>
+            <div class="font-semibold text-gray-900 text-sm">${c.name}</div>
+            <div class="text-xs text-gray-500">${c.industry}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="text-xs text-gray-500">Score</div>
+            <div class="text-sm font-bold text-[#1D9E75]">${c.score}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="flex justify-end">
+      <button onclick="setStep(2)" ${state.client===null?'disabled':''} class="${state.client===null?'bg-gray-200 text-gray-400 cursor-not-allowed':'bg-brand hover:bg-brand-dark text-white'} text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">Siguiente →</button>
+    </div>
+  `;
+}
+
+function selectClient(i) { state.client = i; render(); }
+
+function renderStep2() {
+  return `
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Contexto de la propuesta</h1>
+      <p class="text-sm text-gray-500 mt-1">Describe el desafío y configura las opciones.</p>
+    </div>
+    <div class="space-y-5">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1.5">Problema a resolver</label>
+        <textarea oninput="state.context.problema=this.value" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]" rows="4" placeholder="Describe el problema del cliente...">${state.context.problema || 'El equipo de ventas de Acme no tiene forma rápida de generar propuestas personalizadas para leads enterprise, perdiendo aprox 3h por propuesta y reduciendo el volumen mensual a ~8.'}</textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1.5">Presupuesto estimado</label>
+        <div class="flex items-center gap-3">
+          <input type="range" min="5000" max="100000" step="5000" value="${state.context.budget}" oninput="state.context.budget=parseInt(this.value); document.getElementById('budget-label').textContent='$'+this.value.toLocaleString()" class="flex-1">
+          <span id="budget-label" class="text-sm font-semibold text-gray-900 min-w-[80px]">$${state.context.budget.toLocaleString()}</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1.5">Template base</label>
+        <div class="grid grid-cols-3 gap-2">
+          ${['consultoria','producto','agencia'].map(t => `
+            <div onclick="state.context.template='${t}'; render()" class="border-2 ${state.context.template===t?'border-brand bg-brand-soft':'border-gray-200'} rounded-xl p-3 cursor-pointer transition-colors">
+              <div class="text-xs font-bold text-gray-900 capitalize">${t}</div>
+              <div class="text-[11px] text-gray-500 mt-1">${t==='consultoria'?'SaaS, servicios':t==='producto'?'E-commerce':'Marketing'}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="flex justify-between pt-4">
+        <button onclick="setStep(1)" class="text-sm font-semibold text-gray-600 hover:text-gray-900">← Atrás</button>
+        <button onclick="simulateGenerate()" class="bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-5 py-2.5 rounded-xl">Generar propuesta →</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderStep3() {
+  if (state.generating) {
+    return `
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-gray-900">Generando con IA</h1>
+        <p class="text-sm text-gray-500 mt-1">Claude está redactando tu propuesta personalizada.</p>
+      </div>
+      <div class="space-y-3">
+        ${['Resumen ejecutivo','Problema','Solución','Alcance','Timeline','Inversión','Próximos pasos'].map((s,i) => `
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+            <div class="h-5 w-5 rounded-full border-2 border-[#1D9E75] border-t-transparent animate-spin"></div>
+            <div class="flex-1">
+              <div class="text-xs font-semibold text-gray-900">${s}</div>
+              <div class="mt-1 h-2 shimmer rounded w-${['3/4','1/2','2/3','5/6','3/5','4/5','1/2'][i]}"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  // Completado — pasar automáticamente al paso 4 en 500ms
+  return `
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">¡Listo!</h1>
+      <p class="text-sm text-gray-500 mt-1">Tu propuesta fue generada con éxito.</p>
+    </div>
+    <div class="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+      <div class="h-12 w-12 rounded-full bg-green-100 mx-auto mb-3 flex items-center justify-center">
+        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div class="text-sm font-bold text-green-900">Propuesta generada en 2.1 segundos</div>
+      <div class="text-xs text-green-700 mt-1">Claude Sonnet 4.5 · 1,847 tokens</div>
+      <button onclick="setStep(4)" class="mt-4 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-5 py-2.5 rounded-xl">Revisar propuesta →</button>
+    </div>
+  `;
+}
+
+function renderStep4() {
+  const s = state.sections || {};
+  return `
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Revisa y exporta</h1>
+        <p class="text-sm text-gray-500 mt-1">Tu propuesta está lista. Revísala y descárgala.</p>
+      </div>
+      <div class="flex gap-2">
+        <button class="text-xs font-semibold border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50">PDF</button>
+        <button class="text-xs font-semibold border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50">DOCX</button>
+        <button class="text-xs font-semibold bg-brand hover:bg-brand-dark text-white px-3 py-2 rounded-lg">Enviar por email</button>
+      </div>
+    </div>
+    <div class="space-y-4">
+      ${section('Resumen ejecutivo', s.resumen)}
+      ${section('Problema', s.problema)}
+      ${section('Solución propuesta', s.solucion)}
+      ${section('Alcance', s.alcance)}
+      ${section('Timeline', s.timeline)}
+      ${section('Inversión', s.inversion)}
+      ${section('Próximos pasos', s.proximos)}
+    </div>
+    <div class="flex justify-between mt-6 pt-4 border-t border-gray-100">
+      <button onclick="setStep(2)" class="text-sm font-semibold text-gray-600 hover:text-gray-900">← Editar contexto</button>
+      <button onclick="goto('proposals'); state.wizardStep=1; state.client=null; render()" class="text-sm font-semibold text-brand hover:underline" style="color:#1D9E75">+ Nueva propuesta</button>
+    </div>
+  `;
+}
+
+function section(title, body) {
+  return `
+    <div class="border border-gray-100 rounded-xl p-4 bg-gray-50">
+      <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">${title}</div>
+      <div class="text-sm text-gray-800 whitespace-pre-line">${body || ''}</div>
+    </div>
+  `;
+}
+
+// -------------------------------------------------------------------
+function renderClients() {
+  const data = [
+    ['Acme Consulting', 'contacto@acme.com', 'SaaS', '51-100', 87, 4],
+    ['TechLatam', 'hola@techlatam.mx', 'E-commerce', '11-50', 72, 2],
+    ['Munich Pagos', 'sales@munich.pag', 'Fintech', '11-50', 91, 6],
+    ['Bosque Verde SA', 'info@bverde.co', 'Servicios', '1-10', 65, 1],
+    ['Nova Health', 'ceo@nova.health', 'Salud', '101-250', 78, 3],
+  ];
+  return `
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Clientes</h1>
+        <p class="text-sm text-gray-500 mt-1">${data.length} clientes en tu base.</p>
+      </div>
+      <button class="bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2 rounded-xl">+ Nuevo cliente</button>
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr><th class="text-left p-3 font-semibold">Empresa</th><th class="text-left p-3 font-semibold">Email</th><th class="text-left p-3 font-semibold">Industria</th><th class="text-left p-3 font-semibold">Tamaño</th><th class="text-left p-3 font-semibold">Score</th><th class="text-left p-3 font-semibold">Propuestas</th></tr>
+        </thead>
+        <tbody>
+          ${data.map(r => `
+            <tr class="border-t border-gray-100 hover:bg-gray-50">
+              <td class="p-3 font-semibold text-gray-900">${r[0]}</td>
+              <td class="p-3 text-gray-600">${r[1]}</td>
+              <td class="p-3 text-gray-600">${r[2]}</td>
+              <td class="p-3 text-gray-600">${r[3]}</td>
+              <td class="p-3"><span class="font-bold text-[#1D9E75]">${r[4]}</span></td>
+              <td class="p-3 text-gray-600">${r[5]}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// -------------------------------------------------------------------
+function renderAnalytics() {
+  return `
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Analytics</h1>
+      <p class="text-sm text-gray-500 mt-1">Métricas de tu pipeline comercial.</p>
+    </div>
+    <div class="grid grid-cols-4 gap-4 mb-6">
+      ${statCard('Revenue cerrado', '$127k', '+42% YoY', 'brand')}
+      ${statCard('Tiempo promedio', '4.2 días', '-1.8 días', 'blue')}
+      ${statCard('Tokens usados', '84k', 'este mes', 'purple')}
+      ${statCard('Conversión IA', '71%', 'aceptación', 'brand')}
+    </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h2 class="font-bold text-gray-900 mb-4">Propuestas por estado (últimos 30 días)</h2>
+      <div class="flex items-end gap-3 h-48 mb-2">
+        ${[{l:'Borrador',v:8,c:'bg-gray-300'},{l:'Enviada',v:14,c:'bg-blue-400'},{l:'Revisión',v:6,c:'bg-amber-400'},{l:'Aceptada',v:12,c:'bg-[#1D9E75]'},{l:'Rechazada',v:3,c:'bg-red-400'}].map(b => `
+          <div class="flex-1 flex flex-col items-center gap-2">
+            <div class="w-full ${b.c} rounded-t-lg" style="height: ${(b.v/14)*100}%"></div>
+            <div class="text-xs font-semibold text-gray-900">${b.v}</div>
+            <div class="text-[11px] text-gray-500">${b.l}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// -------------------------------------------------------------------
+function renderBilling() {
+  const t = state.trial;
+  const pct = Math.min(100, (t.proposalsUsed / t.proposalsQuota) * 100);
+  const stageLabel = {no_card:'Prueba gratuita', with_card:'Prueba extendida', active:'Suscripción activa', expired:'Prueba vencida'}[t.stage];
+
+  return `
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Billing</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona tu plan, método de pago y uso mensual.</p>
+    </div>
+
+    <!-- Stage switcher para el preview -->
+    <div class="bg-gray-900 text-white rounded-xl p-3 mb-5 flex items-center gap-2 text-xs">
+      <span class="text-gray-400 mr-2">Simular estado:</span>
+      ${['no_card','with_card','expired'].map(s => `
+        <button onclick="setTrialStage('${s}')" class="px-3 py-1.5 rounded-lg font-semibold ${t.stage===s?'bg-brand':'bg-gray-700 hover:bg-gray-600'}">${s}</button>
+      `).join('')}
+    </div>
+
+    <!-- Estado actual -->
+    <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm mb-5">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Estado actual</div>
+          <div class="text-xl font-bold text-gray-900">${stageLabel}</div>
+          <div class="text-sm text-gray-500 mt-1">
+            ${t.stage !== 'active' ? `${t.daysLeft} ${t.daysLeft===1?'día restante':'días restantes'} · vence el ${new Date(Date.now()+t.daysLeft*86400000).toLocaleDateString('es')}` : `Plan Pro activo — próximo cobro 01/05/2026`}
+          </div>
+        </div>
+        <div class="rounded-full bg-brand-soft brand px-3 py-1 text-xs font-semibold">PRO</div>
+      </div>
+      <div class="mt-6">
+        <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+          <span>Propuestas generadas este período</span>
+          <span class="font-semibold text-gray-900">${t.proposalsUsed} / ${t.proposalsQuota}</span>
+        </div>
+        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+          <div class="h-full bg-brand transition-all" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>
+
+    ${renderBillingPromo()}
+
+    <!-- Planes disponibles -->
+    <div class="mt-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-3">Planes disponibles</h2>
+      <div class="grid grid-cols-3 gap-4">
+        ${planCard('Starter', '$0', '30 días gratis sin tarjeta', ['20 propuestas','1 usuario','Templates básicos','Soporte email'], false)}
+        ${planCard('Pro', '$49/mes', '60 días gratis · 30+30', ['Propuestas ilimitadas','5 usuarios','Todos los templates','Analytics completo','Soporte prioritario'], true)}
+        ${planCard('Enterprise', 'Consultar', 'Custom', ['Usuarios ilimitados','API access','SLA dedicado','Templates custom'], false)}
+      </div>
+    </div>
+
+    <!-- Método de pago -->
+    <div class="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-3">Método de pago</h2>
+      ${t.cardOnFile ? `
+        <div class="flex items-center justify-between border border-gray-200 rounded-xl p-4">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-14 bg-gray-900 rounded-lg flex items-center justify-center text-white text-xs font-bold">VISA</div>
+            <div>
+              <div class="text-sm font-semibold text-gray-900">•••• •••• •••• 4242</div>
+              <div class="text-xs text-gray-500">Vence 12/28 · Eduardo G.</div>
+            </div>
+          </div>
+          <button class="text-xs font-semibold text-gray-600 hover:text-gray-900">Cambiar</button>
+        </div>
+      ` : `
+        <div class="text-sm text-gray-500 italic">No tienes método de pago registrado.</div>
+      `}
+    </div>
+  `;
+}
+
+function renderBillingPromo() {
+  const t = state.trial;
+  if (t.stage === 'no_card') {
+    return `
+      <div class="rounded-2xl border-2 border-brand bg-gradient-to-br from-[rgba(29,158,117,0.08)] to-transparent p-6">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="h-5 w-5 brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143z"/></svg>
+          <h2 class="text-lg font-bold text-gray-900">Obtén 30 días adicionales gratis</h2>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">Añade una tarjeta ahora y extenderemos tu prueba gratis por 30 días más — sin cobros hasta que termine la prueba extendida. Cancela cuando quieras.</p>
+        <ul class="space-y-2 mb-5">
+          ${['Propuestas ilimitadas durante todo el período extendido','Acceso a todos los templates y funciones Pro','Sin cobros hasta el día 60','Cancelación con 1 click'].map(i => `
+            <li class="flex items-start gap-2 text-sm text-gray-700">
+              <svg class="h-4 w-4 brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              ${i}
+            </li>
+          `).join('')}
+        </ul>
+        <button onclick="openCheckout()" class="flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-dark px-5 py-3 text-sm font-semibold text-white">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          Añadir tarjeta y extender trial
+        </button>
+      </div>
+    `;
+  }
+  if (t.stage === 'with_card') {
+    return `
+      <div class="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+        <h2 class="text-lg font-bold text-blue-900 mb-2">Trial extendido activo</h2>
+        <p class="text-sm text-blue-700">Tienes una tarjeta registrada. No se cobrará hasta el <strong>${new Date(Date.now()+t.daysLeft*86400000).toLocaleDateString('es')}</strong>. Cuando termine el trial, pasarás automáticamente al plan Pro ($49/mes) a menos que canceles.</p>
+        <button class="mt-4 text-xs font-semibold text-blue-900 underline">Cancelar suscripción</button>
+      </div>
+    `;
+  }
+  if (t.stage === 'expired') {
+    return `
+      <div class="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <h2 class="text-lg font-bold text-red-900 mb-2">Tu prueba ha vencido</h2>
+        <p class="text-sm text-red-700 mb-4">Añade un método de pago y activa el plan Pro para continuar generando propuestas.</p>
+        <button onclick="openCheckout()" class="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-5 py-3 text-sm font-semibold text-white">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          Activar plan Pro
+        </button>
+      </div>
+    `;
+  }
+  return '';
+}
+
+function planCard(name, price, subtitle, features, popular) {
+  return `
+    <div class="relative bg-white rounded-2xl p-5 ${popular?'border-2 border-brand shadow-lg':'border border-gray-100 shadow-sm'}">
+      ${popular?'<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="bg-brand text-white text-xs font-bold px-3 py-1 rounded-full">Más popular</span></div>':''}
+      <div class="text-sm font-bold text-gray-900">${name}</div>
+      <div class="text-2xl font-black text-gray-900 mt-1">${price}</div>
+      <div class="text-xs text-gray-500 mt-1 mb-4">${subtitle}</div>
+      <ul class="space-y-2 text-xs text-gray-700">
+        ${features.map(f => `<li class="flex items-start gap-2"><svg class="h-3.5 w-3.5 brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${f}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function setTrialStage(stage) {
+  state.trial.stage = stage;
+  if (stage === 'no_card') { state.trial.daysLeft = 30; state.trial.cardOnFile = false; state.trial.proposalsUsed = 3; state.trial.proposalsQuota = 20; }
+  if (stage === 'with_card') { state.trial.daysLeft = 28; state.trial.cardOnFile = true; state.trial.proposalsUsed = 42; state.trial.proposalsQuota = 999; }
+  if (stage === 'expired') { state.trial.daysLeft = 0; state.trial.cardOnFile = false; state.trial.proposalsUsed = 20; state.trial.proposalsQuota = 20; }
+  render();
+}
+
+// -------------------------------------------------------------------
+// Checkout modal (pasarela de pagos)
+// -------------------------------------------------------------------
+function openCheckout() {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-gray-900">Añadir método de pago</h2>
+        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-900">✕</button>
+      </div>
+      <p class="text-xs text-gray-500 mb-5">Procesado de forma segura por Stripe. No se cobrará hasta que termine tu prueba gratis.</p>
+      <form onsubmit="event.preventDefault(); completeCheckout(this)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">Número de tarjeta</label>
+          <input type="text" placeholder="4242 4242 4242 4242" maxlength="19" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Vencimiento</label>
+            <input type="text" placeholder="MM/AA" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1.5">CVC</label>
+            <input type="text" placeholder="123" maxlength="4" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">Titular</label>
+          <input type="text" placeholder="Nombre como aparece en la tarjeta" class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]">
+        </div>
+        <div class="rounded-xl bg-gray-50 p-3 text-xs text-gray-600 flex items-start gap-2">
+          <svg class="h-4 w-4 brand mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M12 21a9 9 0 110-18 9 9 0 010 18z"/></svg>
+          <div>Obtienes <strong>30 días adicionales gratis</strong>. El primer cobro de $49 ocurrirá el día 60. Cancelable en cualquier momento.</div>
+        </div>
+        <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white text-sm font-semibold py-3 rounded-xl mt-2">Confirmar y extender trial</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function completeCheckout(form) {
+  form.closest('.fixed').remove();
+  const toast = document.createElement('div');
+  toast.className = 'fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2 z-50';
+  toast.innerHTML = '<svg class="h-5 w-5 text-[#1D9E75]" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Trial extendido 30 días. Gracias.';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+  setTrialStage('with_card');
+}
+
+// -------------------------------------------------------------------
+render();
+</script>
+</body>
+</html>

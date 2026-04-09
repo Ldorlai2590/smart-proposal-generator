@@ -77,16 +77,28 @@ export async function POST(req: Request) {
       case 'organization.created': {
         const { id, name } = (evt as OrganizationCreatedEvent).data
 
+        // Trial híbrido: primeros 30 días sin tarjeta ('no_card' stage)
+        const now = new Date()
+        const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
         await db
           .insert(tenants)
           .values({
             clerkOrgId: id,
             name,
             plan: 'free',
+            trialStartedAt: now,
+            trialEndsAt,
+            trialStage: 'no_card',
+            cardOnFile: false,
+            proposalsUsed: 0,
+            proposalsQuota: 20, // límite suave para fase sin tarjeta
           })
           .onConflictDoNothing()
 
-        console.log(`[clerk-webhook] Tenant created: ${id} (${name})`)
+        console.log(
+          `[clerk-webhook] Tenant created: ${id} (${name}) | trial ends ${trialEndsAt.toISOString()}`
+        )
         break
       }
 

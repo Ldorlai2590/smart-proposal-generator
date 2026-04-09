@@ -6,18 +6,44 @@ import {
   jsonb,
   text,
   timestamp,
+  boolean,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
 // tenants
 // ---------------------------------------------------------------------------
+// plan: 'free' | 'pro' | 'enterprise'
+// trialStage:
+//   'no_card'    → primeros 30 días sin tarjeta
+//   'with_card'  → 30 días adicionales tras añadir tarjeta (pre-charge)
+//   'active'     → suscripción pagada activa
+//   'expired'    → trial agotado, acceso bloqueado hasta pagar
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   clerkOrgId: varchar('clerk_org_id', { length: 255 }).unique().notNull(),
   name: varchar('name', { length: 255 }).notNull(),
-  plan: varchar('plan', { length: 50 }).default('free'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  plan: varchar('plan', { length: 50 }).default('free').notNull(),
+
+  // Trial híbrido 30 + 30 días
+  trialStartedAt: timestamp('trial_started_at', { withTimezone: true }).defaultNow().notNull(),
+  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }).notNull(),
+  trialStage: varchar('trial_stage', { length: 20 }).default('no_card').notNull(),
+  cardOnFile: boolean('card_on_file').default(false).notNull(),
+
+  // Stripe
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+
+  // Metered usage (propuestas generadas en el período actual)
+  proposalsUsed: integer('proposals_used').default(0).notNull(),
+  proposalsQuota: integer('proposals_quota').default(999999).notNull(),
+
+  // Onboarding
+  onboardingCompleted: boolean('onboarding_completed').default(false).notNull(),
+  metadata: jsonb('metadata').default({}),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export type Tenant = typeof tenants.$inferSelect

@@ -9,7 +9,7 @@ export default function SelectOrgPage() {
         <OrganizationList
           hidePersonal
           afterSelectOrganizationUrl="/dashboard"
-          afterCreateOrganizationUrl="/dashboard"
+          afterCreateOrganizationUrl="/onboarding"
         />
       </div>
     </div>

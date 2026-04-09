@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SmartSPG — Preview Completo</title>
+<style>
+/* ───── Reset & Base ───── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;background:#f8fafc;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;border:none;font-family:inherit}
+img{display:block;max-width:100%}
+input,textarea,select{font-family:inherit}
+
+/* ───── Colors ───── */
+:root{
+  --brand:#1D9E75;--brand-dark:#158a63;--brand-light:#e6f7f2;
+  --dark:#0F172A;--dark2:#1E293B;--dark3:#334155;
+  --slate4:#475569;--slate5:#64748b;--slate6:#94A3B8;
+  --bg:#F8FAFC;--white:#fff;--red:#ef4444;
+}
+
+/* ───── Utilities ───── */
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}
+.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}.gap-6{gap:24px}.gap-8{gap:32px}
+.text-center{text-align:center}.text-sm{font-size:14px}.text-xs{font-size:12px}.text-lg{font-size:18px}.text-2xl{font-size:24px}.text-3xl{font-size:30px}.text-4xl{font-size:36px}
+.font-bold{font-weight:700}.font-semibold{font-weight:600}.font-medium{font-weight:500}
+.text-white{color:#fff}.text-brand{color:var(--brand)}.text-slate{color:var(--slate6)}.text-gray{color:#6b7280}.text-gray-900{color:#111827}
+.rounded-lg{border-radius:12px}.rounded-xl{border-radius:16px}.rounded-full{border-radius:999px}
+.shadow-sm{box-shadow:0 1px 3px rgba(0,0,0,.08)}.shadow-lg{box-shadow:0 10px 25px rgba(0,0,0,.1)}
+.hidden{display:none!important}
+.w-full{width:100%}
+.mb-2{margin-bottom:8px}.mb-4{margin-bottom:16px}.mb-6{margin-bottom:24px}.mb-8{margin-bottom:32px}.mb-10{margin-bottom:40px}
+.mt-4{margin-top:16px}.mt-6{margin-top:24px}
+.p-4{padding:16px}.p-6{padding:24px}.p-8{padding:32px}.px-4{padding-left:16px;padding-right:16px}.px-6{padding-left:24px;padding-right:24px}.py-3{padding-top:12px;padding-bottom:12px}
+.border{border:1px solid #e2e8f0}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.transition{transition:all .2s ease}
+
+/* ───── Animations ───── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.animate-in{animation:fadeIn .4s ease both}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}.delay-3{animation-delay:.3s}.delay-4{animation-delay:.4s}.delay-5{animation-delay:.5s}
+
+/* ───── NAV (top floating) ───── */
+.top-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;height:56px;display:flex;align-items:center;padding:0 24px}
+.top-nav .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111}
+.top-nav .logo .spg{color:var(--brand)}
+.top-nav .nav-links{display:flex;gap:24px;margin-left:40px}
+.top-nav .nav-links a{font-size:14px;color:#64748b;font-weight:500;transition:color .15s}
+.top-nav .nav-links a:hover{color:#111}
+.top-nav .nav-right{margin-left:auto;display:flex;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;transition:all .15s}
+.btn-brand{background:var(--brand);color:#fff}.btn-brand:hover{background:var(--brand-dark)}
+.btn-outline{background:transparent;border:1px solid #e2e8f0;color:#334155}.btn-outline:hover{background:#f1f5f9}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-disabled{opacity:.5;pointer-events:none}
+
+/* ───── Pages Container ───── */
+.page{display:none;min-height:100vh}
+.page.active{display:block}
+
+/* ───── LANDING ───── */
+.hero{padding:120px 0 80px;background:linear-gradient(135deg,#fff 0%,#e6f7f220 50%,#fff 100%);position:relative}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--brand-light);color:var(--brand);font-size:12px;font-weight:600;padding:6px 14px;border-radius:999px;margin-bottom:20px}
+.hero h1{font-size:40px;line-height:1.15;color:#111;margin-bottom:16px}
+.hero h1 span{color:var(--brand)}
+.hero .subtitle{font-size:17px;color:#64748b;line-height:1.6;margin-bottom:28px;max-width:480px}
+.hero .trust-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:20px}
+.hero .trust-item{display:flex;align-items:center;gap:6px;font-size:13px;color:#64748b}
+
+/* Mockup */
+.mockup-card{background:var(--dark);border-radius:16px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.mockup-header{display:flex;align-items:center;gap:12px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--dark2)}
+.mockup-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.mockup-progress{margin-left:auto;width:96px;height:8px;background:var(--dark2);border-radius:4px;overflow:hidden}
+.mockup-progress-fill{height:100%;background:var(--brand);border-radius:4px;width:0%;transition:width 2s ease}
+.mockup-sections{display:flex;flex-direction:column;gap:12px}
+.mockup-section{display:flex;align-items:center;gap:12px}
+.mockup-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.mockup-dot.done{background:var(--brand)}
+.mockup-dot.active{border:2px solid var(--brand);animation:pulse 1.5s infinite}
+.mockup-dot.pending{border:2px solid var(--dark2)}
+.mockup-dot svg{width:12px;height:12px}
+.mockup-label{font-size:12px;font-weight:500}
+.mockup-bar{height:6px;flex:1;background:var(--dark2);border-radius:3px;margin-top:4px}
+.mockup-bar-fill{height:100%;background:var(--dark3);border-radius:3px}
+
+/* About */
+.about-section{padding:80px 0;background:linear-gradient(180deg,#fff 0%,#f0faf8 50%,#fff 100%)}
+.about-section h2{font-size:32px;color:#111;margin-bottom:12px}
+.about-section h2 span{color:var(--brand)}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:40px 0}
+.feature-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;transition:box-shadow .3s}
+.feature-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.feature-icon{width:48px;height:48px;border-radius:12px;background:var(--brand-light);color:var(--brand);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:22px}
+.feature-card h3{font-size:16px;font-weight:600;color:#111;margin-bottom:8px}
+.feature-card p{font-size:14px;color:#64748b;line-height:1.6}
+.about-banner{max-width:700px;margin:40px auto 0;background:linear-gradient(135deg,#f0faf8,#e6f7f2);border:1px solid #d0ebe5;border-radius:16px;padding:28px;text-align:center;color:#334155;font-size:15px;line-height:1.7}
+
+/* Pricing */
+.pricing-section{padding:80px 0;background:#fff}
+.pricing-section h2{font-size:32px;text-align:center;margin-bottom:8px}
+.pricing-section .sub{text-align:center;color:#64748b;font-size:15px;margin-bottom:40px}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:960px;margin:0 auto}
+.price-card{border:2px solid #e2e8f0;border-radius:16px;padding:28px;position:relative;transition:all .3s}
+.price-card.popular{border-color:var(--brand);transform:scale(1.03)}
+.price-card .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;font-size:11px;font-weight:600;padding:4px 14px;border-radius:99px}
+.price-card h3{font-size:18px;font-weight:700;margin-bottom:4px;color:#111}
+.price-card .price{font-size:32px;font-weight:800;color:#111;margin:12px 0 4px}
+.price-card .price span{font-size:14px;font-weight:500;color:#64748b}
+.price-card .desc{font-size:13px;color:#64748b;margin-bottom:20px}
+.price-card ul{list-style:none;margin-bottom:24px}
+.price-card li{font-size:13px;color:#334155;padding:6px 0;display:flex;align-items:center;gap:8px}
+.price-card li .check{color:var(--brand);font-size:16px}
+.price-card li .minus{color:#cbd5e1;font-size:16px}
+
+/* ───── AUTH PAGES ───── */
+.auth-page{display:none;min-height:100vh}
+.auth-page.active{display:flex}
+.auth-left{width:480px;background:var(--dark);padding:40px;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0}
+.auth-right{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.auth-left .logo{display:flex;align-items:center;gap:8px;margin-bottom:60px;font-weight:700;font-size:17px;color:#fff}
+.auth-left .logo .spg{color:var(--brand)}
+.auth-left h2{font-size:28px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:12px}
+.auth-left h2 span{color:var(--brand)}
+.auth-left p{color:var(--slate6);font-size:14px;line-height:1.6;margin-bottom:32px}
+.auth-trust{display:flex;flex-direction:column;gap:14px}
+.auth-trust-item{display:flex;align-items:center;gap:10px;color:#fff;font-size:14px}
+.auth-trust-item .icon{color:var(--brand);font-size:18px}
+.auth-footer{font-size:11px;color:var(--slate4)}
+.auth-form{width:100%;max-width:380px}
+.auth-form h1{font-size:24px;font-weight:700;color:#111;margin-bottom:4px;text-align:center}
+.auth-form .sub{font-size:14px;color:#64748b;text-align:center;margin-bottom:24px}
+.social-btn{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;font-size:14px;font-weight:500;color:#334155;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;transition:background .15s}
+.social-btn:hover{background:#f8fafc}
+.divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:#94a3b8;font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e2e8f0}
+.form-field{margin-bottom:14px}
+.form-field label{display:block;font-size:13px;font-weight:500;color:#334155;margin-bottom:6px}
+.form-field input{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;font-size:14px;outline:none;transition:border .15s}
+.form-field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.auth-link{text-align:center;font-size:13px;color:#9ca3af;margin-top:20px}
+.auth-link a{color:var(--brand);font-weight:600}
+.auth-link a:hover{text-decoration:underline}
+
+/* ───── ONBOARDING ───── */
+.onboarding-page{display:none;min-height:100vh}
+.onboarding-page.active{display:flex}
+.onb-sidebar{width:300px;background:var(--dark);padding:40px 28px;display:flex;flex-direction:column;flex-shrink:0}
+.onb-sidebar h1{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+.onb-sidebar .welcome{color:var(--slate6);font-size:14px;margin-bottom:32px}
+.onb-steps{display:flex;flex-direction:column;gap:20px}
+.onb-step{display:flex;align-items:center;gap:14px}
+.onb-step-num{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;transition:all .3s}
+.onb-step-num.active{background:var(--brand);color:#fff}
+.onb-step-num.done{background:var(--brand);color:#fff}
+.onb-step-num.pending{background:var(--dark3);color:var(--slate6)}
+.onb-step-label{font-size:14px;font-weight:500;transition:color .3s}
+.onb-step-label.active,.onb-step-label.done{color:#fff}
+.onb-step-label.pending{color:var(--slate6)}
+.onb-progress{margin-top:auto}
+.onb-progress-info{display:flex;justify-content:space-between;font-size:11px;color:var(--slate6);margin-bottom:6px}
+.onb-progress-bar{height:6px;background:var(--dark3);border-radius:3px;overflow:hidden}
+.onb-progress-fill{height:100%;background:var(--brand);border-radius:3px;transition:width .4s}
+.onb-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px}
+.onb-content .step-area{width:100%;max-width:600px}
+.onb-content h2{font-size:28px;font-weight:700;color:#111;margin-bottom:8px}
+.onb-content .step-desc{font-size:15px;color:#64748b;margin-bottom:28px}
+.option-list{display:flex;flex-direction:column;gap:10px}
+.option-btn{width:100%;padding:16px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;text-align:left;transition:all .15s}
+.option-btn:hover{border-color:#cbd5e1}
+.option-btn.selected{border-color:var(--brand);background:var(--brand-light)}
+.option-btn .opt-title{font-size:15px;font-weight:600;color:#111}
+.option-btn .opt-desc{font-size:13px;color:#64748b;margin-top:2px}
+.chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;transition:all .15s}
+.chip-btn:hover{border-color:#cbd5e1}
+.chip-btn.selected{border-color:var(--brand);background:var(--brand-light)}
+.chip-check{width:18px;height:18px;border:2px solid #cbd5e1;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chip-btn.selected .chip-check{border-color:var(--brand);background:var(--brand)}
+.chip-label{font-size:14px;font-weight:500;color:#111}
+.onb-nav{display:flex;gap:12px;margin-top:32px}
+.summary-card{background:#f8fafc;border-radius:12px;padding:24px}
+.summary-card .sum-row{padding:12px 0;border-bottom:1px solid #e2e8f0}
+.summary-card .sum-row:last-child{border-bottom:none}
+.summary-card .sum-label{font-size:13px;font-weight:600;color:#111;margin-bottom:6px}
+.summary-card .tags{display:flex;flex-wrap:wrap;gap:6px}
+.summary-card .tag{font-size:12px;padding:4px 12px;border-radius:999px;font-weight:500}
+.summary-card .tag.green{background:#dcfce7;color:#166534}
+.summary-card .tag.blue{background:#dbeafe;color:#1e40af}
+
+/* ───── DASHBOARD ───── */
+.dashboard-page{display:none;min-height:100vh}
+.dashboard-page.active{display:flex}
+.sidebar{width:220px;background:var(--dark);display:flex;flex-direction:column;flex-shrink:0;height:100vh;position:sticky;top:0}
+.sidebar .logo{height:56px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--dark2);font-weight:700;font-size:15px;color:#fff;gap:8px}
+.sidebar .logo .spg{color:var(--brand)}
+.sidebar nav{flex:1;padding:8px;display:flex;flex-direction:column;gap:2px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:500;color:var(--slate6);transition:all .15s;border-left:3px solid transparent}
+.sidebar nav a:hover{background:var(--dark2);color:#f8fafc}
+.sidebar nav a.active{background:var(--dark2);color:#fff;border-left-color:var(--brand)}
+.sidebar nav a.active .nav-icon{color:var(--brand)}
+.sidebar .sidebar-bottom{padding:12px;border-top:1px solid var(--dark2)}
+.sidebar .org-name{font-size:11px;color:var(--slate6);padding:4px 8px;margin-bottom:8px;font-weight:500}
+.sidebar .user-pill{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px}
+.sidebar .user-avatar{width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.dash-main{flex:1;overflow-y:auto}
+.dash-content{max-width:960px;margin:0 auto;padding:32px 24px}
+.dash-header{margin-bottom:28px}
+.dash-header h1{font-size:24px;font-weight:700;color:#111;margin-bottom:4px}
+.dash-header p{font-size:14px;color:#64748b}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.stat-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px}
+.stat-card .stat-label{font-size:12px;color:#64748b;font-weight:500;margin-bottom:8px}
+.stat-card .stat-value{font-size:26px;font-weight:700;color:#111}
+.stat-card .stat-sub{font-size:12px;color:var(--brand);margin-top:4px}
+.recent-section h2{font-size:18px;font-weight:600;margin-bottom:16px;color:#111}
+.recent-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0}
+.recent-table th{background:#f8fafc;font-size:12px;font-weight:600;color:#64748b;text-align:left;padding:12px 16px;text-transform:uppercase;letter-spacing:.5px}
+.recent-table td{padding:14px 16px;font-size:14px;color:#334155;border-top:1px solid #f1f5f9}
+.recent-table .status-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+.status-draft{background:#fef3c7;color:#92400e}
+.status-sent{background:#dcfce7;color:#166534}
+
+/* ───── BILLING ───── */
+.billing-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.trial-card{background:linear-gradient(135deg,var(--brand-light),#d0ebe5);border:1px solid #b2dfcf;border-radius:16px;padding:28px;margin-bottom:24px}
+.trial-card h3{font-size:18px;font-weight:700;color:#111;margin-bottom:8px}
+.trial-card p{font-size:14px;color:#334155;margin-bottom:16px}
+.usage-bar-container{background:#fff;height:10px;border-radius:5px;overflow:hidden;margin-bottom:8px}
+.usage-bar-fill{height:100%;background:var(--brand);border-radius:5px;transition:width 1s}
+.usage-info{font-size:12px;color:#64748b;display:flex;justify-content:space-between}
+.trial-cta{background:var(--brand);color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;border:none;transition:background .15s}
+.trial-cta:hover{background:var(--brand-dark)}
+
+/* ───── WIZARD ───── */
+.wizard-steps-bar{display:flex;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 24px;margin-bottom:24px;gap:8px}
+.wizard-step-item{display:flex;align-items:center;gap:8px}
+.wizard-step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.wizard-step-dot.active{background:var(--brand);color:#fff}
+.wizard-step-dot.done{background:var(--brand);color:#fff}
+.wizard-step-dot.pending{background:#f1f5f9;color:#94a3b8}
+.wizard-step-name{font-size:13px;font-weight:500;color:#334155}
+.wizard-step-sep{flex:1;height:2px;background:#e2e8f0;margin:0 4px}
+.wizard-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:28px}
+.wizard-panel h2{font-size:20px;font-weight:700;color:#111;margin-bottom:6px}
+.wizard-panel .wiz-desc{font-size:14px;color:#64748b;margin-bottom:20px}
+.service-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.service-chip{padding:8px 16px;border:2px solid #e2e8f0;border-radius:99px;font-size:13px;font-weight:500;background:#fff;transition:all .15s;color:#334155}
+.service-chip:hover{border-color:#cbd5e1}
+.service-chip.selected{border-color:var(--brand);background:var(--brand-light);color:var(--brand)}
+.gen-section{display:flex;align-items:center;gap:12px;padding:12px 0}
+.gen-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.gen-dot.done{background:var(--brand)}
+.gen-dot.active{border:2px solid var(--brand);animation:pulse 1.5s infinite}
+.gen-dot.pending{border:2px solid #e2e8f0}
+.gen-dot svg{width:12px;height:12px}
+.gen-label{font-size:14px;font-weight:500}
+.gen-label.done{color:var(--slate5)}
+.gen-label.active{color:#111}
+.gen-label.pending{color:#cbd5e1}
+.gen-bar{flex:1;height:6px;background:#f1f5f9;border-radius:3px}
+.gen-bar-fill{height:100%;background:var(--brand-light);border-radius:3px}
+.shimmer{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+.editor-toolbar{display:flex;gap:4px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px 10px 0 0;margin-bottom:-1px}
+.editor-toolbar button{padding:6px 8px;border-radius:6px;font-size:13px;color:#64748b;background:none;border:none}
+.editor-toolbar button:hover{background:#e2e8f0}
+.editor-area{border:1px solid #e2e8f0;border-radius:0 0 10px 10px;min-height:300px;padding:20px;font-size:14px;line-height:1.7;color:#334155}
+.editor-section{margin-bottom:16px}
+.editor-section h3{font-size:15px;font-weight:600;color:#111;margin-bottom:6px}
+.editor-section p{font-size:14px;color:#475569;line-height:1.6}
+.export-row{display:flex;gap:12px;margin-top:20px}
+
+/* ───── Route switch pills ───── */
+.route-switch{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--dark);border-radius:99px;padding:6px;display:flex;gap:4px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.route-pill{padding:8px 16px;border-radius:99px;font-size:12px;font-weight:600;color:var(--slate6);background:none;border:none;transition:all .15s;white-space:nowrap}
+.route-pill.active{background:var(--brand);color:#fff}
+.route-pill:hover:not(.active){background:var(--dark2);color:#fff}
+
+/* SVG icons inline */
+.icon-zap{display:inline-block;width:20px;height:20px;color:var(--brand)}
+.icon-check{color:var(--brand)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ ROUTE SWITCH ═══════════════ -->
+<div class="route-switch" id="routeSwitch">
+  <button class="route-pill active" data-route="landing">Home</button>
+  <button class="route-pill" data-route="signin">Sign In</button>
+  <button class="route-pill" data-route="signup">Sign Up</button>
+  <button class="route-pill" data-route="onboarding">Onboarding</button>
+  <button class="route-pill" data-route="dashboard">Dashboard</button>
+  <button class="route-pill" data-route="billing">Billing</button>
+  <button class="route-pill" data-route="wizard">Wizard</button>
+</div>
+
+<!-- ═══════════════ LANDING PAGE ═══════════════ -->
+<div class="page active" id="page-landing">
+  <!-- Navbar -->
+  <div class="top-nav">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Smart<span class="spg">SPG</span>
+    </div>
+    <div class="nav-links">
+      <a href="#" onclick="event.preventDefault()">Producto</a>
+      <a href="#" onclick="event.preventDefault()">Precios</a>
+      <a href="#" onclick="event.preventDefault()">FAQ</a>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-outline btn-sm" onclick="navigate('signin')">Iniciar sesion</button>
+      <button class="btn btn-brand btn-sm" onclick="navigate('signup')">Registrate gratis</button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="animate-in">
+          <div class="hero-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg>
+            Powered by Claude AI
+          </div>
+          <h1>Propuestas comerciales <span>multi-servicio, generadas con IA en minutos</span></h1>
+          <p class="subtitle">Agrupa multiples servicios en una sola propuesta profesional. Claude analiza tu cliente, estructura cada alcance de forma independiente y exporta en PDF o Word.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-brand" onclick="navigate('signup')">Empezar gratis — 60 dias <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            <button class="btn btn-outline">Ver como funciona</button>
+          </div>
+          <div class="trust-row">
+            <div class="trust-item"><span class="icon-check">&#10003;</span> 60 dias gratis</div>
+            <div class="trust-item"><span class="icon-check">&#10003;</span> Multi-servicio B2B</div>
+            <div class="trust-item"><span class="icon-check">&#10003;</span> PDF y Word al instante</div>
+          </div>
+        </div>
+        <div class="animate-in delay-2">
+          <div class="mockup-card">
+            <div class="mockup-header">
+              <div class="mockup-avatar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg>
+              </div>
+              <div>
+                <div style="color:#fff;font-size:13px;font-weight:500">Generando propuesta...</div>
+                <div style="color:#94a3b8;font-size:11px">TechCorp SA &middot; Consultoria</div>
+              </div>
+              <div class="mockup-progress"><div class="mockup-progress-fill" id="heroProgress"></div></div>
+            </div>
+            <div class="mockup-sections" id="heroSections"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Us -->
+  <section class="about-section">
+    <div class="container text-center">
+      <h2>La plataforma que transforma tu <span>proceso comercial</span></h2>
+      <p style="color:#64748b;font-size:16px;max-width:640px;margin:0 auto">Disenada para agencias, consultoras y empresas de servicios que necesitan generar propuestas profesionales rapidamente.</p>
+      <div class="features-grid">
+        <div class="feature-card animate-in">
+          <div class="feature-icon">&#128230;</div>
+          <h3>Propuestas multi-servicio</h3>
+          <p>Un solo documento que agrupa todos tus servicios: consultoria, desarrollo, diseno, marketing. La IA estructura cada alcance de forma independiente.</p>
+        </div>
+        <div class="feature-card animate-in delay-1">
+          <div class="feature-icon">&#9889;</div>
+          <h3>Personalizacion con IA</h3>
+          <p>Claude analiza el contexto de tu cliente y genera propuestas persuasivas en espanol, adaptadas a cada industria.</p>
+        </div>
+        <div class="feature-card animate-in delay-2">
+          <div class="feature-icon">&#128640;</div>
+          <h3>De borrador a cierre en minutos</h3>
+          <p>Genera, revisa con el editor integrado y exporta en PDF o Word. Envia por email directo desde la plataforma.</p>
+        </div>
+      </div>
+      <div class="about-banner">
+        Somos un equipo enfocado en acelerar el ciclo de ventas B2B en LATAM. Creemos que las agencias, consultoras y empresas de servicios merecen herramientas que les permitan generar propuestas profesionales sin perder horas en formato y redaccion.
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing-section">
+    <div class="container">
+      <h2>Planes simples, sin sorpresas</h2>
+      <p class="sub">60 dias gratis — 30 sin tarjeta + 30 con tarjeta</p>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <h3>Starter</h3>
+          <div class="price">Gratis <span>/ 60 dias</span></div>
+          <p class="desc">Ideal para probar la plataforma</p>
+          <ul>
+            <li><span class="check">&#10003;</span> 20 propuestas</li>
+            <li><span class="check">&#10003;</span> 1 usuario</li>
+            <li><span class="check">&#10003;</span> Export PDF</li>
+            <li><span class="minus">&mdash;</span> Sin soporte prioritario</li>
+          </ul>
+          <button class="btn btn-outline w-full" onclick="navigate('signup')">Comenzar gratis</button>
+        </div>
+        <div class="price-card popular">
+          <div class="badge">Popular</div>
+          <h3>Pro</h3>
+          <div class="price">$49 <span>/ mes</span></div>
+          <p class="desc">Para equipos de ventas activos</p>
+          <ul>
+            <li><span class="check">&#10003;</span> Propuestas ilimitadas</li>
+            <li><span class="check">&#10003;</span> 5 usuarios</li>
+            <li><span class="check">&#10003;</span> PDF + Word + Email</li>
+            <li><span class="check">&#10003;</span> Soporte prioritario</li>
+          </ul>
+          <button class="btn btn-brand w-full" onclick="navigate('signup')">Iniciar prueba gratis</button>
+        </div>
+        <div class="price-card">
+          <h3>Enterprise</h3>
+          <div class="price">Custom</div>
+          <p class="desc">Para organizaciones grandes</p>
+          <ul>
+            <li><span class="check">&#10003;</span> Todo en Pro</li>
+            <li><span class="check">&#10003;</span> Usuarios ilimitados</li>
+            <li><span class="check">&#10003;</span> API access</li>
+            <li><span class="check">&#10003;</span> SLA dedicado</li>
+          </ul>
+          <button class="btn btn-outline w-full">Contactar ventas</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="padding:40px 0;background:#0f172a;text-align:center">
+    <div style="color:#475569;font-size:12px">&copy; 2026 Smart Proposal Generator. Todos los derechos reservados.</div>
+  </footer>
+</div>
+
+<!-- ═══════════════ SIGN IN ═══════════════ -->
+<div class="auth-page" id="page-signin">
+  <div class="auth-left">
+    <div>
+      <div class="logo" style="cursor:pointer" onclick="navigate('landing')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Smart<span class="spg">SPG</span>
+      </div>
+      <h2>Propuestas B2B profesionales, <span>generadas con IA</span></h2>
+      <p>Crea propuestas comerciales multi-servicio en minutos. Analiza a tu cliente, personaliza con IA y exporta en PDF o Word.</p>
+      <div class="auth-trust">
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> 60 dias de prueba gratis</div>
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Propuestas multi-servicio con IA</div>
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Export PDF y Word en segundos</div>
+      </div>
+    </div>
+    <div class="auth-footer">&copy; 2026 Smart Proposal Generator</div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-form animate-in">
+      <h1>Bienvenido de vuelta</h1>
+      <p class="sub">Inicia sesion para continuar con tus propuestas</p>
+      <button class="social-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Continuar con Google
+      </button>
+      <button class="social-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#333"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Continuar con GitHub
+      </button>
+      <div class="divider">o</div>
+      <div class="form-field"><label>Email</label><input type="email" placeholder="tu@empresa.com"></div>
+      <div class="form-field"><label>Contrasena</label><input type="password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"></div>
+      <button class="btn btn-brand w-full" style="margin-top:8px" onclick="navigate('dashboard')">Iniciar sesion</button>
+      <div class="auth-link">No tienes cuenta? <a href="#" onclick="event.preventDefault();navigate('signup')">Registrate gratis</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SIGN UP ═══════════════ -->
+<div class="auth-page" id="page-signup">
+  <div class="auth-left">
+    <div>
+      <div class="logo" style="cursor:pointer" onclick="navigate('landing')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Smart<span class="spg">SPG</span>
+      </div>
+      <h2>Empieza a generar propuestas <span>en 2 minutos</span></h2>
+      <p>Crea tu cuenta, responde unas preguntas sobre tu negocio y la IA personalizara tus propuestas desde el primer dia.</p>
+      <div class="auth-trust">
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Sin tarjeta de credito — 30 dias gratis</div>
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Anade tarjeta despues para +30 dias</div>
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Genera propuestas multi-servicio con IA</div>
+        <div class="auth-trust-item"><span class="icon">&#10003;</span> Exporta en PDF y Word al instante</div>
+      </div>
+    </div>
+    <div class="auth-footer">&copy; 2026 Smart Proposal Generator</div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-form animate-in">
+      <h1>Crea tu cuenta</h1>
+      <p class="sub">60 dias gratis — sin compromiso ni tarjeta</p>
+      <button class="social-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Continuar con Google
+      </button>
+      <button class="social-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#333"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Continuar con GitHub
+      </button>
+      <div class="divider">o</div>
+      <div class="form-field"><label>Nombre completo</label><input type="text" placeholder="Eduardo Giraldo"></div>
+      <div class="form-field"><label>Email corporativo</label><input type="email" placeholder="tu@empresa.com"></div>
+      <div class="form-field"><label>Contrasena</label><input type="password" placeholder="Min. 8 caracteres"></div>
+      <button class="btn btn-brand w-full" style="margin-top:8px" onclick="navigate('onboarding')">Crear cuenta</button>
+      <div class="auth-link">Ya tienes cuenta? <a href="#" onclick="event.preventDefault();navigate('signin')">Inicia sesion</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ONBOARDING ═══════════════ -->
+<div class="onboarding-page" id="page-onboarding">
+  <div class="onb-sidebar">
+    <h1>SmartSPG</h1>
+    <p class="welcome">Bienvenido</p>
+    <div class="onb-steps" id="onbSteps"></div>
+    <div class="onb-progress">
+      <div class="onb-progress-info"><span>Progreso</span><span id="onbPercent">20%</span></div>
+      <div class="onb-progress-bar"><div class="onb-progress-fill" id="onbProgressFill" style="width:20%"></div></div>
+    </div>
+  </div>
+  <div class="onb-content">
+    <div class="step-area" id="onbStepArea"></div>
+    <div class="onb-nav" id="onbNav"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div class="dashboard-page" id="page-dashboard">
+  <div class="sidebar">
+    <div class="logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Smart<span class="spg">SPG</span>
+    </div>
+    <nav id="sidebarNav"></nav>
+    <div class="sidebar-bottom">
+      <div class="org-name">GC Pron</div>
+      <div class="user-pill"><div class="user-avatar">EG</div></div>
+    </div>
+  </div>
+  <div class="dash-main">
+    <div class="dash-content" id="dashContent"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ BILLING (inside dashboard) ═══════════════ -->
+<div class="dashboard-page" id="page-billing">
+  <div class="sidebar" id="billingSidebar"></div>
+  <div class="dash-main">
+    <div class="dash-content" id="billingContent"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ WIZARD (inside dashboard) ═══════════════ -->
+<div class="dashboard-page" id="page-wizard">
+  <div class="sidebar" id="wizardSidebar"></div>
+  <div class="dash-main">
+    <div class="dash-content" id="wizardContent"></div>
+  </div>
+</div>
+
+<script>
+// ───── State ─────
+let currentRoute = 'landing';
+let onbStep = 0;
+let onbData = { businessType: null, industries: [], services: [], proposalSize: null, tone: null };
+let wizStep = 0;
+let wizServices = [];
+let genRunning = false;
+let dashSubpage = 'home';
+
+const ONB_STEPS = [
+  { title: 'Tipo de negocio' },
+  { title: 'Industrias' },
+  { title: 'Servicios' },
+  { title: 'Tamano de propuesta' },
+  { title: 'Tono preferido' },
+];
+
+const BUSINESS_TYPES = [
+  { value: 'agency', label: 'Agencia', desc: 'Agencia de servicios digitales o creativa' },
+  { value: 'consultancy', label: 'Consultoria', desc: 'Consultoria empresarial o estrategica' },
+  { value: 'saas', label: 'SaaS', desc: 'Proveedor de software/plataforma' },
+  { value: 'freelancer', label: 'Freelancer', desc: 'Profesional independiente' },
+  { value: 'other', label: 'Otro', desc: 'Otro tipo de negocio' },
+];
+const INDUSTRIES = ['Tecnologia','Marketing','Finanzas','Salud','Educacion','E-commerce','Legal','Manufactura','Logistica','Otro'];
+const SERVICES = ['Consultoria','Desarrollo','Diseno','Marketing Digital','Publicidad Pagada','SEO/SEM','Contenido','Capacitacion','Otro'];
+const PROPOSAL_SIZES = [{v:'under5k',l:'Menos de $5k'},{v:'5k-20k',l:'$5k - $20k'},{v:'20k-50k',l:'$20k - $50k'},{v:'above50k',l:'Mas de $50k'}];
+const TONES = [{v:'formal',l:'Formal',d:'Profesional y corporativo'},{v:'consultative',l:'Consultivo',d:'Colaborativo y de asociacion'},{v:'direct',l:'Directo',d:'Claro y al punto'}];
+const WIZ_SERVICES = ['Consultoria','Desarrollo web','Marketing digital','Diseno','SEO/SEM','Email marketing','Capacitacion','Publicidad Pagada'];
+
+const NAV_ITEMS = [
+  { id:'home', label:'Dashboard', icon:'&#9632;' },
+  { id:'proposals', label:'Propuestas', icon:'&#128196;' },
+  { id:'clients', label:'Clientes', icon:'&#128101;' },
+  { id:'analytics', label:'Analitica', icon:'&#128202;' },
+  { id:'billing', label:'Billing', icon:'&#128179;' },
+];
+
+// ───── Router ─────
+function navigate(route) {
+  document.querySelectorAll('.page,.auth-page,.onboarding-page,.dashboard-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.route-pill').forEach(p => p.classList.remove('active'));
+
+  const el = document.getElementById('page-' + route);
+  if (el) el.classList.add('active');
+
+  document.querySelectorAll('.route-pill').forEach(p => {
+    if (p.dataset.route === route) p.classList.add('active');
+  });
+
+  currentRoute = route;
+
+  if (route === 'landing') initHeroAnimation();
+  if (route === 'onboarding') renderOnboarding();
+  if (route === 'dashboard') { dashSubpage = 'home'; renderDashboard(); }
+  if (route === 'billing') renderBilling();
+  if (route === 'wizard') { wizStep = 0; renderWizard(); }
+}
+
+// Route switch
+document.querySelectorAll('.route-pill').forEach(btn => {
+  btn.addEventListener('click', () => navigate(btn.dataset.route));
+});
+
+// ───── Hero Animation ─────
+function initHeroAnimation() {
+  const sections = ['Diagnostico','Servicios propuestos','Alcance por servicio','Inversion','Caso de exito'];
+  const container = document.getElementById('heroSections');
+  const progress = document.getElementById('heroProgress');
+  if (!container) return;
+  container.innerHTML = '';
+  sections.forEach((s, i) => {
+    const done = i < 3;
+    const active = i === 3;
+    container.innerHTML += `
+      <div class="mockup-section" style="opacity:0;animation:fadeIn .4s ease ${0.4 + i * 0.3}s both">
+        <div class="mockup-dot ${done ? 'done' : active ? 'active' : 'pending'}">
+          ${done ? '<svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>' : ''}
+        </div>
+        <div style="flex:1">
+          <div class="mockup-label" style="color:${done ? '#94a3b8' : active ? '#fff' : '#475569'}">${s}</div>
+          ${done ? `<div class="mockup-bar"><div class="mockup-bar-fill" style="width:${70 + i * 10}%"></div></div>` : ''}
+        </div>
+      </div>`;
+  });
+  setTimeout(() => { if (progress) progress.style.width = '71%'; }, 300);
+}
+
+// ───── Sidebar renderer ─────
+function renderSidebar(containerId, activeId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Smart<span class="spg">SPG</span>
+    </div>
+    <nav>${NAV_ITEMS.map(n => `
+      <a href="#" class="${n.id === activeId ? 'active' : ''}" onclick="event.preventDefault();handleSidebarClick('${n.id}')">
+        <span class="nav-icon">${n.icon}</span> ${n.label}
+      </a>`).join('')}
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="org-name">GC Pron</div>
+      <div class="user-pill"><div class="user-avatar">EG</div></div>
+    </div>`;
+}
+
+function handleSidebarClick(id) {
+  if (id === 'billing') navigate('billing');
+  else if (id === 'proposals') navigate('wizard');
+  else navigate('dashboard');
+}
+
+// ───── Dashboard ─────
+function renderDashboard() {
+  renderSidebar('page-dashboard > .sidebar', 'home');
+  const c = document.getElementById('dashContent');
+  c.innerHTML = `
+    <div class="dash-header animate-in">
+      <h1>Dashboard</h1>
+      <p>Resumen de tu actividad reciente</p>
+    </div>
+    <div class="stat-grid">
+      ${[
+        { label:'Propuestas este mes', value:'12', sub:'+3 vs. mes anterior' },
+        { label:'Clientes activos', value:'8', sub:'+2 nuevos' },
+        { label:'Tasa de conversion', value:'67%', sub:'+5% vs. mes anterior' },
+        { label:'Ingresos estimados', value:'$24.8k', sub:'Basado en propuestas enviadas' },
+      ].map((s,i) => `
+        <div class="stat-card animate-in delay-${i+1}">
+          <div class="stat-label">${s.label}</div>
+          <div class="stat-value">${s.value}</div>
+          <div class="stat-sub">${s.sub}</div>
+        </div>`).join('')}
+    </div>
+    <div class="recent-section animate-in delay-3">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>Propuestas recientes</h2>
+        <button class="btn btn-brand btn-sm" onclick="navigate('wizard')">+ Nueva propuesta</button>
+      </div>
+      <table class="recent-table">
+        <thead><tr><th>Propuesta</th><th>Cliente</th><th>Servicios</th><th>Estado</th><th>Fecha</th></tr></thead>
+        <tbody>
+          <tr><td>Propuesta Marketing Digital</td><td>Lazzios Cosmetics</td><td>Paid Media, Landing, Diseno</td><td><span class="status-badge status-sent">Enviada</span></td><td>7 abr 2026</td></tr>
+          <tr><td>Consultoria Estrategica</td><td>TechCorp SA</td><td>Consultoria, Capacitacion</td><td><span class="status-badge status-draft">Borrador</span></td><td>5 abr 2026</td></tr>
+          <tr><td>Desarrollo Plataforma</td><td>RetailMax</td><td>Desarrollo web, SEO</td><td><span class="status-badge status-sent">Enviada</span></td><td>2 abr 2026</td></tr>
+          <tr><td>Diseno de Marca</td><td>FoodCo LATAM</td><td>Diseno, Contenido</td><td><span class="status-badge status-draft">Borrador</span></td><td>28 mar 2026</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ───── Billing ─────
+function renderBilling() {
+  renderSidebar('page-billing > .sidebar', 'billing');
+  const c = document.getElementById('billingContent');
+  c.innerHTML = `
+    <div class="dash-header animate-in">
+      <h1>Billing</h1>
+      <p>Gestiona tu suscripcion y metodo de pago</p>
+    </div>
+    <div class="trial-card animate-in delay-1">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h3>&#127881; Periodo de prueba activo</h3>
+          <p>Te quedan <strong>24 dias</strong> de prueba gratuita. Anade una tarjeta para extender 30 dias mas.</p>
+        </div>
+        <button class="trial-cta" onclick="alert('Redirigiendo a Stripe Checkout para capturar tarjeta...')">Anadir tarjeta (+30 dias)</button>
+      </div>
+      <div class="usage-bar-container"><div class="usage-bar-fill" style="width:35%"></div></div>
+      <div class="usage-info"><span>7 de 20 propuestas usadas</span><span>35%</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="animate-in delay-2">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:12px">Plan actual</h3>
+        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px"><span style="font-size:28px;font-weight:700">Starter</span><span style="color:#64748b;font-size:13px">/ Prueba gratis</span></div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">20 propuestas, 1 usuario, export PDF</p>
+        <button class="btn btn-brand btn-sm">Upgrade a Pro — $49/mes</button>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px">
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:12px">Metodo de pago</h3>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+          <div style="width:40px;height:28px;background:#e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#64748b">VISA</div>
+          <span style="font-size:14px;color:#64748b">Sin tarjeta configurada</span>
+        </div>
+        <button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="alert('Redirigiendo a Stripe...')">Configurar tarjeta</button>
+      </div>
+    </div>
+    <div style="margin-top:24px" class="animate-in delay-3">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px">Historial de facturacion</h3>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;text-align:center;color:#94a3b8;font-size:14px">
+        No hay facturas aun. Tu periodo de prueba es gratuito.
+      </div>
+    </div>`;
+}
+
+// ───── Onboarding ─────
+function renderOnboarding() {
+  // Sidebar steps
+  const stepsEl = document.getElementById('onbSteps');
+  stepsEl.innerHTML = ONB_STEPS.map((s, i) => {
+    const state = i < onbStep ? 'done' : i === onbStep ? 'active' : 'pending';
+    return `<div class="onb-step">
+      <div class="onb-step-num ${state}">${i < onbStep ? '&#10003;' : i + 1}</div>
+      <span class="onb-step-label ${state}">${s.title}</span>
+    </div>`;
+  }).join('');
+
+  const pct = Math.round(((onbStep + 1) / 5) * 100);
+  document.getElementById('onbPercent').textContent = pct + '%';
+  document.getElementById('onbProgressFill').style.width = pct + '%';
+
+  const area = document.getElementById('onbStepArea');
+  let html = '';
+
+  if (onbStep === 0) {
+    html = `<h2>Tipo de negocio</h2><p class="step-desc">Dinos que tipo de organizacion eres para personalizar tus propuestas</p>
+      <div class="option-list">${BUSINESS_TYPES.map(t => `
+        <button class="option-btn ${onbData.businessType === t.value ? 'selected' : ''}" onclick="onbData.businessType='${t.value}';renderOnboarding()">
+          <div class="opt-title">${t.label}</div><div class="opt-desc">${t.desc}</div>
+        </button>`).join('')}</div>`;
+  } else if (onbStep === 1) {
+    html = `<h2>Industrias objetivo</h2><p class="step-desc">Selecciona las industrias a las que atienden tus clientes (minimo una)</p>
+      <div class="chip-grid">${INDUSTRIES.map(ind => `
+        <button class="chip-btn ${onbData.industries.includes(ind) ? 'selected' : ''}" onclick="toggleOnb('industries','${ind}')">
+          <div class="chip-check">${onbData.industries.includes(ind) ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
+          <span class="chip-label">${ind}</span>
+        </button>`).join('')}</div>`;
+  } else if (onbStep === 2) {
+    html = `<h2>Servicios ofrecidos</h2><p class="step-desc">Elige los servicios que incluyes en tus propuestas (minimo uno)</p>
+      <div class="chip-grid">${SERVICES.map(svc => `
+        <button class="chip-btn ${onbData.services.includes(svc) ? 'selected' : ''}" onclick="toggleOnb('services','${svc}')">
+          <div class="chip-check">${onbData.services.includes(svc) ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
+          <span class="chip-label">${svc}</span>
+        </button>`).join('')}</div>`;
+  } else if (onbStep === 3) {
+    html = `<h2>Tamano tipico de propuesta</h2><p class="step-desc">Cual es el valor promedio de tus propuestas?</p>
+      <div class="option-list">${PROPOSAL_SIZES.map(s => `
+        <button class="option-btn ${onbData.proposalSize === s.v ? 'selected' : ''}" onclick="onbData.proposalSize='${s.v}';renderOnboarding()">
+          <div class="opt-title">${s.l}</div>
+        </button>`).join('')}</div>`;
+  } else if (onbStep === 4) {
+    html = `<h2>Tono preferido</h2><p class="step-desc">Como quieres que suenen tus propuestas?</p>
+      <div class="option-list">${TONES.map(t => `
+        <button class="option-btn ${onbData.tone === t.v ? 'selected' : ''}" onclick="onbData.tone='${t.v}';renderOnboarding()">
+          <div class="opt-title">${t.l}</div><div class="opt-desc">${t.d}</div>
+        </button>`).join('')}</div>`;
+  } else if (onbStep === 5) {
+    const btLabel = BUSINESS_TYPES.find(t => t.value === onbData.businessType)?.label || '';
+    const psLabel = PROPOSAL_SIZES.find(s => s.v === onbData.proposalSize)?.l || '';
+    const toneLabel = TONES.find(t => t.v === onbData.tone)?.l || '';
+    html = `<h2>Resumen</h2><p class="step-desc">Revisa tus respuestas antes de comenzar</p>
+      <div class="summary-card">
+        <div class="sum-row"><div class="sum-label">Tipo de negocio</div><div>${btLabel}</div></div>
+        <div class="sum-row"><div class="sum-label">Industrias</div><div class="tags">${onbData.industries.map(i => `<span class="tag green">${i}</span>`).join('')}</div></div>
+        <div class="sum-row"><div class="sum-label">Servicios</div><div class="tags">${onbData.services.map(s => `<span class="tag blue">${s}</span>`).join('')}</div></div>
+        <div class="sum-row"><div class="sum-label">Tamano de propuesta</div><div>${psLabel}</div></div>
+        <div class="sum-row"><div class="sum-label">Tono</div><div>${toneLabel}</div></div>
+      </div>`;
+  }
+
+  area.innerHTML = `<div class="animate-in">${html}</div>`;
+
+  // Nav buttons
+  const nav = document.getElementById('onbNav');
+  const canNext = isOnbStepValid();
+  const isLast = onbStep >= 5;
+  nav.innerHTML = `
+    <button class="btn btn-outline ${onbStep === 0 ? 'btn-disabled' : ''}" onclick="if(onbStep>0){onbStep--;renderOnboarding()}">&#8592; Atras</button>
+    <button class="btn btn-brand ${!canNext ? 'btn-disabled' : ''}" style="margin-left:auto" onclick="advanceOnb()">
+      ${isLast ? 'Comenzar &#10003;' : onbStep === 4 ? 'Ver resumen &#8594;' : 'Siguiente &#8594;'}
+    </button>`;
+}
+
+function toggleOnb(field, val) {
+  const arr = onbData[field];
+  const idx = arr.indexOf(val);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
+  renderOnboarding();
+}
+
+function isOnbStepValid() {
+  if (onbStep === 0) return onbData.businessType !== null;
+  if (onbStep === 1) return onbData.industries.length > 0;
+  if (onbStep === 2) return onbData.services.length > 0;
+  if (onbStep === 3) return onbData.proposalSize !== null;
+  if (onbStep === 4) return onbData.tone !== null;
+  if (onbStep === 5) return true;
+  return false;
+}
+
+function advanceOnb() {
+  if (!isOnbStepValid()) return;
+  if (onbStep >= 5) { navigate('dashboard'); return; }
+  onbStep++;
+  renderOnboarding();
+}
+
+// ───── Wizard ─────
+const WIZ_STEPS = ['Cliente','Contexto','Generacion IA','Revision & Export'];
+const GEN_SECTIONS = ['Diagnostico','Servicios propuestos','Alcance por servicio','Inversion consolidada','Caso de exito'];
+
+function renderWizard() {
+  renderSidebar('page-wizard > .sidebar', 'proposals');
+  const c = document.getElementById('wizardContent');
+
+  // Steps bar
+  let stepsHtml = '<div class="wizard-steps-bar">';
+  WIZ_STEPS.forEach((s, i) => {
+    const state = i < wizStep ? 'done' : i === wizStep ? 'active' : 'pending';
+    stepsHtml += `<div class="wizard-step-item">
+      <div class="wizard-step-dot ${state}">${i < wizStep ? '&#10003;' : i + 1}</div>
+      <span class="wizard-step-name">${s}</span>
+    </div>`;
+    if (i < WIZ_STEPS.length - 1) stepsHtml += '<div class="wizard-step-sep"></div>';
+  });
+  stepsHtml += '</div>';
+
+  let panelHtml = '';
+
+  if (wizStep === 0) {
+    panelHtml = `<div class="wizard-panel animate-in">
+      <h2>Selecciona o crea un cliente</h2>
+      <p class="wiz-desc">Busca un cliente existente o crea uno nuevo</p>
+      <div class="form-field"><label>Buscar cliente</label><input type="text" placeholder="Nombre de empresa..." value="Lazzios Cosmetics" style="border-color:var(--brand)"></div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:600;font-size:15px;color:#111">Lazzios Cosmetics</div>
+            <div style="font-size:13px;color:#64748b">E-commerce &middot; Cosmeticos &middot; Colombia</div>
+          </div>
+          <div style="background:var(--brand-light);color:var(--brand);font-size:12px;font-weight:600;padding:4px 12px;border-radius:99px">Score: 85</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-brand" onclick="wizStep=1;renderWizard()">Siguiente &#8594;</button>
+      </div>
+    </div>`;
+  } else if (wizStep === 1) {
+    panelHtml = `<div class="wizard-panel animate-in">
+      <h2>Contexto de la propuesta</h2>
+      <p class="wiz-desc">Define el problema, servicios, presupuesto y timeline</p>
+      <div class="form-field"><label>Problema / necesidad</label><textarea style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;min-height:80px;font-size:14px;resize:vertical" placeholder="Describe la necesidad del cliente...">Lazzios Cosmetics necesita aumentar su presencia digital y generar leads cualificados para su linea premium de cosmeticos. Requieren una estrategia integral que incluya publicidad pagada, landing pages optimizadas y diseno de anuncios.</textarea></div>
+      <div class="form-field">
+        <label>Servicios a incluir</label>
+        <div class="service-chips">
+          ${WIZ_SERVICES.map(s => `<button class="service-chip ${wizServices.includes(s)?'selected':''}" onclick="toggleWizService('${s}')">${s}</button>`).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div class="form-field"><label>Presupuesto estimado</label><input type="text" placeholder="$5,000 - $10,000" value="$810/mes + $280 one-time"></div>
+        <div class="form-field"><label>Timeline</label><input type="text" placeholder="3 meses" value="3 meses"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:20px">
+        <button class="btn btn-outline" onclick="wizStep=0;renderWizard()">&#8592; Atras</button>
+        <button class="btn btn-brand ${wizServices.length===0?'btn-disabled':''}" onclick="if(wizServices.length>0){wizStep=2;renderWizard();startGeneration()}">Generar con IA &#9889;</button>
+      </div>
+    </div>`;
+  } else if (wizStep === 2) {
+    panelHtml = `<div class="wizard-panel animate-in">
+      <h2>Generando propuesta con IA</h2>
+      <p class="wiz-desc">Claude esta analizando el contexto y generando cada seccion...</p>
+      <div id="genSections">${GEN_SECTIONS.map((s, i) => `
+        <div class="gen-section">
+          <div class="gen-dot pending" id="genDot${i}"></div>
+          <span class="gen-label pending" id="genLabel${i}">${s}</span>
+          <div class="gen-bar"><div class="gen-bar-fill" id="genBar${i}" style="width:0%"></div></div>
+        </div>`).join('')}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:20px">
+        <button class="btn btn-outline" onclick="wizStep=1;renderWizard()">&#8592; Atras</button>
+        <button class="btn btn-brand btn-disabled" id="genNextBtn" onclick="wizStep=3;renderWizard()">Esperando... &#8987;</button>
+      </div>
+    </div>`;
+  } else if (wizStep === 3) {
+    const svcs = wizServices.length > 0 ? wizServices : ['Publicidad Pagada','Landing Page','Diseno de Anuncios'];
+    panelHtml = `<div class="wizard-panel animate-in">
+      <h2>Revision & Export</h2>
+      <p class="wiz-desc">Revisa, edita y exporta tu propuesta</p>
+      <div class="editor-toolbar">
+        <button><b>B</b></button><button><i>I</i></button><button><u>U</u></button>
+        <button>H1</button><button>H2</button><button>&#8226; Lista</button><button>1. Lista</button>
+      </div>
+      <div class="editor-area">
+        <div class="editor-section"><h3>Diagnostico</h3><p>Lazzios Cosmetics se encuentra en un momento clave de expansion en el mercado de cosmeticos premium en Colombia. Su necesidad de aumentar la presencia digital y generar leads cualificados requiere una estrategia integral que combine multiples canales.</p></div>
+        <div class="editor-section"><h3>Servicios Propuestos</h3><p>${svcs.map((s,i) => `<strong>${i+1}. ${s}</strong>`).join(' &middot; ')}</p></div>
+        <div class="editor-section"><h3>Alcance por Servicio</h3>${svcs.map(s => `<p><strong>${s}:</strong> Implementacion completa con metricas de seguimiento, reportes mensuales y optimizacion continua basada en datos.</p>`).join('')}</div>
+        <div class="editor-section"><h3>Inversion Consolidada</h3>
+          <table style="width:100%;border-collapse:collapse;margin:8px 0">
+            <tr style="background:#f8fafc"><th style="text-align:left;padding:8px;border:1px solid #e2e8f0;font-size:13px">Servicio</th><th style="text-align:left;padding:8px;border:1px solid #e2e8f0;font-size:13px">Tipo</th><th style="text-align:right;padding:8px;border:1px solid #e2e8f0;font-size:13px">Valor</th></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Publicidad Pagada</td><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Mensual</td><td style="text-align:right;padding:8px;border:1px solid #e2e8f0;font-size:13px">$350</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Landing Page</td><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Unico</td><td style="text-align:right;padding:8px;border:1px solid #e2e8f0;font-size:13px">$280</td></tr>
+            <tr><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Diseno de Anuncios</td><td style="padding:8px;border:1px solid #e2e8f0;font-size:13px">Mensual</td><td style="text-align:right;padding:8px;border:1px solid #e2e8f0;font-size:13px">$180</td></tr>
+            <tr style="background:#f0faf8;font-weight:600"><td style="padding:8px;border:1px solid #d0ebe5;font-size:13px" colspan="2">Total mensual recurrente</td><td style="text-align:right;padding:8px;border:1px solid #d0ebe5;font-size:13px;color:var(--brand)">$530/mes</td></tr>
+          </table>
+        </div>
+        <div class="editor-section"><h3>Caso de Exito</h3><p>Para un cliente similar en el sector de belleza, esta estrategia genero un incremento del 145% en leads cualificados durante los primeros 3 meses, con un costo por lead 40% inferior al promedio del sector.</p></div>
+      </div>
+      <div class="export-row">
+        <button class="btn btn-outline" onclick="wizStep=2;renderWizard()">&#8592; Atras</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="alert('Exportando PDF via DocuForge...')">&#128196; PDF</button>
+          <button class="btn btn-outline" onclick="alert('Exportando DOCX...')">&#128462; Word</button>
+          <button class="btn btn-brand" onclick="alert('Enviando por email via Resend...')">&#9993; Enviar por email</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  c.innerHTML = stepsHtml + panelHtml;
+}
+
+function toggleWizService(s) {
+  const idx = wizServices.indexOf(s);
+  if (idx >= 0) wizServices.splice(idx, 1); else wizServices.push(s);
+  renderWizard();
+}
+
+function startGeneration() {
+  if (genRunning) return;
+  genRunning = true;
+  let i = 0;
+  function animateSection() {
+    if (i >= GEN_SECTIONS.length) {
+      genRunning = false;
+      const btn = document.getElementById('genNextBtn');
+      if (btn) { btn.classList.remove('btn-disabled'); btn.innerHTML = 'Revisar propuesta &#8594;'; }
+      return;
+    }
+    const dot = document.getElementById('genDot' + i);
+    const label = document.getElementById('genLabel' + i);
+    const bar = document.getElementById('genBar' + i);
+    if (dot) { dot.className = 'gen-dot active'; }
+    if (label) { label.className = 'gen-label active'; }
+
+    setTimeout(() => {
+      if (dot) { dot.className = 'gen-dot done'; dot.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>'; }
+      if (label) { label.className = 'gen-label done'; }
+      if (bar) { bar.style.width = '100%'; bar.style.background = 'var(--brand-light)'; }
+      i++;
+      setTimeout(animateSection, 200);
+    }, 800 + Math.random() * 500);
+  }
+  setTimeout(animateSection, 400);
+}
+
+// ───── Init ─────
+initHeroAnimation();
+</script>
+</body>
+</html>

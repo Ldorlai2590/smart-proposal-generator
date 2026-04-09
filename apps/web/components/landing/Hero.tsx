@@ -5,17 +5,17 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react'
 
 const STREAMING_SECTIONS = [
-  'Resumen ejecutivo',
-  'Problema',
-  'Solución',
-  'Alcance',
+  'Diagnóstico',
+  'Servicios propuestos',
+  'Alcance por servicio',
   'Inversión',
+  'Caso de éxito',
 ]
 
 const TRUST_ITEMS = [
-  'Sin tarjeta de crédito',
-  '3 propuestas gratis',
-  'Cancela cuando quieras',
+  '60 días gratis',
+  'Multi-servicio B2B',
+  'PDF y Word al instante',
 ]
 
 export function Hero() {
@@ -44,13 +44,12 @@ export function Hero() {
             </div>
 
             <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-              Propuestas ganadoras,{' '}
-              <span className="text-[#1D9E75]">generadas en minutos</span>
+              Propuestas comerciales{' '}
+              <span className="text-[#1D9E75]">multi-servicio, generadas con IA en minutos</span>
             </h1>
 
             <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">
-              Analiza tu cliente, genera con Claude AI y exporta en PDF o Word.
-              Para equipos de ventas en LATAM que quieren cerrar más negocios.
+              Agrupa múltiples servicios en una sola propuesta profesional. Claude analiza tu cliente, estructura cada alcance de forma independiente y exporta en PDF o Word.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -58,7 +57,7 @@ export function Hero() {
                 href="/sign-up"
                 className="inline-flex items-center justify-center gap-2 bg-[#1D9E75] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#158a63] transition-colors text-sm"
               >
-                Empezar gratis — es gratis
+                Empezar gratis — 60 días sin tarjeta
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a

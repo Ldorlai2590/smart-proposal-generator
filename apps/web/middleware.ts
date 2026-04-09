@@ -14,6 +14,8 @@ const isProtectedRoute = createRouteMatcher([
   '/clients(.*)',
   '/proposals(.*)',
   '/analytics(.*)',
+  '/onboarding(.*)',
+  '/billing(.*)',
 ])
 
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
@@ -40,15 +42,16 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.redirect(selectOrgUrl)
   }
 
-  // 4. Forward orgId as X-Tenant-ID header on protected API routes
-  //    so FastAPI can enforce multi-tenant isolation
-  if (isApiRoute(request) && orgId) {
-    const requestHeaders = new Headers(request.headers)
+  // 4. Forward orgId + pathname as headers for downstream use
+  const requestHeaders = new Headers(request.headers)
+  const pathname = request.nextUrl.pathname
+  requestHeaders.set('x-next-pathname', pathname)
+
+  if (orgId) {
     requestHeaders.set('X-Tenant-ID', orgId)
-    return NextResponse.next({ request: { headers: requestHeaders } })
   }
 
-  return NextResponse.next()
+  return NextResponse.next({ request: { headers: requestHeaders } })
 })
 
 export const config = {

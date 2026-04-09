@@ -1,5 +1,6 @@
 import { Navbar } from './Navbar'
 import { Hero } from './Hero'
+import { AboutUs } from './AboutUs'
 import { SocialProof } from './SocialProof'
 import { HowItWorks } from './HowItWorks'
 import { FeaturesGrid } from './FeaturesGrid'
@@ -14,6 +15,7 @@ export function LandingPage() {
     <>
       <Navbar />
       <Hero />
+      <AboutUs />
       <SocialProof />
       <HowItWorks />
       <FeaturesGrid />

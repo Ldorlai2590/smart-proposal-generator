@@ -9,6 +9,7 @@ import {
   FileText,
   Users,
   BarChart3,
+  CreditCard,
   ChevronLeft,
   Zap,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/proposals', label: 'Propuestas', icon: FileText },
   { href: '/clients', label: 'Clientes', icon: Users },
   { href: '/analytics', label: 'Analítica', icon: BarChart3 },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
 ]
 
 export function Sidebar() {

@@ -8,6 +8,7 @@ import type { ClientData } from './Step1Client'
 
 export interface ContextData {
   problema: string
+  services: string[]
   budget: string
   timeline: string
   template: string
@@ -29,6 +30,17 @@ const TEMPLATES = [
   { id: 'general', label: 'Propuesta General', icon: '📄', desc: 'Adaptable a cualquier servicio' },
 ]
 
+const SERVICES = [
+  { id: 'consultoria', label: 'Consultoría estratégica', icon: '🎯' },
+  { id: 'desarrollo-web', label: 'Desarrollo web / Landing page', icon: '💻' },
+  { id: 'marketing-digital', label: 'Marketing digital / Paid Media', icon: '📱' },
+  { id: 'diseño-contenido', label: 'Diseño y creación de contenido', icon: '🎨' },
+  { id: 'seo-sem', label: 'SEO / SEM', icon: '🔍' },
+  { id: 'email-marketing', label: 'Email marketing', icon: '📧' },
+  { id: 'capacitacion', label: 'Capacitación / Training', icon: '🎓' },
+  { id: 'otro', label: 'Otro (custom)', icon: '⚙️' },
+]
+
 const BUDGETS = ['< $5K', '$5K - $20K', '$20K - $50K', '$50K - $100K', '$100K+']
 const TIMELINES = ['2 semanas', '1 mes', '2-3 meses', '3-6 meses', '6+ meses']
 const TONOS = [
@@ -39,12 +51,26 @@ const TONOS = [
 
 export function Step2Context({ client, onNext, onBack }: Step2ContextProps) {
   const [problema, setProblema] = useState('')
+  const [services, setServices] = useState<string[]>([])
   const [budget, setBudget] = useState('')
   const [timeline, setTimeline] = useState('')
   const [template, setTemplate] = useState('')
   const [tono, setTono] = useState<'formal' | 'consultivo' | 'directo'>('consultivo')
+  const [customService, setCustomService] = useState('')
 
-  const canContinue = problema.trim().length >= 20 && template !== ''
+  const toggleService = (serviceId: string) => {
+    if (serviceId === 'otro') {
+      setServices(services.includes(serviceId) ? services.filter(s => s !== serviceId) : [...services, serviceId])
+    } else {
+      setServices(services.includes(serviceId) ? services.filter(s => s !== serviceId) : [...services, serviceId])
+    }
+  }
+
+  const servicesWithCustom = customService && services.includes('otro')
+    ? services.filter(s => s !== 'otro').concat([customService])
+    : services
+
+  const canContinue = problema.trim().length >= 20 && template !== '' && services.length > 0
 
   return (
     <div className="space-y-6">
@@ -65,6 +91,39 @@ export function Step2Context({ client, onNext, onBack }: Step2ContextProps) {
         )}>
           {problema.length} / 20 mínimo
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+          Servicios a incluir *
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {SERVICES.map((service) => (
+            <div key={service.id}>
+              <button
+                onClick={() => toggleService(service.id)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm transition-all text-left',
+                  services.includes(service.id)
+                    ? 'border-[var(--color-brand)] bg-[var(--color-brand-light)]'
+                    : 'border-gray-200 hover:border-gray-300',
+                )}
+              >
+                <span className="text-base">{service.icon}</span>
+                <span className="font-medium text-gray-900">{service.label}</span>
+              </button>
+              {service.id === 'otro' && services.includes('otro') && (
+                <input
+                  type="text"
+                  placeholder="Describe el servicio personalizado"
+                  value={customService}
+                  onChange={(e) => setCustomService(e.target.value)}
+                  className="w-full mt-1.5 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-brand)]"
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -162,7 +221,7 @@ export function Step2Context({ client, onNext, onBack }: Step2ContextProps) {
         <Button variant="outline" onClick={onBack} size="lg">
           Atrás
         </Button>
-        <Button onClick={() => onNext({ problema, budget, timeline, template, tono })} disabled={!canContinue} size="lg" className="flex-1">
+        <Button onClick={() => onNext({ problema, services: servicesWithCustom, budget, timeline, template, tono })} disabled={!canContinue} size="lg" className="flex-1">
           Generar propuesta →
         </Button>
       </div>
