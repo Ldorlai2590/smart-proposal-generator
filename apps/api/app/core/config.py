@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     clerk_webhook_secret: str = ""
     docuforge_api_key: str = ""
     resend_api_key: str = ""
+    email_from: str = "propuestas@smartproposal.ai"
     apitally_client_id: str = ""
     cors_origins: list[str] = ["http://localhost:3000"]
 

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@clerk/nextjs'
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,7 +12,7 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus, Search, MoreHorizontal, Eye, Copy, Archive, Trash2 } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Eye, Copy, Archive, Trash2, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -20,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { fetchWithTenant } from '@/lib/api'
 
 interface Proposal {
   id: string
@@ -30,15 +32,48 @@ interface Proposal {
   date: string
 }
 
-const MOCK_PROPOSALS: Proposal[] = [
-  { id: '1', title: 'Plataforma e-commerce B2B', client: 'TechCorp SA', status: 'accepted', value: '$12,000', date: '06/04/2026' },
-  { id: '2', title: 'Consultoría transformación digital', client: 'Retail Plus', status: 'sent', value: '$8,500', date: '05/04/2026' },
-  { id: '3', title: 'Migración cloud AWS', client: 'HealthMed', status: 'draft', value: '$24,000', date: '04/04/2026' },
-  { id: '4', title: 'App móvil iOS + Android', client: 'EduTech', status: 'rejected', value: '$18,000', date: '03/04/2026' },
-  { id: '5', title: 'CRM personalizado', client: 'FinCorp', status: 'sent', value: '$31,000', date: '02/04/2026' },
-  { id: '6', title: 'Sistema de logística', client: 'LogiPro', status: 'accepted', value: '$45,000', date: '01/04/2026' },
-  { id: '7', title: 'Rediseño UX/UI', client: 'CreativeCo', status: 'draft', value: '$6,000', date: '31/03/2026' },
-]
+// Raw shape returned by FastAPI
+interface ApiProposal {
+  id: string
+  title: string
+  status: string
+  client_id: string
+  created_at: string
+  context: { budget?: number }
+}
+
+interface ApiResponse {
+  data: ApiProposal[]
+  total: number
+}
+
+function formatBudget(budget?: number): string {
+  if (budget == null) return '—'
+  return `$${budget.toLocaleString('en-US')}`
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}/${mm}/${yyyy}`
+}
+
+function mapApiProposal(p: ApiProposal): Proposal {
+  const validStatuses = new Set<Proposal['status']>(['draft', 'sent', 'accepted', 'rejected'])
+  const status: Proposal['status'] = validStatuses.has(p.status as Proposal['status'])
+    ? (p.status as Proposal['status'])
+    : 'draft'
+  return {
+    id: p.id,
+    title: p.title ?? 'Sin título',
+    client: p.client_id,
+    status,
+    value: formatBudget(p.context?.budget),
+    date: formatDate(p.created_at),
+  }
+}
 
 const STATUS_STYLES: Record<Proposal['status'], string> = {
   accepted: 'bg-green-50 text-green-700',
@@ -62,9 +97,68 @@ const STATUS_OPTIONS = [
   { value: 'rejected', label: 'Rechazadas' },
 ]
 
+// Skeleton row — 5 cells matching the table columns
+function SkeletonRows({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <tr key={i} className="border-b border-gray-50">
+          {/* Propuesta (title + client) */}
+          <td className="px-5 py-3.5">
+            <div className="h-3.5 w-48 bg-gray-200 rounded animate-pulse mb-1.5" />
+            <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+          </td>
+          {/* Estado */}
+          <td className="px-5 py-3.5">
+            <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+          </td>
+          {/* Valor */}
+          <td className="px-5 py-3.5">
+            <div className="h-3.5 w-16 bg-gray-200 rounded animate-pulse" />
+          </td>
+          {/* Fecha */}
+          <td className="px-5 py-3.5">
+            <div className="h-3.5 w-20 bg-gray-200 rounded animate-pulse" />
+          </td>
+          {/* Acciones */}
+          <td className="px-5 py-3.5">
+            <div className="h-6 w-6 bg-gray-100 rounded animate-pulse" />
+          </td>
+        </tr>
+      ))}
+    </>
+  )
+}
+
 export default function ProposalsPage() {
+  const { orgId } = useAuth()
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [globalFilter, setGlobalFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+
+  const fetchProposals = useCallback(async () => {
+    if (!orgId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetchWithTenant('/proposals?limit=50&offset=0', orgId)
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`)
+      }
+      const json: ApiResponse = await res.json()
+      setProposals(json.data.map(mapApiProposal))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar propuestas')
+    } finally {
+      setLoading(false)
+    }
+  }, [orgId])
+
+  useEffect(() => {
+    fetchProposals()
+  }, [fetchProposals])
 
   const columns = useMemo<ColumnDef<Proposal>[]>(
     () => [
@@ -138,7 +232,7 @@ export default function ProposalsPage() {
   )
 
   const filteredData = useMemo(() => {
-    let data = MOCK_PROPOSALS
+    let data = proposals
     if (statusFilter) data = data.filter((p) => p.status === statusFilter)
     if (globalFilter) {
       const q = globalFilter.toLowerCase()
@@ -149,7 +243,7 @@ export default function ProposalsPage() {
       )
     }
     return data
-  }, [globalFilter, statusFilter])
+  }, [proposals, globalFilter, statusFilter])
 
   const table = useReactTable({
     data: filteredData,
@@ -200,8 +294,45 @@ export default function ProposalsPage() {
         </select>
       </div>
 
+      {/* Error state */}
+      {error && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-4">
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={fetchProposals}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && !error && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Propuesta', 'Estado', 'Valor', 'Fecha', ''].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3.5"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <SkeletonRows count={5} />
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Table */}
-      {filteredData.length === 0 ? (
+      {!loading && !error && filteredData.length === 0 && (
         <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl">
           <div className="text-4xl mb-3">📄</div>
           <h3 className="text-base font-semibold text-gray-900 mb-1">Sin propuestas</h3>
@@ -218,7 +349,9 @@ export default function ProposalsPage() {
             Crear propuesta
           </Link>
         </div>
-      ) : (
+      )}
+
+      {!loading && !error && filteredData.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>

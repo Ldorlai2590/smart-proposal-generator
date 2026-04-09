@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
-import { FileText, Download, Mail, Share2, Plus, Building2, Bold, Italic } from 'lucide-react'
+import { FileText, Download, Mail, Share2, Plus, Building2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { ProposalSectionEditor } from '@/components/editor/ProposalSectionEditor'
 import type { ClientData } from './Step1Client'
 import type { ProposalSections } from './Step3Generate'
+
+// ─── Section metadata ─────────────────────────────────────────────────────────
 
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
   resumenEjecutivo: 'Resumen Ejecutivo',
@@ -22,149 +22,119 @@ const SECTION_LABELS: Record<keyof ProposalSections, string> = {
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'resumenEjecutivo', 'problema', 'solucion', 'alcance',
-  'timeline', 'inversion', 'proximosPasos',
+  'resumenEjecutivo',
+  'problema',
+  'solucion',
+  'alcance',
+  'timeline',
+  'inversion',
+  'proximosPasos',
 ]
 
-interface SectionEditorProps {
-  sectionKey: keyof ProposalSections
-  initialContent: string
-  onChange: (key: keyof ProposalSections, text: string) => void
-}
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-function SectionEditor({ sectionKey, initialContent, onChange }: SectionEditorProps) {
-  const [focused, setFocused] = useState(false)
-  const [hovered, setHovered] = useState(false)
+type ExportFormat = 'pdf' | 'docx' | 'email'
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({
-        placeholder: 'Escribe aquí...',
-      }),
-    ],
-    content: initialContent
-      ? `<p>${initialContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
-      : '',
-    editable: true,
-    onUpdate: ({ editor }) => {
-      onChange(sectionKey, editor.getText())
-    },
-    onFocus: () => setFocused(true),
-    onBlur: () => setFocused(false),
-  })
-
-  const showToolbar = focused || hovered
-
-  return (
-    <div
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Minimal toolbar — only visible on focus/hover */}
-      <div
-        className={`flex items-center gap-1 mb-1.5 transition-opacity duration-150 ${
-          showToolbar ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <button
-          type="button"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            editor?.chain().focus().toggleBold().run()
-          }}
-          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-            editor?.isActive('bold') ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
-          }`}
-          title="Negrita"
-        >
-          <Bold className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            editor?.chain().focus().toggleItalic().run()
-          }}
-          className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-            editor?.isActive('italic') ? 'bg-gray-100 text-gray-900' : 'text-gray-400'
-          }`}
-          title="Cursiva"
-        >
-          <Italic className="h-3.5 w-3.5" />
-        </button>
-        <div className="w-px h-3.5 bg-gray-200 mx-0.5" />
-        <span className="text-[10px] text-gray-300 select-none">editar</span>
-      </div>
-
-      <EditorContent
-        editor={editor}
-        className={`
-          text-base text-gray-600 leading-relaxed
-          rounded-md transition-colors duration-150
-          [&_.tiptap]:outline-none
-          [&_.tiptap]:min-h-[1.5em]
-          [&_.tiptap_p]:mb-3
-          [&_.tiptap_p:last-child]:mb-0
-          [&_.tiptap_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]
-          [&_.tiptap_.is-editor-empty:first-child::before]:text-gray-300
-          [&_.tiptap_.is-editor-empty:first-child::before]:float-left
-          [&_.tiptap_.is-editor-empty:first-child::before]:pointer-events-none
-          [&_.tiptap_.is-editor-empty:first-child::before]:h-0
-          ${focused ? 'bg-gray-50/60 rounded px-2 -mx-2' : ''}
-        `}
-      />
-    </div>
-  )
+interface ExportToast {
+  format: ExportFormat
+  status: 'success' | 'error'
+  message: string
 }
 
 interface Step4ReviewProps {
   client: ClientData
   sections: ProposalSections
+  proposalId: string
   onBack: () => void
 }
 
-export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function Step4Review({ client, sections, proposalId, onBack }: Step4ReviewProps) {
+  // editedSections stores raw HTML from TipTap (richer than plain text)
   const [editedSections, setEditedSections] = useState<ProposalSections>(sections)
-  const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null)
+  const [exporting, setExporting] = useState<ExportFormat | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [toast, setToast] = useState<ExportToast | null>(null)
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleSectionChange = useCallback(
-    (key: keyof ProposalSections, text: string) => {
-      setEditedSections((prev) => ({ ...prev, [key]: text }))
+    (key: keyof ProposalSections, html: string) => {
+      setEditedSections((prev) => ({ ...prev, [key]: html }))
     },
     [],
   )
 
-  async function handleExport(format: 'pdf' | 'docx') {
+  const handleSaveStart = useCallback(() => {
+    setIsSaving(true)
+    // Auto-reset after 1.5 s (section editors clear themselves at 1.2 s)
+    setTimeout(() => setIsSaving(false), 1500)
+  }, [])
+
+  function showToast(format: ExportFormat, status: 'success' | 'error', message: string) {
+    setToast({ format, status, message })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  async function handleExport(format: ExportFormat) {
     setExporting(format)
     try {
       const res = await fetch('/api/proposals/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sections: editedSections, client, format }),
+        body: JSON.stringify({
+          proposalId,
+          sections: editedSections,
+          client,
+          format,
+        }),
       })
-      if (res.ok) {
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${format}`
-        a.click()
-        URL.revokeObjectURL(url)
+
+      if (!res.ok) {
+        let errorMsg = `Error ${res.status}`
+        try {
+          const errBody = (await res.json()) as { error?: string }
+          if (errBody.error) errorMsg = errBody.error
+        } catch {
+          // ignore parse error
+        }
+        showToast(format, 'error', errorMsg)
+        return
       }
+
+      if (format === 'email') {
+        showToast('email', 'success', 'Propuesta enviada por email correctamente.')
+        return
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${format}`
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast(format, 'success', `${format.toUpperCase()} descargado correctamente.`)
+    } catch (err: unknown) {
+      console.error('[Step4] export error:', err)
+      showToast(format, 'error', 'Error de conexión. Intenta nuevamente.')
     } finally {
       setExporting(null)
     }
   }
 
   const today = new Date().toLocaleDateString('es-ES', {
-    year: 'numeric', month: 'long', day: 'numeric',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   })
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex gap-6 items-start">
-      {/* Document preview */}
+      {/* ── Document preview ── */}
       <div className="flex-1 min-w-0">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden">
           {/* Document header */}
@@ -191,16 +161,13 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
             {SECTION_ORDER.map((key, i) => (
               <div key={key}>
                 {i > 0 && <Separator className="mb-8" />}
-                <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#1D9E75] bg-[#e6f7f2] px-2 py-0.5 rounded">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  {SECTION_LABELS[key]}
-                </h2>
-                <SectionEditor
+                <ProposalSectionEditor
                   sectionKey={key}
+                  label={SECTION_LABELS[key]}
+                  index={i}
                   initialContent={sections[key] ?? ''}
                   onChange={handleSectionChange}
+                  onSaveStart={handleSaveStart}
                 />
               </div>
             ))}
@@ -215,12 +182,18 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
         </div>
       </div>
 
-      {/* Actions sidebar */}
-      <div className="w-52 flex-shrink-0 sticky top-6">
+      {/* ── Actions sidebar ── */}
+      <div className="w-52 flex-shrink-0 sticky top-6 space-y-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Exportar
-          </p>
+          {/* Saving indicator (sidebar level) */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Exportar
+            </p>
+            {isSaving && (
+              <span className="text-[10px] text-gray-400 animate-pulse">Guardando...</span>
+            )}
+          </div>
 
           <Button
             className="w-full justify-start gap-2 bg-[#1D9E75] hover:bg-[#158a63] text-white"
@@ -228,7 +201,11 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
             onClick={() => handleExport('pdf')}
             disabled={!!exporting}
           >
-            <FileText className="h-4 w-4" />
+            {exporting === 'pdf' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
             {exporting === 'pdf' ? 'Generando...' : 'PDF'}
           </Button>
 
@@ -239,7 +216,11 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
             onClick={() => handleExport('docx')}
             disabled={!!exporting}
           >
-            <Download className="h-4 w-4" />
+            {exporting === 'docx' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             {exporting === 'docx' ? 'Generando...' : 'Word (.docx)'}
           </Button>
 
@@ -247,10 +228,15 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
             variant="outline"
             className="w-full justify-start gap-2"
             size="sm"
-            disabled
+            onClick={() => handleExport('email')}
+            disabled={!!exporting}
           >
-            <Mail className="h-4 w-4" />
-            Enviar por email
+            {exporting === 'email' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4" />
+            )}
+            {exporting === 'email' ? 'Enviando...' : 'Enviar por email'}
           </Button>
 
           <Button
@@ -275,6 +261,24 @@ export function Step4Review({ client, sections, onBack }: Step4ReviewProps) {
             Nueva propuesta
           </Button>
         </div>
+
+        {/* Toast notification */}
+        {toast && (
+          <div
+            className={`rounded-xl border p-3 text-xs flex items-start gap-2 shadow-sm transition-all ${
+              toast.status === 'success'
+                ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]'
+                : 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]'
+            }`}
+          >
+            {toast.status === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5 text-[#16A34A]" />
+            ) : (
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-[#DC2626]" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        )}
       </div>
     </div>
   )

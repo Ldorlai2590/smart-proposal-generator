@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { Search, Plus, Building2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { fetchWithTenant } from '@/lib/api'
 
 export interface ClientData {
   id: string
@@ -44,9 +46,6 @@ interface ApiListResponse {
 
 const INDUSTRIES = ['Tecnología', 'Retail', 'Salud', 'Educación', 'Finanzas', 'Manufactura', 'Logística', 'Otro']
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-const TENANT_HEADER = { 'X-Tenant-ID': 'dev-tenant', 'Content-Type': 'application/json' }
-
 function mapApiClient(c: ApiClient): ClientData {
   return {
     id: c.id,
@@ -60,6 +59,7 @@ function mapApiClient(c: ApiClient): ClientData {
 }
 
 export function Step1Client({ onNext }: Step1ClientProps) {
+  const { orgId } = useAuth()
   const [query, setQuery] = useState('')
   const [clients, setClients] = useState<ClientData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -79,12 +79,13 @@ export function Step1Client({ onNext }: Step1ClientProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchClients = useCallback(async (search: string) => {
+    if (!orgId) return
     setIsLoading(true)
     setFetchError(null)
     try {
       const params = new URLSearchParams({ page: '1', per_page: '20' })
       if (search) params.set('search', search)
-      const res = await fetch(`${API_BASE}/clients/?${params.toString()}`, { headers: TENANT_HEADER })
+      const res = await fetchWithTenant(`/clients/?${params.toString()}`, orgId)
       if (!res.ok) throw new Error(`Error ${res.status}`)
       const data: ApiListResponse = await res.json()
       setClients(data.items.map(mapApiClient))
@@ -94,7 +95,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [orgId])
 
   // Initial load
   useEffect(() => {
@@ -111,7 +112,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
   }
 
   async function handleCreate() {
-    if (!newClient.name || !newClient.company) return
+    if (!newClient.name || !newClient.company || !orgId) return
     setIsCreating(true)
     setCreateError(null)
     try {
@@ -122,9 +123,8 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         industry: newClient.industry || null,
         company_size: newClient.companySize || null,
       }
-      const res = await fetch(`${API_BASE}/clients/`, {
+      const res = await fetchWithTenant('/clients/', orgId, {
         method: 'POST',
-        headers: TENANT_HEADER,
         body: JSON.stringify(body),
       })
       if (!res.ok) {
@@ -232,7 +232,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         <div className="pt-2">
           <Button
             onClick={handleCreate}
-            disabled={!newClient.name || !newClient.company || isCreating}
+            disabled={!newClient.name || !newClient.company || isCreating || !orgId}
             className="w-full"
             size="lg"
           >

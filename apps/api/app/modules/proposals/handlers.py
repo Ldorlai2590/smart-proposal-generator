@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -13,6 +14,9 @@ from app.modules.proposals.queries import GetProposalQuery, ListProposalsQuery
 
 
 async def handle_create_proposal(cmd: CreateProposalCommand, db: AsyncSession) -> Proposal:
+    # If sections are provided upfront (AI-generated save), set status to "generated"
+    status = "generated" if cmd.sections else "draft"
+
     proposal = Proposal(
         id=uuid4(),
         tenant_id=cmd.tenant_id,
@@ -21,9 +25,14 @@ async def handle_create_proposal(cmd: CreateProposalCommand, db: AsyncSession) -
         title=cmd.title,
         template_id=cmd.template_id,
         context=cmd.context,
+        sections=cmd.sections,
+        tokens_used=cmd.tokens_used,
+        model=cmd.model,
+        status=status,
     )
     db.add(proposal)
     await db.flush()
+    await db.refresh(proposal)
     return proposal
 
 
@@ -55,6 +64,27 @@ async def handle_update_sections(cmd: UpdateProposalSectionsCommand, db: AsyncSe
     proposal.tokens_used = cmd.tokens_used
     proposal.model = cmd.model
     proposal.status = "generated"
+    proposal.updated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(proposal)
+    return proposal
+
+
+async def handle_update_status(cmd: UpdateProposalStatusCommand, db: AsyncSession) -> Proposal:
+    result = await db.execute(
+        select(Proposal).where(
+            Proposal.tenant_id == cmd.tenant_id,
+            Proposal.id == cmd.proposal_id,
+        )
+    )
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Propuesta no encontrada")
+
+    proposal.status = cmd.status
+    proposal.updated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await db.refresh(proposal)
     return proposal
 
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Literal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +9,14 @@ from app.core.database import get_db
 from app.shared.tenant import require_tenant
 from app.modules.proposals.handlers import handle_get_proposal
 from app.modules.proposals.queries import GetProposalQuery
-from app.modules.exports.pdf import generate_pdf, generate_pdf_from_sections
+from app.modules.exports.pdf import generate_pdf_from_sections
 from app.modules.exports.docx import generate_docx
+from app.modules.exports.email import send_proposal_email
+from app.modules.exports.schemas import (
+    DocxExportResponse,
+    EmailExportRequest,
+    EmailExportResponse,
+)
 
 router = APIRouter(prefix="/exports", tags=["exports"])
 
@@ -80,7 +86,7 @@ async def export_proposal(body: ExportRequest) -> Response:
 
 
 # ---------------------------------------------------------------------------
-# Legacy endpoints that look up a saved proposal from the DB
+# DB-backed endpoints — look up a saved proposal by proposal_id + tenant_id
 # ---------------------------------------------------------------------------
 
 @router.post("/proposals/{proposal_id}/pdf")
@@ -88,7 +94,7 @@ async def export_pdf(
     proposal_id: UUID,
     tenant_id: str = Depends(require_tenant),
     db: AsyncSession = Depends(get_db),
-):
+) -> Response:
     proposal = await handle_get_proposal(
         GetProposalQuery(tenant_id=tenant_id, proposal_id=proposal_id), db
     )
@@ -104,19 +110,69 @@ async def export_pdf(
     )
 
 
-@router.post("/proposals/{proposal_id}/docx")
+@router.post("/proposals/{proposal_id}/docx", response_model=DocxExportResponse)
 async def export_docx(
     proposal_id: UUID,
     tenant_id: str = Depends(require_tenant),
     db: AsyncSession = Depends(get_db),
-):
+) -> Response:
+    """
+    Generate a DOCX for a saved proposal.
+
+    - Tenant-scoped: only returns the proposal if tenant_id matches.
+    - Cover page: title + client name (from context) + today's date.
+    - Headings coloured with brand green #1D9E75.
+    - Returns the file as a direct download (Content-Disposition: attachment).
+    """
     proposal = await handle_get_proposal(
         GetProposalQuery(tenant_id=tenant_id, proposal_id=proposal_id), db
     )
+
     sections = proposal.sections if isinstance(proposal.sections, dict) else {}
-    docx_bytes = generate_docx(sections, "", proposal.title or "")
+
+    # Best-effort client name from the proposal context
+    context: dict = proposal.context if isinstance(proposal.context, dict) else {}
+    client_name: str = context.get("client_name", "") or context.get("clientName", "")
+    company: str = context.get("company", "") or context.get("client_company", "")
+
+    docx_bytes = generate_docx(
+        sections=sections,
+        client_name=client_name,
+        company=company,
+        title=proposal.title or "",
+    )
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename=propuesta-{proposal_id}.docx"},
+    )
+
+
+@router.post("/proposals/{proposal_id}/email", response_model=EmailExportResponse)
+async def export_email(
+    proposal_id: UUID,
+    body: EmailExportRequest,
+    tenant_id: str = Depends(require_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> EmailExportResponse:
+    """
+    Send a proposal by email via Resend.
+
+    - Tenant-scoped: only sends if tenant_id matches.
+    - Builds an HTML email with all non-empty sections.
+    - Uses settings.RESEND_API_KEY and settings.EMAIL_FROM from .env.
+    """
+    proposal = await handle_get_proposal(
+        GetProposalQuery(tenant_id=tenant_id, proposal_id=proposal_id), db
+    )
+
+    try:
+        await send_proposal_email(proposal, str(body.recipient_email))
+    except RuntimeError as exc:
+        # RESEND_API_KEY not configured
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return EmailExportResponse(
+        success=True,
+        message=f"Propuesta enviada correctamente a {body.recipient_email}",
     )

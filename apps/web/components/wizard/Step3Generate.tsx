@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { experimental_useObject as useObject } from 'ai/react'
 import { z } from 'zod/v4'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2, Sparkles } from 'lucide-react'
+import { useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { fetchWithTenant } from '@/lib/api'
 import type { ClientData } from './Step1Client'
 import type { ContextData } from './Step2Context'
 
@@ -48,15 +50,23 @@ const SECTION_ORDER: (keyof ProposalSections)[] = [
 interface Step3GenerateProps {
   client: ClientData
   context: ContextData
-  onNext: (sections: ProposalSections) => void
+  onNext: (sections: ProposalSections, proposalId: string) => void
   onBack: () => void
 }
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
 export function Step3Generate({ client, context, onNext, onBack }: Step3GenerateProps) {
+  const { orgId, userId } = useAuth()
   const { object, submit, isLoading, error } = useObject<ProposalSections>({
     api: '/api/proposals/stream',
     schema: ProposalSectionSchema,
   })
+
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [proposalId, setProposalId] = useState<string | null>(null)
+  // Track whether we already fired the save to avoid duplicate POSTs
+  const hasSavedRef = useRef(false)
 
   const partial = object as Partial<ProposalSections> | undefined
 
@@ -77,6 +87,52 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
   const completedCount = SECTION_ORDER.filter((k) => !!partial?.[k]).length
   const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
   const isComplete = !isLoading && completedCount === SECTION_ORDER.length
+
+  // Save to FastAPI once streaming finishes
+  useEffect(() => {
+    if (!isComplete || hasSavedRef.current || !partial) return
+    if (!orgId || !userId) return
+
+    hasSavedRef.current = true
+    setSaveState('saving')
+
+    const title = `Propuesta para ${client.company || client.name}`
+    const body = {
+      client_id: client.id,
+      title,
+      template_id: context.template,
+      context: {
+        problem: context.problema,
+        budget: context.budget,
+        timeline: context.timeline,
+      },
+      sections: partial as ProposalSections,
+      tokens_used: 0,
+      model: 'claude-sonnet-4-5',
+      status: 'generated',
+    }
+
+    fetchWithTenant('/proposals', orgId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Clerk-User-ID': userId,
+      },
+      body: JSON.stringify(body),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`FastAPI ${res.status}`)
+        const data = (await res.json()) as { id: string; status: string; created_at: string }
+        setProposalId(data.id)
+        setSaveState('saved')
+      })
+      .catch((err: unknown) => {
+        console.error('[Step3] save failed:', err)
+        setSaveState('error')
+        // Allow advancing even on save error — user can retry from Step4
+        setProposalId('')
+      })
+  }, [isComplete, orgId, userId, partial, client, context])
 
   function getStatus(key: keyof ProposalSections): 'done' | 'streaming' | 'pending' {
     if (partial?.[key]) return 'done'
@@ -100,9 +156,26 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
             />
           </div>
           <div className="flex-1">
-            <p className="text-white text-sm font-semibold">
-              {isComplete ? '¡Propuesta generada!' : isLoading ? 'Claude está generando...' : error ? 'Error al generar' : 'Listo para revisar'}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-white text-sm font-semibold">
+                {isComplete ? '¡Propuesta generada!' : isLoading ? 'Claude está generando...' : error ? 'Error al generar' : 'Listo para revisar'}
+              </p>
+              {saveState === 'saving' && (
+                <span className="flex items-center gap-1 text-[10px] text-[#94A3B8] animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Guardando...
+                </span>
+              )}
+              {saveState === 'saved' && (
+                <span className="flex items-center gap-1 text-[10px] text-[#1D9E75]">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Guardado ✓
+                </span>
+              )}
+              {saveState === 'error' && (
+                <span className="text-[10px] text-red-400">No se pudo guardar</span>
+              )}
+            </div>
             <p className="text-[#94A3B8] text-xs">{client.company} · {context.template}</p>
           </div>
           <div className="text-right">
@@ -187,12 +260,23 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
           Atrás
         </Button>
         <Button
-          onClick={() => isComplete && onNext(partial as ProposalSections)}
-          disabled={!isComplete}
+          onClick={() => {
+            if (isComplete && partial && proposalId !== null) {
+              onNext(partial as ProposalSections, proposalId)
+            }
+          }}
+          disabled={!isComplete || saveState === 'saving' || proposalId === null}
           size="lg"
           className="flex-1 bg-[#1D9E75] hover:bg-[#158a63] text-white"
         >
-          Revisar propuesta →
+          {saveState === 'saving' ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Guardando...
+            </span>
+          ) : (
+            'Revisar propuesta →'
+          )}
         </Button>
       </div>
     </div>

@@ -9,6 +9,7 @@ class CreateClientCommand(BaseModel):
     email: str | None = None
     industry: str | None = None
     company_size: str | None = None
+    score: int = 0
 
 
 class UpdateClientCommand(BaseModel):

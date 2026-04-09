@@ -21,6 +21,7 @@ export function ProposalWizard() {
   const [client, setClient] = useState<ClientData | null>(null)
   const [context, setContext] = useState<ContextData | null>(null)
   const [sections, setSections] = useState<ProposalSections | null>(null)
+  const [proposalId, setProposalId] = useState<string>('')
 
   const { title, subtitle } = STEP_TITLES[step - 1]
 
@@ -83,8 +84,9 @@ export function ProposalWizard() {
               <Step3Generate
                 client={client}
                 context={context}
-                onNext={(s) => {
+                onNext={(s, pid) => {
                   setSections(s)
+                  setProposalId(pid)
                   setStep(4)
                 }}
                 onBack={() => setStep(2)}
@@ -95,6 +97,7 @@ export function ProposalWizard() {
               <Step4Review
                 client={client}
                 sections={sections}
+                proposalId={proposalId}
                 onBack={() => setStep(3)}
               />
             )}

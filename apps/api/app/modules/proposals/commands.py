@@ -9,6 +9,9 @@ class CreateProposalCommand(BaseModel):
     title: str | None = None
     template_id: str | None = None
     context: dict = {}
+    sections: dict = {}
+    tokens_used: int = 0
+    model: str | None = None
 
 
 class UpdateProposalSectionsCommand(BaseModel):

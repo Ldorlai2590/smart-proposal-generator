@@ -1,8 +1,12 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import * as schema from '@/db/schema'
 
-const connectionString = process.env.DIRECT_URL!
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set')
+}
 
-// Para queries (pooled en producción)
-const client = postgres(connectionString, { prepare: false })
-export const db = drizzle(client)
+// Pooled connection (pgBouncer / Supabase pooler) — disable prepared statements
+const client = postgres(process.env.DATABASE_URL, { prepare: false })
+
+export const db = drizzle(client, { schema })
