@@ -45,6 +45,9 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
 
+# Custom server that serves static files (standalone server.js doesn't)
+COPY --from=builder /app/apps/web/server.custom.js ./apps/web/server.custom.js
+
 # Prompts YAML files
 COPY --from=builder /app/packages/prompts ./packages/prompts
 
@@ -53,4 +56,4 @@ COPY --from=builder /app/packages/prompts ./packages/prompts
 # STRIPE_SECRET_KEY, RESEND_API_KEY, DOCUFORGE_API_KEY
 
 EXPOSE 7860
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "apps/web/server.custom.js"]
