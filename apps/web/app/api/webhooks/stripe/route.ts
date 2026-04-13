@@ -20,9 +20,7 @@ let stripeClient: Stripe | null = null
 async function getStripe(): Promise<Stripe> {
   if (stripeClient) return stripeClient
   const { default: Stripe } = await import('stripe')
-  stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-    apiVersion: '2025-08-27.basil',
-  })
+  stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
   return stripeClient
 }
 
