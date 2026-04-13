@@ -13,19 +13,21 @@ from app.modules.proposals.models import Proposal
 SECTION_LABELS: dict[str, str] = {
     "resumenEjecutivo": "Resumen Ejecutivo",
     "problema": "El Problema",
-    "solucion": "Nuestra Solución",
-    "alcance": "Alcance del Proyecto",
+    "serviciosPropuestos": "Servicios Propuestos",
+    "alcancePorServicio": "Alcance por Servicio",
     "timeline": "Cronograma",
     "inversion": "Inversión",
+    "casoDeExito": "Caso de Éxito",
     "proximosPasos": "Próximos Pasos",
 }
 SECTION_ORDER = [
     "resumenEjecutivo",
     "problema",
-    "solucion",
-    "alcance",
+    "serviciosPropuestos",
+    "alcancePorServicio",
     "timeline",
     "inversion",
+    "casoDeExito",
     "proximosPasos",
 ]
 

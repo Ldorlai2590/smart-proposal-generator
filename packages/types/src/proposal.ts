@@ -1,10 +1,11 @@
 export interface ProposalSections {
   resumenEjecutivo: string
   problema: string
-  solucion: string
-  alcance: string
+  serviciosPropuestos: string
+  alcancePorServicio: string
   timeline: string
   inversion: string
+  casoDeExito?: string
   proximosPasos: string
 }
 

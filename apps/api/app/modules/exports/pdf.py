@@ -4,13 +4,14 @@ from app.core.config import settings
 SECTION_LABELS: dict[str, str] = {
     "resumenEjecutivo": "Resumen Ejecutivo",
     "problema": "El Problema",
-    "solucion": "Nuestra Solución",
-    "alcance": "Alcance del Proyecto",
+    "serviciosPropuestos": "Servicios Propuestos",
+    "alcancePorServicio": "Alcance por Servicio",
     "timeline": "Cronograma",
     "inversion": "Inversión",
+    "casoDeExito": "Caso de Éxito",
     "proximosPasos": "Próximos Pasos",
 }
-SECTION_ORDER = ["resumenEjecutivo", "problema", "solucion", "alcance", "timeline", "inversion", "proximosPasos"]
+SECTION_ORDER = ["resumenEjecutivo", "problema", "serviciosPropuestos", "alcancePorServicio", "timeline", "inversion", "casoDeExito", "proximosPasos"]
 
 
 def _sections_to_html(sections: dict[str, str], client_name: str, company: str) -> str:

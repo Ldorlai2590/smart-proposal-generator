@@ -1,11 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Plus, Building2, TrendingUp, Users } from 'lucide-react'
+import { Search, Plus, Building2, TrendingUp, Users, AlertCircle } from 'lucide-react'
 import { useAuth } from '@clerk/nextjs'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { fetchWithTenant } from '@/lib/api'
+import { z } from 'zod/v4'
 
 interface Client {
   id: string
@@ -40,6 +43,20 @@ const AVATAR_COLORS = [
   'from-pink-500 to-rose-600',
   'from-indigo-500 to-blue-600',
 ]
+
+// Zod schema for client creation
+const clientFormSchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido').trim(),
+  company: z.string().min(1, 'La empresa es requerida').trim(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  industry: z.string().optional(),
+  company_size: z.string().optional(),
+})
+
+type ClientFormData = z.infer<typeof clientFormSchema>
+
+const INDUSTRY_OPTIONS = ['Tecnología', 'Finanzas', 'Salud', 'Educación', 'Retail', 'Manufactura', 'Servicios', 'Otro']
+const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+']
 
 function mapApiClient(apiClient: ApiClient): Client {
   return {
@@ -78,6 +95,229 @@ function ClientCardSkeleton({ index }: { index: number }) {
   )
 }
 
+function NewClientDialog({
+  open,
+  onOpenChange,
+  onClientCreated,
+  orgId,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onClientCreated: () => void
+  orgId: string
+}) {
+  const [formData, setFormData] = useState<ClientFormData>({
+    name: '',
+    company: '',
+    email: '',
+    industry: '',
+    company_size: '',
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError] = useState('')
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
+    }
+    setApiError('')
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrors({})
+    setApiError('')
+
+    try {
+      // Validate form data
+      const validated = clientFormSchema.parse(formData)
+
+      setSubmitting(true)
+      const res = await fetchWithTenant('/clients', orgId, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: validated.name,
+          company: validated.company,
+          email: validated.email || null,
+          industry: validated.industry || null,
+          company_size: validated.company_size || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        setApiError(
+          errorData.detail || `Error al crear cliente (${res.status})`
+        )
+        return
+      }
+
+      // Success
+      setFormData({
+        name: '',
+        company: '',
+        email: '',
+        industry: '',
+        company_size: '',
+      })
+      onOpenChange(false)
+      onClientCreated()
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {}
+        err.errors.forEach((error) => {
+          const path = error.path[0]
+          if (path) {
+            fieldErrors[path] = error.message
+          }
+        })
+        setErrors(fieldErrors)
+      } else {
+        setApiError('Error al crear el cliente. Intenta de nuevo.')
+        console.error('Create client error:', err)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nuevo cliente</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {apiError && (
+            <div className="flex gap-2 rounded-lg bg-red-50 border border-red-200 p-3">
+              <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{apiError}</p>
+            </div>
+          )}
+
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Ej: Juan García"
+              disabled={submitting}
+              aria-invalid={!!errors.name}
+            />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+
+          {/* Company */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Empresa <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              name="company"
+              value={formData.company}
+              onChange={handleChange}
+              placeholder="Ej: Acme Inc."
+              disabled={submitting}
+              aria-invalid={!!errors.company}
+            />
+            {errors.company && <p className="text-xs text-red-600 mt-1">{errors.company}</p>}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <Input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Ej: juan@acme.com"
+              disabled={submitting}
+              aria-invalid={!!errors.email}
+            />
+            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+          </div>
+
+          {/* Industry */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Industria</label>
+            <select
+              name="industry"
+              value={formData.industry}
+              onChange={handleChange}
+              disabled={submitting}
+              className="h-8 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-[#1D9E75] focus-visible:ring-3 focus-visible:ring-[#1D9E75]/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Selecciona una industria</option>
+              {INDUSTRY_OPTIONS.map((ind) => (
+                <option key={ind} value={ind}>
+                  {ind}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Company Size */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tamaño de empresa</label>
+            <select
+              name="company_size"
+              value={formData.company_size}
+              onChange={handleChange}
+              disabled={submitting}
+              className="h-8 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-[#1D9E75] focus-visible:ring-3 focus-visible:ring-[#1D9E75]/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Selecciona un tamaño</option>
+              {COMPANY_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size} empleados
+                </option>
+              ))}
+            </select>
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={submitting}
+            onClick={handleSubmit}
+            className="bg-[#1D9E75] text-white hover:bg-[#158a63]"
+          >
+            {submitting ? 'Creando...' : 'Crear cliente'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ClientsPage() {
   const { orgId } = useAuth()
   const [clients, setClients] = useState<Client[]>([])
@@ -85,6 +325,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [industry, setIndustry] = useState('Todas')
+  const [dialogOpen, setDialogOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchClients = useCallback(
@@ -146,11 +387,23 @@ export default function ClientsPage() {
             {loading ? 'Cargando...' : `${total} clientes registrados`}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 bg-[#1D9E75] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#158a63] transition-colors">
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="inline-flex items-center gap-2 bg-[#1D9E75] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#158a63] transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Nuevo cliente
         </button>
       </div>
+
+      {orgId && (
+        <NewClientDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onClientCreated={() => fetchClients(search)}
+          orgId={orgId}
+        />
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap gap-3 mb-6">

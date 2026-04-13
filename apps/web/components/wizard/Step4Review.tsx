@@ -14,20 +14,22 @@ import type { ProposalSections } from './Step3Generate'
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
   resumenEjecutivo: 'Resumen Ejecutivo',
   problema: 'El Problema',
-  solucion: 'Nuestra Solución',
-  alcance: 'Alcance del Proyecto',
+  serviciosPropuestos: 'Servicios Propuestos',
+  alcancePorServicio: 'Alcance por Servicio',
   timeline: 'Cronograma',
   inversion: 'Inversión',
+  casoDeExito: 'Caso de Éxito',
   proximosPasos: 'Próximos Pasos',
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
   'resumenEjecutivo',
   'problema',
-  'solucion',
-  'alcance',
+  'serviciosPropuestos',
+  'alcancePorServicio',
   'timeline',
   'inversion',
+  'casoDeExito',
   'proximosPasos',
 ]
 

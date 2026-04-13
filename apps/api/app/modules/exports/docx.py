@@ -11,19 +11,21 @@ BRAND_RGB = RGBColor(0x1D, 0x9E, 0x75)
 SECTION_LABELS: dict[str, str] = {
     "resumenEjecutivo": "Resumen Ejecutivo",
     "problema": "El Problema",
-    "solucion": "Nuestra Solución",
-    "alcance": "Alcance del Proyecto",
+    "serviciosPropuestos": "Servicios Propuestos",
+    "alcancePorServicio": "Alcance por Servicio",
     "timeline": "Cronograma",
     "inversion": "Inversión",
+    "casoDeExito": "Caso de Éxito",
     "proximosPasos": "Próximos Pasos",
 }
 SECTION_ORDER = [
     "resumenEjecutivo",
     "problema",
-    "solucion",
-    "alcance",
+    "serviciosPropuestos",
+    "alcancePorServicio",
     "timeline",
     "inversion",
+    "casoDeExito",
     "proximosPasos",
 ]
 

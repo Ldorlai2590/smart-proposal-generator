@@ -15,36 +15,39 @@ import type { ContextData } from './Step2Context'
 export interface ProposalSections {
   resumenEjecutivo: string
   problema: string
-  solucion: string
-  alcance: string
+  serviciosPropuestos: string
+  alcancePorServicio: string
   timeline: string
   inversion: string
+  casoDeExito?: string
   proximosPasos: string
 }
 
 const ProposalSectionSchema = z.object({
   resumenEjecutivo: z.string(),
   problema: z.string(),
-  solucion: z.string(),
-  alcance: z.string(),
+  serviciosPropuestos: z.string(),
+  alcancePorServicio: z.string(),
   timeline: z.string(),
   inversion: z.string(),
+  casoDeExito: z.string().optional(),
   proximosPasos: z.string(),
 })
 
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
   resumenEjecutivo: 'Resumen ejecutivo',
   problema: 'Problema',
-  solucion: 'Solución',
-  alcance: 'Alcance del proyecto',
+  serviciosPropuestos: 'Servicios propuestos',
+  alcancePorServicio: 'Alcance por servicio',
   timeline: 'Cronograma',
   inversion: 'Inversión',
+  casoDeExito: 'Caso de éxito',
   proximosPasos: 'Próximos pasos',
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'resumenEjecutivo', 'problema', 'solucion', 'alcance',
-  'timeline', 'inversion', 'proximosPasos',
+  'resumenEjecutivo', 'problema', 'serviciosPropuestos', 'alcancePorServicio',
+  'timeline', 'inversion', 'casoDeExito', 'proximosPasos',
 ]
 
 interface Step3GenerateProps {
@@ -84,9 +87,11 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const completedCount = SECTION_ORDER.filter((k) => !!partial?.[k]).length
-  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
-  const isComplete = !isLoading && completedCount === SECTION_ORDER.length
+  // casoDeExito is optional, so we count required fields (all except casoDeExito)
+  const requiredSections = SECTION_ORDER.filter((k) => k !== 'casoDeExito')
+  const completedCount = requiredSections.filter((k) => !!partial?.[k]).length
+  const progressPct = Math.round((completedCount / requiredSections.length) * 100)
+  const isComplete = !isLoading && completedCount === requiredSections.length
 
   // Save to FastAPI once streaming finishes
   useEffect(() => {

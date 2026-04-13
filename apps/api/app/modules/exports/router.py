@@ -28,10 +28,11 @@ router = APIRouter(prefix="/exports", tags=["exports"])
 class SectionsPayload(BaseModel):
     resumenEjecutivo: str = ""
     problema: str = ""
-    solucion: str = ""
-    alcance: str = ""
+    serviciosPropuestos: str = ""
+    alcancePorServicio: str = ""
     timeline: str = ""
     inversion: str = ""
+    casoDeExito: str = ""
     proximosPasos: str = ""
 
 

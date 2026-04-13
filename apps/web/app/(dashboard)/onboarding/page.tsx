@@ -1,5 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+import { eq } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { tenants } from '@/db/schema'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 
 export const metadata = {
@@ -15,15 +18,14 @@ export default async function OnboardingPage() {
     redirect('/sign-in')
   }
 
-  // TODO: Check if onboarding is already completed
-  // For now, render the wizard directly
-  // const tenant = await db.query.tenants.findFirst({
-  //   where: eq(tenants.clerkOrgId, orgId),
-  // })
-  //
-  // if (tenant?.onboardingCompleted) {
-  //   redirect('/dashboard')
-  // }
+  // Check if onboarding is already completed
+  const tenant = await db.query.tenants.findFirst({
+    where: eq(tenants.clerkOrgId, orgId),
+  })
+
+  if (tenant?.onboardingCompleted) {
+    redirect('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-slate-50">

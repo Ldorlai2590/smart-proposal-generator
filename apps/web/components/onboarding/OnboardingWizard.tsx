@@ -139,17 +139,21 @@ export function OnboardingWizard() {
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (skipped: boolean = false) => {
     setIsLoading(true)
     setError(null)
 
     try {
+      const payload = skipped
+        ? { skipped: true, businessType: null, industries: [], services: [], proposalSize: null, tone: null }
+        : data
+
       const response = await fetch('/api/onboarding', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -162,6 +166,10 @@ export function OnboardingWizard() {
       setError(err instanceof Error ? err.message : 'Error desconocido')
       setIsLoading(false)
     }
+  }
+
+  const handleSkip = () => {
+    handleSubmit(true)
   }
 
   return (
@@ -282,7 +290,7 @@ export function OnboardingWizard() {
           )}
 
           {/* Navigation buttons */}
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={handleBack}
               disabled={currentStep === 0 || isLoading}
@@ -312,6 +320,17 @@ export function OnboardingWizard() {
                   <ChevronRight className="h-4 w-4" />
                 </>
               )}
+            </button>
+          </div>
+
+          {/* Skip button */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleSkip}
+              disabled={isLoading}
+              className="text-sm text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-50"
+            >
+              Saltar por ahora
             </button>
           </div>
         </div>

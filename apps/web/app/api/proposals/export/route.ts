@@ -17,10 +17,11 @@ type ExportRequest = z.infer<typeof ExportRequestSchema>
 const SECTION_META: { key: string; label: string }[] = [
   { key: 'resumenEjecutivo', label: 'Resumen Ejecutivo' },
   { key: 'problema', label: 'El Problema' },
-  { key: 'solucion', label: 'Nuestra Solución' },
-  { key: 'alcance', label: 'Alcance del Proyecto' },
+  { key: 'serviciosPropuestos', label: 'Servicios Propuestos' },
+  { key: 'alcancePorServicio', label: 'Alcance por Servicio' },
   { key: 'timeline', label: 'Cronograma' },
   { key: 'inversion', label: 'Inversión' },
+  { key: 'casoDeExito', label: 'Caso de Éxito' },
   { key: 'proximosPasos', label: 'Próximos Pasos' },
 ]
 

@@ -9593,22 +9593,4 @@ snapshots:
     dependencies:
       yoctocolors: 2.1.2
 
-  yoctocolors-cjs@2.1.3: {}
-
-  yoctocolors@2.1.2: {}
-
-  zod-to-json-schema@3.25.2(zod@3.25.76):
-    dependencies:
-      zod: 3.25.76
-
-  zod-to-json-schema@3.25.2(zod@4.3.6):
-    dependencies:
-      zod: 4.3.6
-
-  zod-validation-error@4.0.2(zod@4.3.6):
-    dependencies:
-      zod: 4.3.6
-
-  zod@3.25.76: {}
-
-  zod@4.3.6: {}
+ 

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartSPG - CEO Review Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --brand: #1D9E75;
+    --brand-dark: #158a63;
+    --dark: #0F172A;
+    --slate-100: #F1F5F9;
+    --slate-200: #E2E8F0;
+    --slate-400: #94A3B8;
+    --slate-600: #475569;
+    --slate-800: #1E293B;
+    --red: #EF4444;
+    --amber: #F59E0B;
+    --green: #22C55E;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #F8FAFC;
+    color: #334155;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, var(--dark) 0%, #1a2744 100%);
+    border-radius: 20px;
+    padding: 60px 48px;
+    color: white;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -30%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(29,158,117,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .cover .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(29,158,117,0.2);
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cover h1 {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .cover h1 span { color: var(--brand); }
+  .cover .subtitle {
+    font-size: 17px;
+    color: var(--slate-400);
+    max-width: 500px;
+    position: relative;
+  }
+  .cover .meta {
+    margin-top: 32px;
+    display: flex;
+    gap: 32px;
+    font-size: 13px;
+    color: var(--slate-400);
+    position: relative;
+  }
+  .cover .meta strong { color: white; }
+
+  /* Score Card */
+  .score-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .score-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    border: 1px solid var(--slate-200);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .score-card .score {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .score-card .label {
+    font-size: 13px;
+    color: var(--slate-600);
+    font-weight: 500;
+  }
+  .score-card .bar {
+    height: 4px;
+    background: var(--slate-200);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .score-card .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  /* Sections */
+  .section {
+    background: white;
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 24px;
+    border: 1px solid var(--slate-200);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 20px 0 10px;
+  }
+
+  /* Status badges */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .status-ok { background: #DCFCE7; color: #166534; }
+  .status-warn { background: #FEF3C7; color: #92400E; }
+  .status-crit { background: #FEE2E2; color: #991B1B; }
+  .status-info { background: #DBEAFE; color: #1E40AF; }
+
+  /* Finding cards */
+  .finding {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin: 12px 0;
+    border-left: 4px solid;
+  }
+  .finding-critical {
+    background: #FFF5F5;
+    border-color: var(--red);
+  }
+  .finding-warning {
+    background: #FFFBEB;
+    border-color: var(--amber);
+  }
+  .finding-positive {
+    background: #F0FDF4;
+    border-color: var(--green);
+  }
+  .finding-info {
+    background: #EFF6FF;
+    border-color: #3B82F6;
+  }
+  .finding .title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .finding .desc {
+    font-size: 13px;
+    color: var(--slate-600);
+    line-height: 1.6;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--slate-100);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--slate-600);
+    border-bottom: 2px solid var(--slate-200);
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--slate-200);
+    vertical-align: top;
+  }
+
+  /* Priority row */
+  .priority-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .priority-item {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--slate-200);
+  }
+  .priority-item .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--brand);
+  }
+  .priority-item .text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-top: 4px;
+  }
+  .priority-item .detail {
+    font-size: 12px;
+    color: var(--slate-600);
+    margin-top: 4px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 32px 0;
+    color: var(--slate-400);
+    font-size: 13px;
+  }
+
+  @media (max-width: 700px) {
+    .score-row { grid-template-columns: repeat(2, 1fr); }
+    .priority-grid { grid-template-columns: 1fr; }
+    .cover { padding: 36px 24px; }
+    .cover h1 { font-size: 28px; }
+    .cover .meta { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="badge">Documento Confidencial</div>
+    <h1>Smart<span>SPG</span> &mdash; CEO Review</h1>
+    <p class="subtitle">Revision ejecutiva del producto, UX y preparacion para lanzamiento beta en el mercado LATAM.</p>
+    <div class="meta">
+      <div><strong>Fecha:</strong> 13 abril 2026</div>
+      <div><strong>Revisado por:</strong> AI Product Reviewer</div>
+      <div><strong>Version:</strong> Pre-Beta v0.9</div>
+    </div>
+  </div>
+
+  <!-- Overall Scores -->
+  <div class="score-row">
+    <div class="score-card">
+      <div class="score" style="color: var(--brand);">8.2</div>
+      <div class="label">UX / Diseno</div>
+      <div class="bar"><div class="bar-fill" style="width:82%; background: var(--brand);"></div></div>
+    </div>
+    <div class="score-card">
+      <div class="score" style="color: #3B82F6;">8.5</div>
+      <div class="label">Arquitectura</div>
+      <div class="bar"><div class="bar-fill" style="width:85%; background: #3B82F6;"></div></div>
+    </div>
+    <div class="score-card">
+      <div class="score" style="color: var(--amber);">7.0</div>
+      <div class="label">Completitud</div>
+      <div class="bar"><div class="bar-fill" style="width:70%; background: var(--amber);"></div></div>
+    </div>
+    <div class="score-card">
+      <div class="score" style="color: var(--red);">6.5</div>
+      <div class="label">Deploy Ready</div>
+      <div class="bar"><div class="bar-fill" style="width:65%; background: var(--red);"></div></div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: Landing Page -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #E0F2FE;">🏠</span>
+      1. Landing Page
+    </h2>
+    <p>La landing page tiene un diseno profesional y moderno. Hero con animacion de streaming IA, seccion "About Us", social proof, "How It Works", grid de features, tabla de precios, FAQ e integraciones.</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Propuesta de valor clara</div>
+      <div class="desc">"Propuestas comerciales multi-servicio, generadas con IA en minutos" &mdash; comunica el valor inmediatamente. El badge "Powered by Claude AI" genera confianza tecnica.</div>
+    </div>
+    <div class="finding finding-positive">
+      <div class="title">Pricing bien estructurado (3 tiers)</div>
+      <div class="desc">Starter (gratis 30 dias), Pro $49/mes (60 dias gratis &mdash; "popular"), Enterprise (contactar). El modelo freemium 30+30 es muy atractivo para LATAM.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Inconsistencia en dias de prueba</div>
+      <div class="desc">El Hero dice "60 dias sin tarjeta" pero Starter ofrece 30 dias sin tarjeta y Pro ofrece 60 (30 sin tarjeta + 30 con tarjeta). Esto puede confundir al usuario sobre que plan obtiene realmente.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Enterprise CTA lleva a mailto:hola@smartspg.io</div>
+      <div class="desc">El dominio smartspg.io no esta configurado aun. Esto dara error al usuario si intenta contactar ventas.</div>
+    </div>
+    <div class="finding finding-info">
+      <div class="title">Idioma 100% espanol</div>
+      <div class="desc">Excelente para el mercado LATAM target. Sin embargo, "Billing" en la navegacion lateral aparece en ingles &mdash; deberia ser "Facturacion" o "Plan".</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Auth -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #F0FDF4;">🔐</span>
+      2. Sign-In / Sign-Up
+    </h2>
+    <p>Autenticacion implementada con Clerk. Layout split-screen profesional: panel izquierdo con branding y trust items, panel derecho con formulario Clerk.</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Branding consistente en auth</div>
+      <div class="desc">Panel lateral con logo SmartSPG, trust items ("60 dias gratis", "Export PDF y Word", "Multi-servicio B2B"), y mensaje persuasivo. Muy profesional para SaaS B2B.</div>
+    </div>
+    <div class="finding finding-positive">
+      <div class="title">Flujo con Organizations de Clerk</div>
+      <div class="desc">Despues de sign-up redirige a select-org, donde el usuario crea su organizacion. Esto habilita multi-tenancy real desde el dia 1.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Sin validacion de dominio corporativo</div>
+      <div class="desc">Cualquier email puede registrarse. Para B2B LATAM seria valioso validar dominios corporativos o al menos sugerir email de empresa vs. Gmail.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Onboarding -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #FEF3C7;">🚀</span>
+      3. Onboarding (5 pasos)
+    </h2>
+    <p>Wizard de 5 pasos con chips seleccionables: tipo de negocio, industrias + servicios, tamano de propuestas, tono preferido, y confirmacion.</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Onboarding que personaliza la experiencia</div>
+      <div class="desc">Los datos de onboarding se guardan en metadata JSONB del tenant. Esto permite personalizar templates, tonos y sugerencias para cada empresa.</div>
+    </div>
+    <div class="finding finding-critical">
+      <div class="title">BUG: Validacion de onboarding comentada</div>
+      <div class="desc">En onboarding/page.tsx, la verificacion de si el onboarding ya fue completado esta comentada (lineas 18-26). Un usuario puede acceder al onboarding repetidamente o quedar atrapado en un loop.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Onboarding no se puede saltar</div>
+      <div class="desc">No hay boton "Saltar" o "Completar despues". Un CEO impaciente podria abandonar el producto aqui. Recomendacion: agregar opcion de skip con valores default.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Dashboard -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #EDE9FE;">📊</span>
+      4. Dashboard
+    </h2>
+    <p>Dashboard principal con saludo personalizado, 4 stat cards, tabla de propuestas recientes, y charts (donut + barras).</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Dashboard visualmente atractivo</div>
+      <div class="desc">Saludo contextual (Buenos dias/tardes/noches + nombre), stat cards con tendencias, tabla de propuestas recientes con badges de status, y graficos Recharts.</div>
+    </div>
+    <div class="finding finding-critical">
+      <div class="title">100% datos mock hardcodeados</div>
+      <div class="desc">Las 4 stat cards, la tabla de propuestas y los graficos usan datos ficticios estaticos. Un CEO que entre vera siempre "48 propuestas, $93.5K en valor" independientemente de su actividad real. Esto es CRITICO corregir antes de beta.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">CTA "Nueva propuesta" necesita mas prominencia</div>
+      <div class="desc">El boton esta arriba a la derecha pero el flujo principal del producto es generar propuestas. Considerar un empty state con CTA central cuando no hay propuestas.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: Proposal Wizard -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #FDF2F8;">✨</span>
+      5. Wizard de Propuestas (Core del Producto)
+    </h2>
+    <p>Wizard de 4 pasos: seleccionar cliente, definir contexto, generacion IA con streaming, revision y export.</p>
+
+    <h3>Paso 1 &mdash; Seleccion de Cliente</h3>
+    <div class="finding finding-positive">
+      <div class="title">Busqueda de clientes con debounce</div>
+      <div class="desc">Busca clientes existentes via API con skeleton loading. Permite crear cliente inline. UX fluida.</div>
+    </div>
+
+    <h3>Paso 2 &mdash; Contexto</h3>
+    <div class="finding finding-positive">
+      <div class="title">Multi-servicio bien implementado</div>
+      <div class="desc">Chips seleccionables para servicios (Paid Media, Landing Pages, Diseno, etc.), slider de budget, datepicker de timeline, selector de tono. Diferenciador clave vs competencia.</div>
+    </div>
+
+    <h3>Paso 3 &mdash; Generacion IA</h3>
+    <div class="finding finding-positive">
+      <div class="title">Streaming con UX premium</div>
+      <div class="desc">Panel oscuro (#0F172A) con progress bar, iconos animados por seccion (pending/streaming/done), preview de texto generado. Comunicacion clara: "Claude esta generando..." con estimado de 30 segundos.</div>
+    </div>
+    <div class="finding finding-critical">
+      <div class="title">BUG CRITICO: Schema mismatch entre cliente y servidor</div>
+      <div class="desc">
+        El schema del <strong>servidor</strong> (route.ts) define campos: <code>serviciosPropuestos</code>, <code>alcancePorServicio</code>, <code>casoDeExito</code>.<br>
+        El schema del <strong>cliente</strong> (Step3Generate.tsx) espera campos: <code>solucion</code>, <code>alcance</code>.<br>
+        Esto significa que la IA genera campos que el frontend no mapea correctamente. El usuario podria ver secciones vacias o incompletas.
+      </div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Sin retry en caso de error de IA</div>
+      <div class="desc">Si la llamada a Claude falla, se muestra un error pero no hay boton de reintentar. El usuario debe volver atras y avanzar de nuevo.</div>
+    </div>
+
+    <h3>Paso 4 &mdash; Revision y Export</h3>
+    <div class="finding finding-positive">
+      <div class="title">Editor TipTap con export triple</div>
+      <div class="desc">Secciones editables con rich text, export a PDF (DocuForge), DOCX y Email. Muy completo para un MVP.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 6: Clients -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #E0F2FE;">👥</span>
+      6. Gestion de Clientes
+    </h2>
+    <p>Tarjetas con avatar gradiente, busqueda con debounce, filtros por industria, y "Opportunity Score".</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Cards visualmente ricas</div>
+      <div class="desc">Cada cliente muestra nombre, empresa, industria como tag, score de oportunidad con barra de progreso, y conteo de propuestas. Diseno limpio y util.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Boton "Nuevo Cliente" sin funcionalidad</div>
+      <div class="desc">El boton esta renderizado pero no abre ningun formulario ni modal. Un CEO que intente agregar un cliente se frustrara.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Sin vista de detalle de cliente</div>
+      <div class="desc">No hay pagina individual de cliente con historial de propuestas, notas, o edicion de datos. Feature esencial para CRM basico.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 7: Billing -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #FEF3C7;">💳</span>
+      7. Billing y Trial
+    </h2>
+    <p>Sistema de trial hibrido: 30 dias sin tarjeta + 30 dias con tarjeta. Integracion con Stripe SetupIntent.</p>
+
+    <div class="finding finding-positive">
+      <div class="title">Trial gating implementado end-to-end</div>
+      <div class="desc">El stream de propuestas verifica trial status y devuelve 402 si la cuota se agoto. El billing page muestra dias restantes, propuestas usadas, y CTA contextual segun stage del trial.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Sin pagina de checkout para plan Pro</div>
+      <div class="desc">Cuando el trial expira, el boton dice "Activar plan Pro" pero no hay flujo de pago real implementado (Stripe Checkout o Payment Element). Solo existe SetupIntent para extender trial.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 8: Analytics -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #EDE9FE;">📈</span>
+      8. Analytics
+    </h2>
+    <div class="finding finding-positive">
+      <div class="title">Dashboard analitico completo</div>
+      <div class="desc">6 KPIs, grafico de lineas (propuestas enviadas vs aceptadas), donut de status, barras de revenue por industria, tabla de top clientes. Muy impresionante para MVP.</div>
+    </div>
+    <div class="finding finding-critical">
+      <div class="title">Datos 100% ficticios (igual que Dashboard)</div>
+      <div class="desc">Todas las metricas son sample data hardcodeado. Si un CEO ve "tasa de cierre del 72%" sin haber creado una sola propuesta, pierde credibilidad inmediata.</div>
+    </div>
+  </div>
+
+  <!-- SECTION 9: Technical / Infra -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #FEE2E2;">⚙️</span>
+      9. Arquitectura y Seguridad
+    </h2>
+
+    <div class="finding finding-positive">
+      <div class="title">Multi-tenancy solida</div>
+      <div class="desc">tenant_id en todas las tablas, header X-Tenant-ID en todas las requests, middleware de Clerk que lo extrae del JWT. Patron correcto para SaaS B2B.</div>
+    </div>
+    <div class="finding finding-positive">
+      <div class="title">AI implementado correctamente</div>
+      <div class="desc">streamObject() en Route Handler (server-side), nunca en client. Cache de prompts con cacheControl ephemeral. Save non-blocking post-stream. Patron de referencia.</div>
+    </div>
+    <div class="finding finding-positive">
+      <div class="title">Stack moderno y mantenible</div>
+      <div class="desc">Next.js 16 App Router, Tailwind v4, shadcn/ui, Vercel AI SDK v4, Zod v4, DrizzleORM, Clerk, Stripe. Todas las librerias en sus versiones mas recientes.</div>
+    </div>
+    <div class="finding finding-critical">
+      <div class="title">Tokens y secrets expuestos en .git/config</div>
+      <div class="desc">El archivo .git/config contiene tokens de GitHub (ghp_...) y HuggingFace (hf_...) embebidos en las URLs de remote. Si este repo se comparte o se clona, los tokens quedan expuestos. ACCION URGENTE: remover tokens de remote URLs y usar variables de entorno o credential helpers.</div>
+    </div>
+    <div class="finding finding-warning">
+      <div class="title">Clerk Publishable Key hardcodeada en Dockerfile</div>
+      <div class="desc">La pk_test_ esta como ARG default en el Dockerfile. Aunque publishable keys no son secrets, es mejor practica pasarla solo como build arg en CI/CD.</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TABLE -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: var(--slate-100);">📋</span>
+      10. Resumen de Hallazgos
+    </h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Score</th>
+          <th>Estado</th>
+          <th>Hallazgo Principal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Landing Page</strong></td>
+          <td>8.5/10</td>
+          <td><span class="status status-ok">Lista</span></td>
+          <td>Profesional. Corregir inconsistencia de dias de trial y email enterprise.</td>
+        </tr>
+        <tr>
+          <td><strong>Auth (Clerk)</strong></td>
+          <td>9/10</td>
+          <td><span class="status status-ok">Lista</span></td>
+          <td>Clerk bien integrado con Organizations. Branding excelente.</td>
+        </tr>
+        <tr>
+          <td><strong>Onboarding</strong></td>
+          <td>7/10</td>
+          <td><span class="status status-warn">Corregir</span></td>
+          <td>Bug: validacion comentada. Agregar opcion de saltar.</td>
+        </tr>
+        <tr>
+          <td><strong>Dashboard</strong></td>
+          <td>6/10</td>
+          <td><span class="status status-crit">Critico</span></td>
+          <td>Datos mock. Debe conectar a API real antes de beta.</td>
+        </tr>
+        <tr>
+          <td><strong>Wizard IA</strong></td>
+          <td>7.5/10</td>
+          <td><span class="status status-crit">Critico</span></td>
+          <td>Schema mismatch servidor/cliente. Streaming UX excelente.</td>
+        </tr>
+        <tr>
+          <td><strong>Clientes</strong></td>
+          <td>7/10</td>
+          <td><span class="status status-warn">Corregir</span></td>
+          <td>Boton "Nuevo Cliente" no funciona. Sin vista de detalle.</td>
+        </tr>
+        <tr>
+          <td><strong>Billing</strong></td>
+          <td>7.5/10</td>
+          <td><span class="status status-warn">Corregir</span></td>
+          <td>Trial gating funciona. Falta checkout para conversion a paid.</td>
+        </tr>
+        <tr>
+          <td><strong>Analytics</strong></td>
+          <td>5/10</td>
+          <td><span class="status status-crit">Critico</span></td>
+          <td>100% datos ficticios. Peligroso para credibilidad.</td>
+        </tr>
+        <tr>
+          <td><strong>Seguridad</strong></td>
+          <td>6/10</td>
+          <td><span class="status status-crit">Critico</span></td>
+          <td>Tokens expuestos en .git/config. Remover urgentemente.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TOP PRIORITIES -->
+  <div class="section">
+    <h2>
+      <span class="icon" style="background: #FEE2E2;">🎯</span>
+      Top 6 Prioridades para Beta Launch
+    </h2>
+
+    <div class="priority-grid">
+      <div class="priority-item" style="border-color: var(--red);">
+        <div class="num">P0</div>
+        <div class="text">Remover tokens de .git/config</div>
+        <div class="detail">Riesgo de seguridad inmediato. Usar credential helpers o variables de entorno. Rotar ambos tokens (GitHub + HuggingFace).</div>
+      </div>
+      <div class="priority-item" style="border-color: var(--red);">
+        <div class="num">P0</div>
+        <div class="text">Corregir schema mismatch en Wizard IA</div>
+        <div class="detail">Alinear ProposalSectionSchema entre route.ts (servidor) y Step3Generate.tsx (cliente). El core del producto no funciona correctamente sin esto.</div>
+      </div>
+      <div class="priority-item" style="border-color: var(--amber);">
+        <div class="num">P1</div>
+        <div class="text">Conectar Dashboard y Analytics a API real</div>
+        <div class="detail">Reemplazar datos mock con queries reales a FastAPI. Mostrar empty states cuando no hay datos en vez de numeros ficticios.</div>
+      </div>
+      <div class="priority-item" style="border-color: var(--amber);">
+        <div class="num">P1</div>
+        <div class="text">Implementar "Nuevo Cliente" funcional</div>
+        <div class="detail">Modal o pagina para crear clientes. Sin esto, el wizard (paso 1) no tiene clientes para seleccionar.</div>
+      </div>
+      <div class="priority-item" style="border-color: #3B82F6;">
+        <div class="num">P2</div>
+        <div class="text">Fix onboarding validation + skip option</div>
+        <div class="detail">Descomentar validacion de completitud. Agregar boton "Saltar" con defaults. Evitar loop infinito.</div>
+      </div>
+      <div class="priority-item" style="border-color: #3B82F6;">
+        <div class="num">P2</div>
+        <div class="text">Completar deploy en HuggingFace Spaces</div>
+        <div class="detail">Push del Dockerfile corregido, configurar secrets, verificar que el build pasa y la app carga correctamente.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <div class="section" style="background: linear-gradient(135deg, var(--dark), #1a2744); color: white; border: none;">
+    <h2 style="color: white;">
+      <span class="icon" style="background: rgba(29,158,117,0.2);">💡</span>
+      Veredicto Ejecutivo
+    </h2>
+    <p style="font-size: 16px; line-height: 1.8; color: var(--slate-400);">
+      SmartSPG tiene una <strong style="color: white;">base solida para un producto SaaS B2B</strong>. El diseno es profesional, la arquitectura multi-tenant es correcta, y el flujo core de generacion de propuestas con IA streaming es impresionante.
+    </p>
+    <p style="font-size: 16px; line-height: 1.8; color: var(--slate-400); margin-top: 12px;">
+      Sin embargo, hay <strong style="color: #F59E0B;">3 bloqueantes criticos</strong> antes de poder invitar usuarios beta: el schema mismatch que rompe el wizard IA, los datos mock en dashboard/analytics que destruyen credibilidad, y los tokens expuestos en git.
+    </p>
+    <p style="font-size: 16px; line-height: 1.8; color: var(--slate-400); margin-top: 12px;">
+      <strong style="color: var(--brand);">Estimacion para beta-ready:</strong> 2-3 dias de desarrollo enfocado en los P0 y P1 identificados. El producto tiene potencial real para el mercado LATAM de propuestas B2B.
+    </p>
+  </div>
+
+  <div class="footer">
+    SmartSPG CEO Review &mdash; Generado el 13 de abril de 2026 &mdash; Confidencial
+  </div>
+
+</div>
+
+</body>
+</html>

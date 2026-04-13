@@ -13,7 +13,7 @@ const STREAMING_SECTIONS = [
 ]
 
 const TRUST_ITEMS = [
-  '60 días gratis',
+  '30 días gratis sin tarjeta',
   'Multi-servicio B2B',
   'PDF y Word al instante',
 ]

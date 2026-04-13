@@ -5,11 +5,12 @@ import { tenants } from '@/db/schema'
 import { z } from 'zod/v4'
 
 const OnboardingDataSchema = z.object({
-  businessType: z.enum(['agency', 'consultancy', 'saas', 'freelancer', 'other']),
-  industries: z.array(z.string()).min(1),
-  services: z.array(z.string()).min(1),
-  proposalSize: z.enum(['under5k', '5k-20k', '20k-50k', 'above50k']),
-  tone: z.enum(['formal', 'consultative', 'direct']),
+  businessType: z.enum(['agency', 'consultancy', 'saas', 'freelancer', 'other']).nullable().optional(),
+  industries: z.array(z.string()).optional().default([]),
+  services: z.array(z.string()).optional().default([]),
+  proposalSize: z.enum(['under5k', '5k-20k', '20k-50k', 'above50k']).nullable().optional(),
+  tone: z.enum(['formal', 'consultative', 'direct']).nullable().optional(),
+  skipped: z.boolean().optional().default(false),
 })
 
 type OnboardingData = z.infer<typeof OnboardingDataSchema>
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
       services: validatedData.services,
       proposalSize: validatedData.proposalSize,
       tone: validatedData.tone,
+      skipped: validatedData.skipped,
       completedAt: new Date().toISOString(),
     }
 

@@ -46,7 +46,7 @@ const PLANS = [
     period: '',
     description: 'Para grandes organizaciones',
     cta: 'Contactar ventas',
-    ctaHref: 'mailto:hola@smartspg.io',
+    ctaHref: 'mailto:eduardo.giraldo@gcpron.com',
     popular: false,
     features: [
       { label: 'Propuestas ilimitadas', included: true },
