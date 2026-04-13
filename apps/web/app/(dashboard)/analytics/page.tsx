@@ -9,7 +9,7 @@ import { FileText, CheckCircle2, DollarSign, TrendingUp, Clock, Users } from 'lu
 import { useAuth } from '@clerk/nextjs'
 import { fetchWithTenant } from '@/lib/api'
 import { StatCard } from '@/components/dashboard/StatCard'
-import type { Proposal, ProposalStatus } from '@smart-proposal/types'
+type ProposalStatus = 'draft' | 'generating' | 'generated' | 'sent' | 'accepted' | 'rejected'
 
 interface ApiProposal {
   id: string
