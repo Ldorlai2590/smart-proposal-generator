@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Proposal Generator — Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#edfaf4',
+              100: '#d2f4e4',
+              200: '#a8e8cb',
+              300: '#6fd6aa',
+              400: '#37be87',
+              500: '#1D9E75',
+              600: '#147f5c',
+              700: '#12664b',
+              800: '#11523c',
+              900: '#0f4332',
+            },
+          },
+          keyframes: {
+            fadeIn:    { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+            shimmer:   { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+            pulse:     { '0%, 100%': { opacity: '1' }, '50%': { opacity: '.4' } },
+            slideIn:   { from: { transform: 'translateX(-12px)', opacity: '0' }, to: { transform: 'translateX(0)', opacity: '1' } },
+            toastIn:   { from: { transform: 'translateY(16px) scale(.96)', opacity: '0' }, to: { transform: 'translateY(0) scale(1)', opacity: '1' } },
+          },
+          animation: {
+            fadeIn:  'fadeIn .35s ease both',
+            shimmer: 'shimmer 2s linear infinite',
+            pulse:   'pulse 1.5s ease-in-out infinite',
+            slideIn: 'slideIn .25s ease both',
+            toastIn: 'toastIn .3s ease both',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    .shimmer-bg {
+      background: linear-gradient(90deg, #1e293b 25%, #253348 50%, #1e293b 75%);
+      background-size: 200% 100%;
+      animation: shimmer 2s linear infinite;
+    }
+
+    .section-card { transition: box-shadow .2s, border-color .2s; }
+    .section-card:hover { box-shadow: 0 0 0 1px #1D9E75; border-color: #1D9E75; }
+
+    .step-connector { flex: 1; height: 2px; background: #1e293b; }
+    .step-connector.active { background: #1D9E75; }
+
+    /* typing cursor */
+    .typing::after {
+      content: '|';
+      animation: pulse 1s steps(1) infinite;
+      color: #1D9E75;
+    }
+
+    /* tiptap-like editor */
+    .editor-area { outline: none; min-height: 320px; }
+    .editor-area:focus { outline: none; }
+
+    /* progress bar */
+    #progressBar { transition: width .4s ease; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased">
+
+<!-- ════════════════════════════════════════════════════════════
+     LAYOUT WRAPPER
+════════════════════════════════════════════════════════════ -->
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside class="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800 shrink-0">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
+      <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+        </svg>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-white leading-tight">Smart Proposal</p>
+        <p class="text-[10px] text-brand-400 font-medium uppercase tracking-wider">Generator</p>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <p class="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1">Principal</p>
+
+      <button onclick="showSection('dashboard')" id="nav-dashboard"
+        class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+
+      <button onclick="showSection('wizard')" id="nav-wizard"
+        class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group bg-brand-500/10 text-brand-400 border border-brand-500/20">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+        Nueva Propuesta
+      </button>
+
+      <button onclick="showSection('proposals')" id="nav-proposals"
+        class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        Propuestas
+        <span class="ml-auto bg-brand-500/20 text-brand-400 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">12</span>
+      </button>
+
+      <button onclick="showSection('clients')" id="nav-clients"
+        class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+        Clientes
+      </button>
+
+      <p class="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1 mt-4">Análisis</p>
+
+      <button onclick="showSection('analytics')" id="nav-analytics"
+        class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all group">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+        Analytics
+      </button>
+    </nav>
+
+    <!-- User -->
+    <div class="px-3 py-4 border-t border-slate-800">
+      <div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 cursor-pointer transition-all">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold shadow">EG</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-white truncate">Eduardo Giraldo</p>
+          <p class="text-[11px] text-slate-400 truncate">Plan Pro</p>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ──────────────────────────────────────────── -->
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="flex items-center justify-between px-6 py-3.5 bg-slate-900/80 border-b border-slate-800 backdrop-blur shrink-0">
+      <div>
+        <h1 id="pageTitle" class="text-base font-semibold text-white">Nueva Propuesta</h1>
+        <p id="pageSubtitle" class="text-xs text-slate-400 mt-0.5">Wizard de generación en 4 pasos</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400 border border-slate-700">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/></svg>
+          Buscar...
+          <kbd class="ml-1 text-slate-600">⌘K</kbd>
+        </div>
+        <button class="relative w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition-all">
+          <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-500 rounded-full border-2 border-slate-900"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- ══════════════════════════════════════════════════════
+           SECTION: DASHBOARD
+      ══════════════════════════════════════════════════════ -->
+      <section id="section-dashboard" class="hidden p-6 animate-fadeIn">
+        <div class="max-w-6xl mx-auto">
+          <div class="mb-6">
+            <h2 class="text-xl font-bold text-white">Bienvenido, Eduardo</h2>
+            <p class="text-sm text-slate-400 mt-1">Aquí tienes el resumen de tu actividad reciente.</p>
+          </div>
+
+          <!-- KPI cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-brand-500/40 transition-all">
+              <p class="text-xs text-slate-400 mb-1">Propuestas enviadas</p>
+              <p class="text-2xl font-bold text-white">47</p>
+              <p class="text-xs text-brand-400 mt-1">↑ 18% este mes</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-brand-500/40 transition-all">
+              <p class="text-xs text-slate-400 mb-1">Tasa de cierre</p>
+              <p class="text-2xl font-bold text-white">34%</p>
+              <p class="text-xs text-brand-400 mt-1">↑ 5 pts vs anterior</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-brand-500/40 transition-all">
+              <p class="text-xs text-slate-400 mb-1">Pipeline activo</p>
+              <p class="text-2xl font-bold text-white">$2.4M</p>
+              <p class="text-xs text-slate-400 mt-1">12 propuestas abiertas</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-brand-500/40 transition-all">
+              <p class="text-xs text-slate-400 mb-1">Tokens IA usados</p>
+              <p class="text-2xl font-bold text-white">1.2M</p>
+              <p class="text-xs text-slate-400 mt-1">de 5M en plan Pro</p>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="bg-gradient-to-br from-brand-500/10 to-brand-600/5 border border-brand-500/20 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="font-semibold text-white">Genera tu próxima propuesta</h3>
+              <p class="text-sm text-slate-400 mt-1">Usa IA para crear propuestas profesionales en minutos, no en horas.</p>
+            </div>
+            <button onclick="showSection('wizard')" class="shrink-0 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30">
+              Nueva propuesta →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════
+           SECTION: CLIENTS
+      ══════════════════════════════════════════════════════ -->
+      <section id="section-clients" class="hidden p-6 animate-fadeIn">
+        <div class="max-w-4xl mx-auto">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="text-xl font-bold text-white">Clientes</h2>
+              <p class="text-sm text-slate-400 mt-0.5">5 clientes registrados</p>
+            </div>
+            <button class="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all">+ Nuevo cliente</button>
+          </div>
+          <div class="space-y-3">
+            <div id="clientTableRows"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════
+           SECTION: PROPOSALS LIST
+      ══════════════════════════════════════════════════════ -->
+      <section id="section-proposals" class="hidden p-6 animate-fadeIn">
+        <div class="max-w-5xl mx-auto">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="text-xl font-bold text-white">Propuestas</h2>
+              <p class="text-sm text-slate-400 mt-0.5">Historial completo</p>
+            </div>
+            <button onclick="showSection('wizard')" class="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all">+ Nueva propuesta</button>
+          </div>
+          <div id="proposalsTable"></div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════
+           SECTION: ANALYTICS
+      ══════════════════════════════════════════════════════ -->
+      <section id="section-analytics" class="hidden p-6 animate-fadeIn">
+        <div class="max-w-5xl mx-auto">
+          <h2 class="text-xl font-bold text-white mb-2">Analytics</h2>
+          <p class="text-sm text-slate-400 mb-6">Métricas de propuestas y rendimiento del equipo.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <p class="text-sm font-semibold text-white mb-4">Propuestas por mes</p>
+              <div class="flex items-end gap-3 h-24">
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500/20 rounded-t" style="height:40%"></div><span class="text-[10px] text-slate-500">Ene</span></div>
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500/30 rounded-t" style="height:55%"></div><span class="text-[10px] text-slate-500">Feb</span></div>
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500/40 rounded-t" style="height:45%"></div><span class="text-[10px] text-slate-500">Mar</span></div>
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500/50 rounded-t" style="height:70%"></div><span class="text-[10px] text-slate-500">Abr</span></div>
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500/60 rounded-t" style="height:80%"></div><span class="text-[10px] text-slate-500">May</span></div>
+                <div class="flex-1 flex flex-col items-center gap-1"><div class="w-full bg-brand-500 rounded-t" style="height:100%"></div><span class="text-[10px] text-slate-500">Jun</span></div>
+              </div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <p class="text-sm font-semibold text-white mb-4">Por industria</p>
+              <div class="space-y-3">
+                <div><div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Fintech</span><span class="text-white font-medium">38%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-1.5 bg-brand-500 rounded-full" style="width:38%"></div></div></div>
+                <div><div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Retail</span><span class="text-white font-medium">27%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-1.5 bg-brand-400 rounded-full" style="width:27%"></div></div></div>
+                <div><div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Energía</span><span class="text-white font-medium">19%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-1.5 bg-brand-300 rounded-full" style="width:19%"></div></div></div>
+                <div><div class="flex justify-between text-xs mb-1"><span class="text-slate-400">Otros</span><span class="text-white font-medium">16%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-1.5 bg-slate-600 rounded-full" style="width:16%"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════
+           SECTION: WIZARD
+      ══════════════════════════════════════════════════════ -->
+      <section id="section-wizard" class="animate-fadeIn">
+
+        <!-- Progress bar (top strip) -->
+        <div class="h-1 bg-slate-800">
+          <div id="progressBar" class="h-1 bg-brand-500 rounded-r-full" style="width: 25%"></div>
+        </div>
+
+        <!-- Step indicator -->
+        <div class="px-6 py-4 bg-slate-900/50 border-b border-slate-800">
+          <div class="max-w-3xl mx-auto flex items-center">
+            <!-- Step 1 -->
+            <button onclick="goToStep(1)" class="step-btn flex flex-col items-center gap-1" id="stepBtn1">
+              <div id="stepCircle1" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-brand-500 bg-brand-500 text-white transition-all">1</div>
+              <span class="hidden sm:block text-[10px] font-medium text-brand-400 transition-all" id="stepLabel1">Cliente</span>
+            </button>
+            <div class="step-connector active" id="connector12"></div>
+            <!-- Step 2 -->
+            <button onclick="goToStep(2)" class="step-btn flex flex-col items-center gap-1" id="stepBtn2">
+              <div id="stepCircle2" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-slate-700 bg-slate-900 text-slate-500 transition-all">2</div>
+              <span class="hidden sm:block text-[10px] font-medium text-slate-500 transition-all" id="stepLabel2">Contexto</span>
+            </button>
+            <div class="step-connector" id="connector23"></div>
+            <!-- Step 3 -->
+            <button onclick="goToStep(3)" class="step-btn flex flex-col items-center gap-1" id="stepBtn3">
+              <div id="stepCircle3" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-slate-700 bg-slate-900 text-slate-500 transition-all">3</div>
+              <span class="hidden sm:block text-[10px] font-medium text-slate-500 transition-all" id="stepLabel3">Generación IA</span>
+            </button>
+            <div class="step-connector" id="connector34"></div>
+            <!-- Step 4 -->
+            <button onclick="goToStep(4)" class="step-btn flex flex-col items-center gap-1" id="stepBtn4">
+              <div id="stepCircle4" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-slate-700 bg-slate-900 text-slate-500 transition-all">4</div>
+              <span class="hidden sm:block text-[10px] font-medium text-slate-500 transition-all" id="stepLabel4">Revisión</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step panels -->
+        <div class="p-6">
+          <div class="max-w-3xl mx-auto">
+
+            <!-- ─── STEP 1: CLIENT ──────────────────────────── -->
+            <div id="step1" class="animate-fadeIn">
+              <h2 class="text-lg font-bold text-white mb-1">Seleccionar cliente</h2>
+              <p class="text-sm text-slate-400 mb-5">Elige un cliente existente o crea uno nuevo para esta propuesta.</p>
+
+              <!-- Search -->
+              <div class="relative mb-4">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/></svg>
+                <input id="clientSearch" oninput="filterClients()" placeholder="Buscar por nombre o empresa..."
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-all" />
+              </div>
+
+              <!-- Client list -->
+              <div id="clientList" class="space-y-2 mb-5"></div>
+
+              <!-- Selected client badge -->
+              <div id="selectedClientBadge" class="hidden mb-5 p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg flex items-center gap-3">
+                <svg class="w-4 h-4 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="selectedClientName" class="text-sm font-medium text-brand-300"></span>
+                <button onclick="clearClient()" class="ml-auto text-slate-500 hover:text-slate-300 transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <!-- Add new client (inline) -->
+              <div class="border border-dashed border-slate-700 rounded-xl p-4 hover:border-brand-500/40 transition-all">
+                <button onclick="toggleNewClientForm()" class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-all w-full text-left">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Crear nuevo cliente
+                </button>
+                <div id="newClientForm" class="hidden mt-4 grid grid-cols-2 gap-3">
+                  <input placeholder="Nombre del contacto" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-all col-span-2" />
+                  <input placeholder="Empresa" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-all" />
+                  <input placeholder="Email" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-all" />
+                  <select class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-brand-500 transition-all col-span-2">
+                    <option value="">Industria...</option>
+                    <option>Fintech</option><option>Retail</option><option>Energía</option><option>Logística</option><option>Salud</option><option>Educación</option>
+                  </select>
+                  <button onclick="addNewClient()" class="col-span-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium py-2 rounded-lg transition-all">Guardar cliente</button>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="flex justify-end mt-6">
+                <button id="step1Next" onclick="nextStep()" disabled
+                  class="btn-next bg-brand-500 hover:bg-brand-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all">
+                  Siguiente — Contexto →
+                </button>
+              </div>
+            </div>
+
+            <!-- ─── STEP 2: CONTEXT ─────────────────────────── -->
+            <div id="step2" class="hidden animate-fadeIn">
+              <h2 class="text-lg font-bold text-white mb-1">Contexto de la propuesta</h2>
+              <p class="text-sm text-slate-400 mb-5">Define el problema, presupuesto y plantilla base para la generación.</p>
+
+              <!-- Problem -->
+              <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Problema principal <span class="text-brand-400">*</span></label>
+                <textarea id="problemInput" rows="4" placeholder="Describe el desafío de negocio del cliente. Ej: Necesitan digitalizar su proceso de onboarding de clientes corporativos para reducir tiempos de apertura de cuentas de 5 días a menos de 24 horas..."
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 resize-none transition-all"></textarea>
+              </div>
+
+              <!-- Budget slider -->
+              <div class="mb-5">
+                <div class="flex justify-between mb-2">
+                  <label class="text-sm font-medium text-slate-300">Presupuesto estimado</label>
+                  <span id="budgetLabel" class="text-sm font-bold text-brand-400">$50,000 USD</span>
+                </div>
+                <input type="range" id="budgetSlider" min="0" max="100" value="50" oninput="updateBudget()"
+                  class="w-full h-2 bg-slate-700 rounded-full appearance-none cursor-pointer accent-brand-500" />
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1"><span>$5K</span><span>$500K+</span></div>
+              </div>
+
+              <!-- Timeline -->
+              <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Timeline de entrega</label>
+                <div class="grid grid-cols-3 gap-2" id="timelineOptions">
+                  <button onclick="selectTimeline(this,'1 mes')" class="timeline-opt border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 hover:border-brand-500/50 hover:text-brand-400 transition-all">1 mes</button>
+                  <button onclick="selectTimeline(this,'3 meses')" class="timeline-opt border border-brand-500 bg-brand-500/10 rounded-lg px-3 py-2 text-sm text-brand-400 transition-all selected">3 meses</button>
+                  <button onclick="selectTimeline(this,'6 meses')" class="timeline-opt border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 hover:border-brand-500/50 hover:text-brand-400 transition-all">6 meses</button>
+                  <button onclick="selectTimeline(this,'9 meses')" class="timeline-opt border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 hover:border-brand-500/50 hover:text-brand-400 transition-all">9 meses</button>
+                  <button onclick="selectTimeline(this,'12 meses')" class="timeline-opt border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 hover:border-brand-500/50 hover:text-brand-400 transition-all">12 meses</button>
+                  <button onclick="selectTimeline(this,'Indefinido')" class="timeline-opt border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 hover:border-brand-500/50 hover:text-brand-400 transition-all">Indefinido</button>
+                </div>
+              </div>
+
+              <!-- Industry templates -->
+              <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Plantilla por industria <span class="text-brand-400">*</span></label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="templateOptions">
+                  <button onclick="selectTemplate(this,'Transformación Digital')" class="template-opt group border border-brand-500 bg-brand-500/10 rounded-xl p-3 text-left transition-all selected">
+                    <div class="text-lg mb-1">🏦</div>
+                    <p class="text-xs font-semibold text-brand-300">Transformación Digital</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Fintech / Banca</p>
+                  </button>
+                  <button onclick="selectTemplate(this,'Ecommerce & Retail')" class="template-opt group border border-slate-700 rounded-xl p-3 text-left hover:border-brand-500/40 transition-all">
+                    <div class="text-lg mb-1">🛍️</div>
+                    <p class="text-xs font-semibold text-slate-300 group-hover:text-white">Ecommerce & Retail</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Retail / Moda</p>
+                  </button>
+                  <button onclick="selectTemplate(this,'Growth & Expansión')" class="template-opt group border border-slate-700 rounded-xl p-3 text-left hover:border-brand-500/40 transition-all">
+                    <div class="text-lg mb-1">🚀</div>
+                    <p class="text-xs font-semibold text-slate-300 group-hover:text-white">Growth & Expansión</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Startups / Scale-ups</p>
+                  </button>
+                  <button onclick="selectTemplate(this,'Sostenibilidad ESG')" class="template-opt group border border-slate-700 rounded-xl p-3 text-left hover:border-brand-500/40 transition-all">
+                    <div class="text-lg mb-1">🌿</div>
+                    <p class="text-xs font-semibold text-slate-300 group-hover:text-white">Sostenibilidad ESG</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Energía / Minería</p>
+                  </button>
+                  <button onclick="selectTemplate(this,'Plataforma de Datos')" class="template-opt group border border-slate-700 rounded-xl p-3 text-left hover:border-brand-500/40 transition-all">
+                    <div class="text-lg mb-1">📊</div>
+                    <p class="text-xs font-semibold text-slate-300 group-hover:text-white">Plataforma de Datos</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Analytics / BI</p>
+                  </button>
+                  <button onclick="selectTemplate(this,'Automatización Ops')" class="template-opt group border border-slate-700 rounded-xl p-3 text-left hover:border-brand-500/40 transition-all">
+                    <div class="text-lg mb-1">⚙️</div>
+                    <p class="text-xs font-semibold text-slate-300 group-hover:text-white">Automatización Ops</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Logística / Industria</p>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex justify-between mt-6">
+                <button onclick="prevStep()" class="border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all">← Volver</button>
+                <button id="step2Next" onclick="nextStep()" class="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all">
+                  Siguiente — Generar IA →
+                </button>
+              </div>
+            </div>
+
+            <!-- ─── STEP 3: AI GENERATION ───────────────────── -->
+            <div id="step3" class="hidden animate-fadeIn">
+              <div class="flex items-start justify-between mb-1">
+                <h2 class="text-lg font-bold text-white">Generando propuesta con IA</h2>
+                <div id="aiModelBadge" class="hidden sm:flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-full px-3 py-1">
+                  <div class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></div>
+                  <span class="text-[10px] font-medium text-slate-400">claude-sonnet-4-5</span>
+                </div>
+              </div>
+              <p class="text-sm text-slate-400 mb-5">Claude está analizando el contexto y redactando cada sección...</p>
+
+              <!-- Section progress indicators -->
+              <div id="sectionProgress" class="space-y-3 mb-6"></div>
+
+              <!-- Streaming preview -->
+              <div id="streamingPreview" class="bg-slate-900 border border-slate-800 rounded-xl p-5 min-h-48 relative overflow-hidden">
+                <div id="streamingContent" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
+                <div id="streamingPlaceholder" class="space-y-2.5">
+                  <div class="shimmer-bg h-3 rounded w-3/4"></div>
+                  <div class="shimmer-bg h-3 rounded w-full"></div>
+                  <div class="shimmer-bg h-3 rounded w-5/6"></div>
+                  <div class="shimmer-bg h-3 rounded w-2/3"></div>
+                  <div class="shimmer-bg h-3 rounded w-full"></div>
+                  <div class="shimmer-bg h-3 rounded w-4/5"></div>
+                </div>
+              </div>
+
+              <div class="flex justify-between mt-6">
+                <button onclick="prevStep()" id="step3Back" class="border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all">← Volver</button>
+                <button id="step3Next" onclick="nextStep()" disabled
+                  class="btn-next bg-brand-500 hover:bg-brand-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all">
+                  Siguiente — Revisar →
+                </button>
+              </div>
+            </div>
+
+            <!-- ─── STEP 4: REVIEW & EXPORT ─────────────────── -->
+            <div id="step4" class="hidden animate-fadeIn">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <h2 class="text-lg font-bold text-white">Revisar y exportar</h2>
+                  <p class="text-sm text-slate-400 mt-0.5">Edita las secciones y exporta la propuesta final.</p>
+                </div>
+                <!-- Export buttons -->
+                <div class="flex flex-wrap gap-2">
+                  <button onclick="exportAction('PDF')" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm text-white px-3 py-2 rounded-lg transition-all">
+                    <svg class="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                    Export PDF
+                  </button>
+                  <button onclick="exportAction('DOCX')" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm text-white px-3 py-2 rounded-lg transition-all">
+                    <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                    Export DOCX
+                  </button>
+                  <button onclick="exportAction('Email')" class="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-sm text-white px-3 py-2 rounded-lg transition-all shadow-sm shadow-brand-500/20">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                    Enviar Email
+                  </button>
+                </div>
+              </div>
+
+              <!-- Toolbar -->
+              <div class="flex items-center gap-1 p-2 bg-slate-900 border border-slate-800 rounded-t-xl border-b-0">
+                <button class="p-1.5 rounded hover:bg-slate-700 transition-all" title="Negrita"><svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+                <button class="p-1.5 rounded hover:bg-slate-700 transition-all" title="Cursiva"><svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+                <div class="w-px h-4 bg-slate-700 mx-1"></div>
+                <button class="p-1.5 rounded hover:bg-slate-700 transition-all" title="H2"><span class="text-[10px] font-bold text-slate-400">H2</span></button>
+                <button class="p-1.5 rounded hover:bg-slate-700 transition-all" title="Lista"><svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+                <div class="w-px h-4 bg-slate-700 mx-1"></div>
+                <span class="text-[10px] text-slate-500 ml-1">Auto-guardado hace 2s</span>
+                <div class="ml-auto flex items-center gap-1.5 text-[10px] text-brand-400">
+                  <div class="w-1.5 h-1.5 rounded-full bg-brand-500"></div>
+                  Guardado
+                </div>
+              </div>
+
+              <!-- Editor sections -->
+              <div id="editorSections" class="bg-slate-900 border border-slate-800 rounded-b-xl divide-y divide-slate-800">
+              </div>
+
+              <div class="flex justify-between mt-6">
+                <button onclick="prevStep()" class="border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all">← Volver</button>
+                <button onclick="showSection('proposals')" class="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-brand-500/20">
+                  Finalizar y guardar ✓
+                </button>
+              </div>
+            </div>
+
+          </div><!-- /max-w-3xl -->
+        </div><!-- /p-6 -->
+
+      </section><!-- /wizard -->
+
+    </div><!-- /overflow-y-auto -->
+  </main>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+════════════════════════════════════════════════════════════ -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+  <div class="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-2xl animate-toastIn max-w-xs">
+    <div id="toastIcon" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"></div>
+    <div>
+      <p id="toastTitle" class="text-sm font-semibold text-white"></p>
+      <p id="toastMsg" class="text-xs text-slate-400 mt-0.5"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════════ -->
+<script>
+/* ─── DATA ──────────────────────────────────────────────────── */
+const CLIENTS = [
+  { id: 1, name: 'Laura Pérez',      company: 'TechCorp LATAM',         industry: 'Tecnología',   size: '200-500',  score: 92, email: 'l.perez@techcorp.lat' },
+  { id: 2, name: 'Carlos Jiménez',   company: 'Bancolombia Digital',    industry: 'Fintech',      size: '5000+',    score: 88, email: 'c.jimenez@bancolombia.com' },
+  { id: 3, name: 'Ana Rodríguez',    company: 'Rappi Growth',           industry: 'Delivery',     size: '1000-5000',score: 75, email: 'a.rodriguez@rappi.com' },
+  { id: 4, name: 'Miguel Torres',    company: 'Falabella eCommerce',    industry: 'Retail',       size: '5000+',    score: 84, email: 'm.torres@falabella.com' },
+  { id: 5, name: 'Patricia Suárez',  company: 'Ecopetrol Digital',      industry: 'Energía',      size: '5000+',    score: 79, email: 'p.suarez@ecopetrol.com.co' },
+];
+
+const PROPOSALS = [
+  { id: 'P-001', client: 'TechCorp LATAM',      title: 'Plataforma de Analítica Predictiva',   status: 'Enviada',   date: '2026-03-15', value: '$85,000' },
+  { id: 'P-002', client: 'Bancolombia Digital',  title: 'Digitalización Onboarding Empresarial', status: 'Cerrada',   date: '2026-02-28', value: '$220,000' },
+  { id: 'P-003', client: 'Rappi Growth',         title: 'Motor de Recomendaciones IA',          status: 'Borrador',  date: '2026-04-01', value: '$45,000' },
+  { id: 'P-004', client: 'Falabella eCommerce',  title: 'Optimización de Conversión Web',       status: 'Revisión',  date: '2026-04-10', value: '$130,000' },
+  { id: 'P-005', client: 'Ecopetrol Digital',    title: 'Dashboard ESG en Tiempo Real',         status: 'Enviada',   date: '2026-04-12', value: '$95,000' },
+];
+
+/* ─── MOCK PROPOSAL SECTIONS ────────────────────────────────── */
+const MOCK_SECTIONS = [
+  {
+    key: 'summary',
+    title: 'Resumen Ejecutivo',
+    icon: '📋',
+    content: `Bancolombia Digital, uno de los líderes del sector financiero en Colombia, se encuentra en un momento estratégico para transformar su proceso de onboarding corporativo mediante la incorporación de inteligencia artificial y automatización avanzada.
+
+La presente propuesta detalla un plan integral para reducir el tiempo de apertura de cuentas empresariales de 5 días hábiles a menos de 24 horas, incrementando la satisfacción del cliente y la competitividad del banco en el segmento B2B.
+
+Nuestro equipo propone una solución basada en tres pilares: automatización documental con OCR y validación en tiempo real, flujos de aprobación inteligentes impulsados por modelos de lenguaje de última generación, y una experiencia de usuario rediseñada desde cero para directores financieros.`,
+  },
+  {
+    key: 'problem',
+    title: 'Análisis del Problema',
+    icon: '🔍',
+    content: `El proceso actual de onboarding corporativo de Bancolombia Digital presenta múltiples fricciones que impactan directamente en la captación y retención de clientes empresariales:
+
+• Tiempo promedio de apertura: 5 días hábiles (promedio de mercado: 2.3 días)
+• 47% de los procesos requieren intervención manual por documentación incompleta
+• Tasa de abandono del formulario digital: 38% en el paso 3 de 7
+• Costo operativo por onboarding: $180 USD vs. $45 USD de neobancos competidores
+• NPS en proceso de apertura: 22/100 (meta interna: >60)
+
+Estos indicadores representan una pérdida estimada de $4.2M USD anuales en oportunidades no captadas y $1.8M USD en costos operativos evitables.`,
+  },
+  {
+    key: 'solution',
+    title: 'Solución Propuesta',
+    icon: '💡',
+    content: `Nuestra solución "FastOnboard IA" integra tres módulos complementarios diseñados específicamente para el sector bancario regulado de América Latina:
+
+Módulo 1 — Captura Inteligente de Documentos
+Motor OCR de alta precisión (>99.2%) para RUT, cámara de comercio, estados financieros y poderes notariales. Validación automática contra registros oficiales de la Superintendencia Financiera, DIAN y Cámara de Comercio en tiempo real.
+
+Módulo 2 — Motor de Decisión con IA
+Modelo de riesgo crediticio adaptado al contexto colombiano que analiza más de 340 variables en <3 segundos. Integración con centrales de riesgo (DataCrédito, TransUnion) y sistema de scoring propietario.
+
+Módulo 3 — Experience Layer
+Interfaz conversacional en español colombiano con soporte vía WhatsApp Business API, portal web responsive y aplicación móvil nativa. Acompañamiento guiado en cada paso con tiempo de completitud estimado visible.`,
+  },
+  {
+    key: 'scope',
+    title: 'Alcance del Proyecto',
+    icon: '📐',
+    content: `El proyecto se estructurará en tres fases con entregables concretos y métricas de éxito definidas:
+
+Fase 1 — Fundamentos (Mes 1-2)
+✓ Arquitectura de microservicios en AWS GovCloud Colombia
+✓ Integración con sistemas core (Flexcube, Temenos)
+✓ Pipeline de datos y modelo base de ML
+✓ Diseño de experiencia validado con 30 usuarios corporativos
+
+Fase 2 — Construcción (Mes 3-5)
+✓ Desarrollo de los 3 módulos core
+✓ Integración con organismos regulatorios
+✓ Pruebas de carga y penetración
+✓ Piloto cerrado con 50 empresas clientes seleccionadas
+
+Fase 3 — Escalamiento (Mes 6)
+✓ Lanzamiento progresivo (10% → 50% → 100% del tráfico)
+✓ Monitoreo en tiempo real y ajuste de modelos
+✓ Transferencia de conocimiento al equipo interno
+✓ Documentación técnica y operativa completa`,
+  },
+  {
+    key: 'timeline',
+    title: 'Cronograma',
+    icon: '📅',
+    content: `El proyecto se ejecutará en un horizonte de 6 meses con hitos mensuales claramente definidos:
+
+Enero 2026   ████████████░░░░░░  Kickoff + Arquitectura
+Febrero 2026 ████████████████░░  Integraciones core
+Marzo 2026   ████████░░░░████░░  Módulos 1 y 2
+Abril 2026   ░░░░████████████░░  Módulo 3 + QA
+Mayo 2026    ░░░░░░░░████████░░  Piloto cerrado + ajustes
+Junio 2026   ░░░░░░░░░░░░████░░  Go-live producción
+
+Equipo dedicado:
+• 1 Tech Lead Senior (full-time)
+• 2 Ingenieros de Backend (full-time)
+• 1 ML Engineer (full-time)
+• 1 Diseñador UX/UI (part-time)
+• 1 Project Manager (part-time)`,
+  },
+  {
+    key: 'investment',
+    title: 'Inversión',
+    icon: '💰',
+    content: `La inversión total del proyecto asciende a USD $220,000 distribuida de la siguiente manera:
+
+Desarrollo e Ingeniería      $140,000  (63.6%)
+Infraestructura Cloud         $28,000  (12.7%)
+Licencias e Integraciones     $22,000  (10.0%)
+Gestión de Proyecto           $18,000  ( 8.2%)
+Capacitación y Transferencia  $12,000  ( 5.5%)
+─────────────────────────────────────────────
+TOTAL                        $220,000  (100%)
+
+Retorno de inversión estimado:
+• Reducción costos operativos: $1.8M USD/año
+• Incremento en captación: $4.2M USD/año
+• ROI proyectado: 2,727% en 12 meses
+• Punto de equilibrio: Mes 4 post-lanzamiento
+
+Condiciones: 30% al inicio, 40% en hito Fase 2, 30% al go-live. Garantía de SLA del 99.9% de uptime durante 12 meses post-lanzamiento.`,
+  },
+  {
+    key: 'nextsteps',
+    title: 'Próximos Pasos',
+    icon: '🚀',
+    content: `Para avanzar con esta propuesta, proponemos el siguiente camino de decisión:
+
+1. Sesión de alineación técnica (esta semana)
+   Reunión de 90 minutos con el equipo de arquitectura de Bancolombia para validar la integración con Flexcube y confirmar los requerimientos de compliance de la SFC.
+
+2. Firma de NDA y carta de intención (próximos 5 días)
+   Formalización del acuerdo de confidencialidad para compartir documentación técnica detallada de las APIs y el modelo de datos.
+
+3. Workshop de Design Thinking (semana 2)
+   Sesión de medio día con stakeholders clave para co-diseñar el journey del usuario corporativo y validar hipótesis de conversión.
+
+4. Kickoff oficial (en 3 semanas)
+   Inicio formal del proyecto con el equipo completo asignado, entrega del cronograma detallado en Jira y acceso a entornos de desarrollo.
+
+Contacto: Eduardo Giraldo — eduardo@smartproposal.lat — +57 310 000 0000`,
+  },
+];
+
+/* ─── STATE ──────────────────────────────────────────────────── */
+let currentStep = 1;
+let selectedClient = null;
+let selectedTimeline = '3 meses';
+let selectedTemplate = 'Transformación Digital';
+let streamingDone = false;
+let expandedSections = {};
+let clientsData = [...CLIENTS];
+
+/* ─── INIT ───────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  renderClientList();
+  renderClientTable();
+  renderProposalsTable();
+  showSection('wizard');
+});
+
+/* ─── NAVIGATION ─────────────────────────────────────────────── */
+function showSection(name) {
+  ['dashboard','wizard','clients','proposals','analytics'].forEach(s => {
+    document.getElementById('section-' + s).classList.toggle('hidden', s !== name);
+    const nav = document.getElementById('nav-' + s);
+    if (nav) {
+      if (s === name) {
+        nav.classList.remove('text-slate-400','hover:text-white','hover:bg-slate-800');
+        nav.classList.add('bg-brand-500/10','text-brand-400','border','border-brand-500/20');
+      } else {
+        nav.classList.add('text-slate-400','hover:text-white','hover:bg-slate-800');
+        nav.classList.remove('bg-brand-500/10','text-brand-400','border','border-brand-500/20');
+      }
+    }
+  });
+
+  const titles = {
+    dashboard: ['Dashboard', 'Resumen de actividad'],
+    wizard: ['Nueva Propuesta', 'Wizard de generación en 4 pasos'],
+    clients: ['Clientes', 'Gestión de clientes'],
+    proposals: ['Propuestas', 'Historial de propuestas'],
+    analytics: ['Analytics', 'Métricas y rendimiento'],
+  };
+  document.getElementById('pageTitle').textContent = titles[name][0];
+  document.getElementById('pageSubtitle').textContent = titles[name][1];
+}
+
+/* ─── STEP NAVIGATION ────────────────────────────────────────── */
+function goToStep(n) {
+  if (n > currentStep) return; // can't skip forward
+  currentStep = n;
+  renderSteps();
+}
+
+function nextStep() {
+  if (currentStep < 4) {
+    currentStep++;
+    renderSteps();
+    if (currentStep === 3) startStreaming();
+    if (currentStep === 4) renderEditorSections();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    renderSteps();
+  }
+}
+
+function renderSteps() {
+  [1,2,3,4].forEach(i => {
+    const circle = document.getElementById('stepCircle' + i);
+    const label  = document.getElementById('stepLabel' + i);
+    const panel  = document.getElementById('step' + i);
+
+    panel.classList.toggle('hidden', i !== currentStep);
+
+    if (i < currentStep) {
+      // completed
+      circle.className = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-brand-500 bg-brand-500 text-white transition-all';
+      circle.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+      label.className  = 'hidden sm:block text-[10px] font-medium text-brand-400 transition-all';
+    } else if (i === currentStep) {
+      circle.className = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-brand-500 bg-brand-500 text-white transition-all';
+      circle.innerHTML = String(i);
+      label.className  = 'hidden sm:block text-[10px] font-medium text-brand-400 transition-all';
+    } else {
+      circle.className = 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-slate-700 bg-slate-900 text-slate-500 transition-all';
+      circle.innerHTML = String(i);
+      label.className  = 'hidden sm:block text-[10px] font-medium text-slate-500 transition-all';
+    }
+  });
+
+  // connectors
+  [['12',1],['23',2],['34',3]].forEach(([id, threshold]) => {
+    const el = document.getElementById('connector' + id);
+    if (currentStep > threshold) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  // progress bar
+  const pct = {1:25, 2:50, 3:75, 4:100}[currentStep];
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+/* ─── CLIENT SEARCH & SELECT ─────────────────────────────────── */
+function renderClientList(filter = '') {
+  const list = document.getElementById('clientList');
+  const filtered = clientsData.filter(c =>
+    c.name.toLowerCase().includes(filter.toLowerCase()) ||
+    c.company.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  list.innerHTML = filtered.map(c => `
+    <button onclick="selectClient(${c.id})"
+      class="client-item w-full flex items-center gap-3 p-3 bg-slate-900 border rounded-xl text-left transition-all hover:border-brand-500/50 ${selectedClient === c.id ? 'border-brand-500 bg-brand-500/5' : 'border-slate-800'}"
+      id="clientItem${c.id}">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+        ${c.company.slice(0,2).toUpperCase()}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-white truncate">${c.company}</p>
+        <p class="text-xs text-slate-400 truncate">${c.name} · ${c.industry}</p>
+      </div>
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <div class="flex items-center gap-1">
+          <div class="w-1.5 h-1.5 rounded-full ${c.score >= 85 ? 'bg-brand-500' : c.score >= 70 ? 'bg-yellow-400' : 'bg-slate-500'}"></div>
+          <span class="text-xs font-semibold ${c.score >= 85 ? 'text-brand-400' : c.score >= 70 ? 'text-yellow-400' : 'text-slate-400'}">${c.score}</span>
+        </div>
+        <span class="text-[10px] text-slate-500">${c.size} emp.</span>
+      </div>
+      ${selectedClient === c.id ? `<svg class="w-4 h-4 text-brand-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` : ''}
+    </button>
+  `).join('');
+}
+
+function filterClients() {
+  renderClientList(document.getElementById('clientSearch').value);
+}
+
+function selectClient(id) {
+  selectedClient = id;
+  const c = clientsData.find(x => x.id === id);
+  document.getElementById('selectedClientBadge').classList.remove('hidden');
+  document.getElementById('selectedClientName').textContent = `${c.company} — ${c.name}`;
+  document.getElementById('step1Next').disabled = false;
+  document.getElementById('step1Next').classList.remove('bg-slate-700','cursor-not-allowed');
+  renderClientList(document.getElementById('clientSearch').value);
+}
+
+function clearClient() {
+  selectedClient = null;
+  document.getElementById('selectedClientBadge').classList.add('hidden');
+  document.getElementById('step1Next').disabled = true;
+  document.getElementById('step1Next').classList.add('bg-slate-700','cursor-not-allowed');
+  renderClientList();
+}
+
+function toggleNewClientForm() {
+  const form = document.getElementById('newClientForm');
+  form.classList.toggle('hidden');
+}
+
+function addNewClient() {
+  const inputs = document.querySelectorAll('#newClientForm input');
+  const name    = inputs[0].value || 'Nuevo Contacto';
+  const company = inputs[1].value || 'Nueva Empresa';
+  const email   = inputs[2].value || '';
+  const newId   = clientsData.length + 1;
+  const sel     = document.querySelector('#newClientForm select');
+  const industry= sel.value || 'Tecnología';
+
+  clientsData.push({ id: newId, name, company, industry, size: '1-50', score: 60, email });
+  toggleNewClientForm();
+  inputs.forEach(i => i.value = '');
+  renderClientList();
+  showToast('success', 'Cliente creado', `${company} agregado correctamente.`);
+}
+
+/* ─── STEP 2 ─────────────────────────────────────────────────── */
+function updateBudget() {
+  const v = parseInt(document.getElementById('budgetSlider').value);
+  const budgets = [5000,10000,20000,35000,50000,75000,100000,150000,200000,300000,500000];
+  const idx = Math.round(v / 100 * (budgets.length - 1));
+  const val = budgets[idx];
+  document.getElementById('budgetLabel').textContent = '$' + val.toLocaleString('en-US') + ' USD';
+}
+
+function selectTimeline(btn, val) {
+  selectedTimeline = val;
+  document.querySelectorAll('.timeline-opt').forEach(b => {
+    b.classList.remove('border-brand-500','bg-brand-500/10','text-brand-400','selected');
+    b.classList.add('border-slate-700','text-slate-400');
+  });
+  btn.classList.remove('border-slate-700','text-slate-400');
+  btn.classList.add('border-brand-500','bg-brand-500/10','text-brand-400','selected');
+}
+
+function selectTemplate(btn, val) {
+  selectedTemplate = val;
+  document.querySelectorAll('.template-opt').forEach(b => {
+    b.classList.remove('border-brand-500','bg-brand-500/10','selected');
+    b.classList.add('border-slate-700');
+    b.querySelector('p:first-of-type').classList.remove('text-brand-300');
+    b.querySelector('p:first-of-type').classList.add('text-slate-300');
+  });
+  btn.classList.remove('border-slate-700');
+  btn.classList.add('border-brand-500','bg-brand-500/10','selected');
+  btn.querySelector('p:first-of-type').classList.remove('text-slate-300');
+  btn.querySelector('p:first-of-type').classList.add('text-brand-300');
+}
+
+/* ─── STEP 3: AI STREAMING ───────────────────────────────────── */
+function startStreaming() {
+  streamingDone = false;
+  document.getElementById('step3Next').disabled = true;
+  document.getElementById('step3Next').classList.add('bg-slate-700','cursor-not-allowed');
+  document.getElementById('step3Next').classList.remove('bg-brand-500','hover:bg-brand-600');
+  document.getElementById('step3Back').disabled = true;
+  document.getElementById('step3Back').classList.add('opacity-50','cursor-not-allowed');
+
+  // Build section progress list
+  const progressEl = document.getElementById('sectionProgress');
+  progressEl.innerHTML = MOCK_SECTIONS.map((s, i) => `
+    <div id="sectionProg${i}" class="flex items-center gap-3 p-3 bg-slate-900 border border-slate-800 rounded-lg transition-all">
+      <div id="sectionProgIcon${i}" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-base">
+        ${s.icon}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-slate-400" id="sectionProgTitle${i}">${s.title}</p>
+        <div id="sectionProgBar${i}" class="h-1 mt-1.5 bg-slate-800 rounded-full overflow-hidden w-0">
+          <div class="h-full bg-brand-500 rounded-full transition-all" id="sectionProgFill${i}" style="width:0%"></div>
+        </div>
+      </div>
+      <div id="sectionProgStatus${i}" class="text-[10px] text-slate-500 font-medium shrink-0">Pendiente</div>
+    </div>
+  `).join('');
+
+  // Hide shimmer, show content area
+  document.getElementById('streamingPlaceholder').style.display = 'none';
+  document.getElementById('streamingContent').textContent = '';
+
+  let sectionIndex = 0;
+
+  function processSection() {
+    if (sectionIndex >= MOCK_SECTIONS.length) {
+      finishStreaming();
+      return;
+    }
+
+    const sec = MOCK_SECTIONS[sectionIndex];
+    const progRow = document.getElementById('sectionProg' + sectionIndex);
+    const progBar  = document.getElementById('sectionProgBar' + sectionIndex);
+    const progFill = document.getElementById('sectionProgFill' + sectionIndex);
+    const progStatus = document.getElementById('sectionProgStatus' + sectionIndex);
+    const progTitle = document.getElementById('sectionProgTitle' + sectionIndex);
+
+    // Activate this section
+    progRow.classList.add('border-brand-500/30','bg-brand-500/5');
+    progBar.style.width = '100%';
+    progStatus.textContent = 'Generando...';
+    progStatus.classList.add('text-brand-400');
+    progStatus.classList.remove('text-slate-500');
+    progTitle.classList.remove('text-slate-400');
+    progTitle.classList.add('text-white');
+
+    // Show section header in streaming area
+    const contentEl = document.getElementById('streamingContent');
+    const header = `\n── ${sec.title} ──\n`;
+    contentEl.textContent += header;
+
+    const words = sec.content.split(' ');
+    let wordIdx = 0;
+    const totalWords = words.length;
+
+    function typeWord() {
+      if (wordIdx < words.length) {
+        contentEl.textContent += (wordIdx === 0 ? '' : ' ') + words[wordIdx];
+        wordIdx++;
+        // Scroll to bottom
+        const preview = document.getElementById('streamingPreview');
+        preview.scrollTop = preview.scrollHeight;
+        // Animate fill bar
+        const pct = Math.round(wordIdx / totalWords * 100);
+        progFill.style.width = pct + '%';
+        setTimeout(typeWord, 22);
+      } else {
+        // Section done
+        contentEl.textContent += '\n\n';
+        progRow.classList.remove('border-brand-500/30','bg-brand-500/5');
+        progRow.classList.add('border-brand-500/20');
+        progStatus.textContent = '✓ Listo';
+        progStatus.classList.remove('text-brand-400');
+        progStatus.classList.add('text-brand-500');
+        sectionIndex++;
+        setTimeout(processSection, 300);
+      }
+    }
+
+    typeWord();
+  }
+
+  setTimeout(processSection, 400);
+}
+
+function finishStreaming() {
+  streamingDone = true;
+  document.getElementById('step3Next').disabled = false;
+  document.getElementById('step3Next').classList.remove('bg-slate-700','cursor-not-allowed');
+  document.getElementById('step3Next').classList.add('bg-brand-500','hover:bg-brand-600');
+  document.getElementById('step3Back').disabled = false;
+  document.getElementById('step3Back').classList.remove('opacity-50','cursor-not-allowed');
+  showToast('success', 'Propuesta generada', 'Todas las secciones han sido redactadas por Claude.');
+}
+
+/* ─── STEP 4: EDITOR ─────────────────────────────────────────── */
+function renderEditorSections() {
+  const container = document.getElementById('editorSections');
+  container.innerHTML = MOCK_SECTIONS.map((s, i) => {
+    const isOpen = expandedSections[i] !== false; // default open
+    return `
+    <div class="section-card" id="editorSection${i}">
+      <button onclick="toggleSection(${i})" class="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-800/50 transition-all">
+        <span class="text-base shrink-0">${s.icon}</span>
+        <span class="flex-1 text-sm font-semibold text-white">${s.title}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full">IA</span>
+          <svg id="chevron${i}" class="w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </button>
+      <div id="sectionBody${i}" class="${isOpen ? '' : 'hidden'} px-5 pb-5">
+        <div contenteditable="true" class="editor-area text-sm text-slate-300 leading-relaxed focus:outline-none border border-slate-700 rounded-lg p-4 bg-slate-950/50 focus:border-brand-500/50 transition-all" spellcheck="false">${s.content.replace(/\n/g,'<br/>')}</div>
+        <div class="flex items-center justify-between mt-2">
+          <span class="text-[10px] text-slate-500">${s.content.split(' ').length} palabras</span>
+          <button onclick="regenerateSection(${i})" class="text-[11px] text-slate-400 hover:text-brand-400 flex items-center gap-1 transition-all">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Regenerar sección
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+function toggleSection(i) {
+  const body = document.getElementById('sectionBody' + i);
+  const chevron = document.getElementById('chevron' + i);
+  const isHidden = body.classList.contains('hidden');
+  body.classList.toggle('hidden', !isHidden);
+  chevron.classList.toggle('rotate-180', isHidden);
+  expandedSections[i] = isHidden;
+}
+
+function regenerateSection(i) {
+  showToast('info', 'Regenerando...', `Claude está reescribiendo "${MOCK_SECTIONS[i].title}"...`);
+  setTimeout(() => {
+    showToast('success', 'Sección actualizada', `"${MOCK_SECTIONS[i].title}" ha sido regenerada.`);
+  }, 2000);
+}
+
+/* ─── EXPORT ─────────────────────────────────────────────────── */
+function exportAction(format) {
+  const msgs = {
+    'PDF':   ['Exportando PDF...', 'Propuesta_Bancolombia_Digital.pdf descargada correctamente.'],
+    'DOCX':  ['Generando DOCX...', 'Propuesta_Bancolombia_Digital.docx lista para descargar.'],
+    'Email': ['Enviando email...', 'Propuesta enviada a c.jimenez@bancolombia.com vía Resend.'],
+  };
+  showToast('info', msgs[format][0], 'Procesando...');
+  setTimeout(() => showToast('success', format + ' listo', msgs[format][1]), 1800);
+}
+
+/* ─── CLIENT TABLE ───────────────────────────────────────────── */
+function renderClientTable() {
+  const el = document.getElementById('clientTableRows');
+  if (!el) return;
+  el.innerHTML = clientsData.map(c => `
+    <div class="flex items-center gap-4 p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-brand-500/30 transition-all">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+        ${c.company.slice(0,2).toUpperCase()}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-white">${c.company}</p>
+        <p class="text-xs text-slate-400">${c.name} · ${c.email}</p>
+      </div>
+      <div class="hidden sm:flex items-center gap-3">
+        <span class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-full">${c.industry}</span>
+        <div class="flex items-center gap-1">
+          <div class="w-1.5 h-1.5 rounded-full ${c.score >= 85 ? 'bg-brand-500' : 'bg-yellow-400'}"></div>
+          <span class="text-xs font-bold ${c.score >= 85 ? 'text-brand-400' : 'text-yellow-400'}">${c.score}</span>
+        </div>
+      </div>
+      <button onclick="showSection('wizard')" class="text-xs text-brand-400 hover:text-brand-300 border border-brand-500/30 hover:border-brand-500/60 px-3 py-1.5 rounded-lg transition-all shrink-0">
+        Nueva propuesta
+      </button>
+    </div>
+  `).join('');
+}
+
+/* ─── PROPOSALS TABLE ────────────────────────────────────────── */
+function renderProposalsTable() {
+  const el = document.getElementById('proposalsTable');
+  if (!el) return;
+
+  const statusColors = {
+    'Enviada':  'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    'Cerrada':  'bg-brand-500/10 text-brand-400 border-brand-500/20',
+    'Borrador': 'bg-slate-700/50 text-slate-400 border-slate-600',
+    'Revisión': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  };
+
+  el.innerHTML = `
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div class="grid grid-cols-12 gap-4 px-5 py-3 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <div class="col-span-1">ID</div>
+        <div class="col-span-3">Cliente</div>
+        <div class="col-span-4">Propuesta</div>
+        <div class="col-span-2">Valor</div>
+        <div class="col-span-2">Estado</div>
+      </div>
+      ${PROPOSALS.map(p => `
+        <div class="grid grid-cols-12 gap-4 px-5 py-3.5 border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30 transition-all items-center">
+          <div class="col-span-1 text-xs text-slate-500 font-mono">${p.id}</div>
+          <div class="col-span-3 text-sm text-white font-medium truncate">${p.client}</div>
+          <div class="col-span-4 text-sm text-slate-300 truncate">${p.title}</div>
+          <div class="col-span-2 text-sm font-semibold text-white">${p.value}</div>
+          <div class="col-span-2">
+            <span class="text-[11px] font-semibold border px-2 py-0.5 rounded-full ${statusColors[p.status] || ''}">${p.status}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ─── TOAST ──────────────────────────────────────────────────── */
+let toastTimer = null;
+function showToast(type, title, msg) {
+  const toast = document.getElementById('toast');
+  const icon  = document.getElementById('toastIcon');
+  const tTitle = document.getElementById('toastTitle');
+  const tMsg   = document.getElementById('toastMsg');
+
+  const configs = {
+    success: { bg: 'bg-brand-500/20', color: 'text-brand-400', svg: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>` },
+    info:    { bg: 'bg-blue-500/20',  color: 'text-blue-400',  svg: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
+    error:   { bg: 'bg-red-500/20',   color: 'text-red-400',   svg: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>` },
+  };
+
+  const cfg = configs[type] || configs.info;
+  icon.className  = `w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${cfg.bg} ${cfg.color}`;
+  icon.innerHTML  = cfg.svg;
+  tTitle.textContent = title;
+  tMsg.textContent   = msg;
+
+  toast.classList.remove('hidden');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add('hidden'), 4000);
+}
+</script>
+</body>
+</html>
