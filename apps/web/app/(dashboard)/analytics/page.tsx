@@ -155,12 +155,13 @@ function computeStatusData(proposals: ApiProposal[]): StatusData[] {
     counts[p.status]++
   })
 
-  return [
+  const items: StatusData[] = [
     { name: 'accepted', value: counts.accepted, color: '#1D9E75' },
     { name: 'sent', value: counts.sent, color: '#2563EB' },
     { name: 'draft', value: counts.draft, color: '#94A3B8' },
     { name: 'rejected', value: counts.rejected, color: '#FCA5A5' },
-  ].filter((s) => s.value > 0)
+  ]
+  return items.filter((s) => s.value > 0)
 }
 
 export default function AnalyticsPage() {
