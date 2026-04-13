@@ -151,7 +151,7 @@ export default function DashboardPage() {
   // Calculate stats
   const totalProposals = proposals.length
   const acceptedCount = proposals.filter((p) => p.status === 'accepted').length
-  const inReviewCount = proposals.filter((p) => p.status === 'review' || p.status === 'sent').length
+  const inReviewCount = proposals.filter((p) => p.status === 'sent').length
   const totalValue = proposals.reduce((sum, p) => sum + (p.budget ?? 0), 0)
 
   // Get 5 most recent proposals

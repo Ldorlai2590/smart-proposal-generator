@@ -176,9 +176,9 @@ function NewClientDialog({
     } catch (err) {
       if (err instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {}
-        err.errors.forEach((error) => {
+        err.issues.forEach((error) => {
           const path = error.path[0]
-          if (path) {
+          if (path != null && typeof path === 'string') {
             fieldErrors[path] = error.message
           }
         })

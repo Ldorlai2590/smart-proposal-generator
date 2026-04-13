@@ -177,8 +177,8 @@ export default function AnalyticsPage() {
       setLoading(true)
       try {
         const [proposalsRes, clientsRes] = await Promise.all([
-          fetchWithTenant('/proposals?limit=200&offset=0', orgId),
-          fetchWithTenant('/clients?limit=200', orgId),
+          fetchWithTenant('/proposals?limit=200&offset=0', orgId!),
+          fetchWithTenant('/clients?limit=200', orgId!),
         ])
 
         if (!proposalsRes.ok || !clientsRes.ok) {
@@ -251,6 +251,7 @@ export default function AnalyticsPage() {
     .map(([id, data]) => ({
       id,
       ...data,
+      acceptedCount: data.accepted,
       closingRate: `${data.proposals > 0 ? Math.round((data.accepted / data.proposals) * 100) : 0}%`,
     }))
     .sort((a, b) => b.proposals - a.proposals)
