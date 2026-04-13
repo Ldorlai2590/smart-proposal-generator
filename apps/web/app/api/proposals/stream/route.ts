@@ -94,13 +94,10 @@ Consolida todo en una tabla final de inversión mostrando el total por servicio 
     messages: [
       {
         role: 'system',
-        content: [{
-          type: 'text',
-          text: system,
-          experimental_providerMetadata: {
-            anthropic: { cacheControl: { type: 'ephemeral' } },
-          },
-        }],
+        content: system,
+        experimental_providerMetadata: {
+          anthropic: { cacheControl: { type: 'ephemeral' } },
+        },
       },
       { role: 'user', content: prompt },
     ],
