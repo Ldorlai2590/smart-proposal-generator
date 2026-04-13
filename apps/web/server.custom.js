@@ -1,21 +1,17 @@
+// Thin wrapper around Next.js standalone server.js
+// Serves _next/static and public files that standalone doesn't handle
 const { createServer } = require('http')
-const { parse } = require('url')
 const path = require('path')
 const fs = require('fs')
-const next = require('next')
+const { spawn } = require('child_process')
 
-const dir = path.join(__dirname)
-const port = parseInt(process.env.PORT, 10) || 7860
-const hostname = process.env.HOSTNAME || '0.0.0.0'
-
-process.env.NODE_ENV = 'production'
-
-const app = next({ dev: false, dir, hostname, port })
-const handle = app.getRequestHandler()
+const PORT = parseInt(process.env.PORT, 10) || 7860
+const INTERNAL_PORT = PORT + 1
+const dir = __dirname
 
 const MIME_TYPES = {
-  '.css': 'text/css',
-  '.js': 'application/javascript',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -27,41 +23,92 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.map': 'application/json',
+  '.txt': 'text/plain',
+  '.webp': 'image/webp',
 }
 
-app.prepare().then(() => {
-  createServer((req, res) => {
-    const parsedUrl = parse(req.url, true)
-    const { pathname } = parsedUrl
+function tryServeStatic(req, res) {
+  const url = new URL(req.url, `http://localhost:${PORT}`)
+  const pathname = url.pathname
 
-    // Serve _next/static files directly
-    if (pathname.startsWith('/_next/static')) {
-      const filePath = path.join(dir, '.next', 'static', pathname.replace('/_next/static', ''))
-      if (fs.existsSync(filePath)) {
-        const ext = path.extname(filePath)
-        const contentType = MIME_TYPES[ext] || 'application/octet-stream'
-        res.setHeader('Content-Type', contentType)
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-        fs.createReadStream(filePath).pipe(res)
-        return
-      }
-    }
+  // _next/static → .next/static
+  if (pathname.startsWith('/_next/static/')) {
+    const filePath = path.join(dir, '.next', 'static', pathname.slice('/_next/static/'.length))
+    return serveFile(filePath, res)
+  }
 
-    // Serve public files directly
-    if (!pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-      const publicPath = path.join(dir, 'public', pathname)
-      if (fs.existsSync(publicPath) && fs.statSync(publicPath).isFile()) {
-        const ext = path.extname(publicPath)
-        const contentType = MIME_TYPES[ext] || 'application/octet-stream'
-        res.setHeader('Content-Type', contentType)
-        fs.createReadStream(publicPath).pipe(res)
-        return
-      }
-    }
+  // public files (favicon, images, etc.) — skip API and _next routes
+  if (!pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
+    const publicPath = path.join(dir, 'public', pathname)
+    return serveFile(publicPath, res)
+  }
 
-    // Let Next.js handle everything else
-    handle(req, res, parsedUrl)
-  }).listen(port, hostname, () => {
-    console.log(`> Ready on http://${hostname}:${port}`)
+  return false
+}
+
+function serveFile(filePath, res) {
+  try {
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false
+    const ext = path.extname(filePath).toLowerCase()
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream'
+    const immutable = filePath.includes('.next/static')
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600',
+    })
+    fs.createReadStream(filePath).pipe(res)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Proxy non-static requests to the standalone Next.js server
+function proxyToNext(req, res) {
+  const options = {
+    hostname: '127.0.0.1',
+    port: INTERNAL_PORT,
+    path: req.url,
+    method: req.method,
+    headers: req.headers,
+  }
+
+  const proxyReq = require('http').request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers)
+    proxyRes.pipe(res, { end: true })
   })
+
+  proxyReq.on('error', (err) => {
+    console.error('[proxy] Error:', err.message)
+    if (!res.headersSent) {
+      res.writeHead(502)
+      res.end('Bad Gateway')
+    }
+  })
+
+  req.pipe(proxyReq, { end: true })
+}
+
+// Start the standalone Next.js server on the internal port
+const nextServer = spawn('node', ['server.js'], {
+  cwd: dir,
+  env: { ...process.env, PORT: String(INTERNAL_PORT), HOSTNAME: '127.0.0.1' },
+  stdio: 'inherit',
 })
+
+nextServer.on('exit', (code) => {
+  console.error(`Next.js server exited with code ${code}`)
+  process.exit(code || 1)
+})
+
+// Wait a moment for the Next.js server to start, then start our proxy
+setTimeout(() => {
+  createServer((req, res) => {
+    if (!tryServeStatic(req, res)) {
+      proxyToNext(req, res)
+    }
+  }).listen(PORT, '0.0.0.0', () => {
+    console.log(`> Static proxy ready on http://0.0.0.0:${PORT}`)
+    console.log(`> Next.js running on http://127.0.0.1:${INTERNAL_PORT}`)
+  })
+}, 3000)
