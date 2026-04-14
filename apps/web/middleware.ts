@@ -4,9 +4,21 @@ import type { NextRequest } from 'next/server'
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
 function demoMiddleware(request: NextRequest) {
-  // In demo mode, skip all Clerk auth — let everything through
+  const pathname = request.nextUrl.pathname
+
+  // In demo mode, redirect landing + auth pages straight to /dashboard
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/sign-in') ||
+    pathname.startsWith('/sign-up') ||
+    pathname.startsWith('/select-org')
+  ) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Let everything else through without Clerk
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-next-pathname', request.nextUrl.pathname)
+  requestHeaders.set('x-next-pathname', pathname)
   requestHeaders.set('X-Demo-Mode', 'true')
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
