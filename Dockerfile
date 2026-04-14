@@ -15,6 +15,11 @@ ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWxpdmUtYm9uZWZpc2gtMTguY2xlcmsuYW
 ARG NEXT_PUBLIC_APP_URL=https://Giraldo34-smart-proposal-generator.hf.space
 ARG NEXT_PUBLIC_API_URL=https://Giraldo34-smart-proposal-generator.hf.space
 
+# Demo mode: skip Clerk auth entirely (NEXT_PUBLIC_ must be at build time for client JS)
+ARG NEXT_PUBLIC_DEMO_MODE=true
+ENV NEXT_PUBLIC_DEMO_MODE=$NEXT_PUBLIC_DEMO_MODE
+ENV DEMO_MODE=true
+
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
@@ -38,6 +43,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=7860
 ENV HOSTNAME=0.0.0.0
+ENV DEMO_MODE=true
+ENV NEXT_PUBLIC_DEMO_MODE=true
 
 # Standalone output includes node_modules (minimal, traced)
 COPY --from=builder /app/apps/web/.next/standalone ./

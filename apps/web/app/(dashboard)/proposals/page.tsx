@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
 import {
   useReactTable,
   getCoreRowModel,
@@ -22,6 +21,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { fetchWithTenant } from '@/lib/api'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+function useDemoAuth() {
+  if (DEMO_MODE) return { orgId: 'demo' as string | null }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth } = require('@clerk/nextjs')
+  return useAuth() as { orgId: string | null }
+}
 
 interface Proposal {
   id: string
@@ -131,7 +139,7 @@ function SkeletonRows({ count }: { count: number }) {
 }
 
 export default function ProposalsPage() {
-  const { orgId } = useAuth()
+  const { orgId } = useDemoAuth()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

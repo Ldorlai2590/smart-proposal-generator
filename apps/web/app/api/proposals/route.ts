@@ -1,10 +1,19 @@
-import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { proposals, tenants, users } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 
-export async function GET() {
+const DEMO_MODE = process.env.DEMO_MODE === 'true'
+const DEMO_TENANT_CLERK_ORG = 'org_3CLrWMV7SmXmUKGYauf8fYagW17'
+
+async function getOrgId(): Promise<string | null> {
+  if (DEMO_MODE) return DEMO_TENANT_CLERK_ORG
+  const { auth } = await import('@clerk/nextjs/server')
   const { orgId } = await auth()
+  return orgId ?? null
+}
+
+export async function GET() {
+  const orgId = await getOrgId()
   if (!orgId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -44,7 +53,15 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { orgId, userId } = await auth()
+  const orgId = await getOrgId()
+  let userId: string | null = null
+  if (DEMO_MODE) {
+    userId = 'user_3C2K7vk764ftSEyJeprNyXbgLY8'
+  } else {
+    const { auth } = await import('@clerk/nextjs/server')
+    const session = await auth()
+    userId = session.userId
+  }
   if (!orgId || !userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }

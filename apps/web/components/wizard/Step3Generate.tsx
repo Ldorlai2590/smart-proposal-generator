@@ -5,10 +5,19 @@ import { experimental_useObject as useObject } from 'ai/react'
 import { z } from 'zod/v4'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2, Sparkles } from 'lucide-react'
-import { useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { fetchWithTenant } from '@/lib/api'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+function useDemoAuth() {
+  if (DEMO_MODE) return { orgId: 'demo' as string | null, userId: 'demo-user' as string | null }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth } = require('@clerk/nextjs')
+  return useAuth() as { orgId: string | null; userId: string | null }
+}
+
 import type { ClientData } from './Step1Client'
 import type { ContextData } from './Step2Context'
 
@@ -60,7 +69,7 @@ interface Step3GenerateProps {
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function Step3Generate({ client, context, onNext, onBack }: Step3GenerateProps) {
-  const { orgId, userId } = useAuth()
+  const { orgId, userId } = useDemoAuth()
   const { object, submit, isLoading, error } = useObject<ProposalSections>({
     api: '/api/proposals/stream',
     schema: ProposalSectionSchema,

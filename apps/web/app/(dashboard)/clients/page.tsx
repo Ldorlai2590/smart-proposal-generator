@@ -2,13 +2,21 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, Plus, Building2, TrendingUp, Users, AlertCircle } from 'lucide-react'
-import { useAuth } from '@clerk/nextjs'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { fetchWithTenant } from '@/lib/api'
 import { z } from 'zod/v4'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+function useDemoAuth() {
+  if (DEMO_MODE) return { orgId: 'demo' as string | null }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth } = require('@clerk/nextjs')
+  return useAuth() as { orgId: string | null }
+}
 
 interface Client {
   id: string
@@ -320,7 +328,7 @@ function NewClientDialog({
 }
 
 export default function ClientsPage() {
-  const { orgId } = useAuth()
+  const { orgId } = useDemoAuth()
   const [clients, setClients] = useState<Client[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)

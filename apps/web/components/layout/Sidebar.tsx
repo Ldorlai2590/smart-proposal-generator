@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserButton, useOrganization } from '@clerk/nextjs'
 import {
   LayoutDashboard,
   FileText,
@@ -12,8 +11,11 @@ import {
   CreditCard,
   ChevronLeft,
   Zap,
+  User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,7 +27,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { organization } = useOrganization()
+  const orgName = DEMO_MODE ? 'Demo Organization' : undefined
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
@@ -96,14 +98,19 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className="p-3 border-t border-[#1E293B] space-y-3 flex-shrink-0">
-        {!collapsed && organization && (
+        {!collapsed && (DEMO_MODE ? orgName : null) && (
           <p className="text-xs text-[#94A3B8] px-2 truncate font-medium">
-            {organization.name}
+            {orgName}
           </p>
         )}
 
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-2 px-1')}>
-          <UserButton afterSignOutUrl="/" />
+          {DEMO_MODE ? (
+            <div className="h-7 w-7 rounded-full bg-[#1D9E75] flex items-center justify-center">
+              <User className="h-4 w-4 text-white" />
+            </div>
+          ) : null}
+          {!DEMO_MODE && <ClerkUserButton />}
         </div>
 
         {/* Collapse toggle */}
@@ -118,5 +125,21 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+  )
+}
+
+function ClerkUserButton() {
+  // Dynamic import to avoid Clerk errors in demo mode
+  const { UserButton, useOrganization } = require('@clerk/nextjs')
+  const { organization } = useOrganization()
+  return (
+    <>
+      {organization && (
+        <p className="text-xs text-[#94A3B8] px-2 truncate font-medium">
+          {organization.name}
+        </p>
+      )}
+      <UserButton afterSignOutUrl="/" />
+    </>
   )
 }

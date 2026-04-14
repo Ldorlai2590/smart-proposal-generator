@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
 import { Search, Plus, Building2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +8,15 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { fetchWithTenant } from '@/lib/api'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+function useDemoAuth() {
+  if (DEMO_MODE) return { orgId: 'demo' as string | null }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth } = require('@clerk/nextjs')
+  return useAuth() as { orgId: string | null }
+}
 
 export interface ClientData {
   id: string
@@ -59,7 +67,7 @@ function mapApiClient(c: ApiClient): ClientData {
 }
 
 export function Step1Client({ onNext }: Step1ClientProps) {
-  const { orgId } = useAuth()
+  const { orgId } = useDemoAuth()
   const [query, setQuery] = useState('')
   const [clients, setClients] = useState<ClientData[]>([])
   const [isLoading, setIsLoading] = useState(false)

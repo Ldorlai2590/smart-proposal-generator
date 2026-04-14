@@ -1,58 +1,74 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/select-org(.*)',
-  '/api/webhooks(.*)',
-])
+const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/clients(.*)',
-  '/proposals(.*)',
-  '/analytics(.*)',
-  '/onboarding(.*)',
-  '/billing(.*)',
-])
-
-const isApiRoute = createRouteMatcher(['/api/(.*)'])
-
-export default clerkMiddleware(async (auth, request) => {
-  const { userId, orgId } = await auth()
-
-  // 1. Allow public routes through without any auth checks
-  if (isPublicRoute(request)) {
-    return NextResponse.next()
-  }
-
-  // 2. Redirect unauthenticated users to /sign-in
-  if (!userId) {
-    const signInUrl = new URL('/sign-in', request.url)
-    signInUrl.searchParams.set('redirect_url', request.url)
-    return NextResponse.redirect(signInUrl)
-  }
-
-  // 3. Redirect authenticated users with no active org to /select-org
-  //    (only for protected app routes — skip for API routes to avoid redirect loops)
-  if (!orgId && isProtectedRoute(request)) {
-    const selectOrgUrl = new URL('/select-org', request.url)
-    return NextResponse.redirect(selectOrgUrl)
-  }
-
-  // 4. Forward orgId + pathname as headers for downstream use
+function demoMiddleware(request: NextRequest) {
+  // In demo mode, skip all Clerk auth — let everything through
   const requestHeaders = new Headers(request.headers)
-  const pathname = request.nextUrl.pathname
-  requestHeaders.set('x-next-pathname', pathname)
-
-  if (orgId) {
-    requestHeaders.set('X-Tenant-ID', orgId)
-  }
-
+  requestHeaders.set('x-next-pathname', request.nextUrl.pathname)
+  requestHeaders.set('X-Demo-Mode', 'true')
   return NextResponse.next({ request: { headers: requestHeaders } })
-})
+}
+
+async function clerkAuthMiddleware(request: NextRequest) {
+  const { clerkMiddleware, createRouteMatcher } = await import('@clerk/nextjs/server')
+
+  const isPublicRoute = createRouteMatcher([
+    '/',
+    '/sign-in(.*)',
+    '/sign-up(.*)',
+    '/select-org(.*)',
+    '/api/webhooks(.*)',
+  ])
+
+  const isProtectedRoute = createRouteMatcher([
+    '/dashboard(.*)',
+    '/clients(.*)',
+    '/proposals(.*)',
+    '/analytics(.*)',
+    '/onboarding(.*)',
+    '/billing(.*)',
+  ])
+
+  const handler = clerkMiddleware(async (auth, req) => {
+    const { userId, orgId } = await auth()
+
+    if (isPublicRoute(req)) {
+      return NextResponse.next()
+    }
+
+    if (!userId) {
+      const signInUrl = new URL('/sign-in', req.url)
+      signInUrl.searchParams.set('redirect_url', req.url)
+      return NextResponse.redirect(signInUrl)
+    }
+
+    if (!orgId && isProtectedRoute(req)) {
+      const selectOrgUrl = new URL('/select-org', req.url)
+      return NextResponse.redirect(selectOrgUrl)
+    }
+
+    const requestHeaders = new Headers(req.headers)
+    const pathname = req.nextUrl.pathname
+    requestHeaders.set('x-next-pathname', pathname)
+
+    if (orgId) {
+      requestHeaders.set('X-Tenant-ID', orgId)
+    }
+
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  })
+
+  return handler(request, {} as never)
+}
+
+export default function middleware(request: NextRequest) {
+  if (DEMO_MODE) {
+    return demoMiddleware(request)
+  }
+  return clerkAuthMiddleware(request)
+}
 
 export const config = {
   matcher: [

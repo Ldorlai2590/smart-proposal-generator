@@ -1,8 +1,10 @@
 import { streamObject } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
-import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod/v4'
 import { getTrialStatus, incrementProposalUsage } from '@/lib/trial'
+
+const DEMO_MODE = process.env.DEMO_MODE === 'true'
+const DEMO_ORG_ID = 'org_3CLrWMV7SmXmUKGYauf8fYagW17'
 
 const ProposalSectionSchema = z.object({
   resumenEjecutivo: z.string().describe('Resumen ejecutivo de la propuesta'),
@@ -28,9 +30,17 @@ const RequestSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const { userId, orgId } = await auth()
-  if (!userId || !orgId) {
-    return new Response('Unauthorized', { status: 401 })
+  let orgId: string | null = null
+
+  if (DEMO_MODE) {
+    orgId = DEMO_ORG_ID
+  } else {
+    const { auth } = await import('@clerk/nextjs/server')
+    const session = await auth()
+    if (!session.userId || !session.orgId) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    orgId = session.orgId
   }
 
   // Gate: trial vencido o cuota agotada → 402 Payment Required

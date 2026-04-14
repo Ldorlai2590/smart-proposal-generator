@@ -1,5 +1,7 @@
-import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod/v4'
+
+const DEMO_MODE = process.env.DEMO_MODE === 'true'
+const DEMO_ORG_ID = 'org_3CLrWMV7SmXmUKGYauf8fYagW17'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -311,9 +313,16 @@ async function handleEmail(
 
 export async function POST(req: Request): Promise<Response> {
   // Auth guard — require both user and org (tenant)
-  const { userId, orgId } = await auth()
-  if (!userId || !orgId) {
-    return jsonResponse({ error: 'Unauthorized' }, 401)
+  let orgId: string | null = null
+  if (DEMO_MODE) {
+    orgId = DEMO_ORG_ID
+  } else {
+    const { auth } = await import('@clerk/nextjs/server')
+    const session = await auth()
+    if (!session.userId || !session.orgId) {
+      return jsonResponse({ error: 'Unauthorized' }, 401)
+    }
+    orgId = session.orgId
   }
 
   // Parse body

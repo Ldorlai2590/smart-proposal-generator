@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useAuth, useUser } from '@clerk/nextjs'
 import { Plus, FileText, CheckCircle2, Clock, DollarSign, RefreshCw } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { ProposalsBarChart, ClosingRateDonut } from '@/components/dashboard/ProposalsChart'
-import { fetchWithTenant } from '@/lib/api'
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 interface ApiProposal {
   id: string
@@ -113,10 +113,17 @@ function SkeletonRecentProposals() {
   )
 }
 
-export default function DashboardPage() {
+function useClerkAuth() {
+  if (DEMO_MODE) return { orgId: 'demo', firstName: 'Demo' }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAuth, useUser } = require('@clerk/nextjs')
   const { orgId } = useAuth()
   const { user } = useUser()
-  const firstName = user?.firstName ?? 'equipo'
+  return { orgId, firstName: user?.firstName ?? 'equipo' }
+}
+
+export default function DashboardPage() {
+  const { orgId, firstName } = useClerkAuth()
 
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
