@@ -177,8 +177,8 @@ export default function AnalyticsPage() {
       setLoading(true)
       try {
         const [proposalsRes, clientsRes] = await Promise.all([
-          fetchWithTenant('/proposals?limit=200&offset=0', orgId!),
-          fetchWithTenant('/clients?limit=200', orgId!),
+          fetch('/api/proposals'),
+          fetch('/api/clients?limit=200'),
         ])
 
         if (!proposalsRes.ok || !clientsRes.ok) {
