@@ -117,12 +117,9 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
       status: 'generated',
     }
 
-    fetchWithTenant('/proposals', orgId, {
+    fetch('/api/proposals', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Clerk-User-ID': userId,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
       .then(async (res) => {

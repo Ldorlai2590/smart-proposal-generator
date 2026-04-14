@@ -144,8 +144,9 @@ function NewClientDialog({
       const validated = clientFormSchema.parse(formData)
 
       setSubmitting(true)
-      const res = await fetchWithTenant('/clients', orgId, {
+      const res = await fetch('/api/clients', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: validated.name,
           company: validated.company,
@@ -334,9 +335,9 @@ export default function ClientsPage() {
       setLoading(true)
       try {
         const path = query
-          ? `/clients?search=${encodeURIComponent(query)}&limit=50`
-          : '/clients?limit=50'
-        const res = await fetchWithTenant(path, orgId)
+          ? `/api/clients?search=${encodeURIComponent(query)}&limit=50`
+          : '/api/clients?limit=50'
+        const res = await fetch(path)
         if (!res.ok) throw new Error(`API error ${res.status}`)
         const json: ApiResponse = await res.json()
         setClients(json.data.map(mapApiClient))

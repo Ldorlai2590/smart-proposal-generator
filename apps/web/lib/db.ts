@@ -6,7 +6,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set')
 }
 
-// Pooled connection (pgBouncer / Supabase pooler) — disable prepared statements
-const client = postgres(process.env.DATABASE_URL, { prepare: false })
+// Direct connection to Supabase — SSL required, prepare disabled for compatibility
+const client = postgres(process.env.DATABASE_URL, { prepare: false, ssl: 'require' })
 
 export const db = drizzle(client, { schema })

@@ -85,7 +85,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     try {
       const params = new URLSearchParams({ page: '1', per_page: '20' })
       if (search) params.set('search', search)
-      const res = await fetchWithTenant(`/clients/?${params.toString()}`, orgId)
+      const res = await fetch(`/api/clients?${params.toString()}`)
       if (!res.ok) throw new Error(`Error ${res.status}`)
       const data: ApiListResponse = await res.json()
       setClients(data.items.map(mapApiClient))
@@ -123,8 +123,9 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         industry: newClient.industry || null,
         company_size: newClient.companySize || null,
       }
-      const res = await fetchWithTenant('/clients/', orgId, {
+      const res = await fetch('/api/clients', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) {

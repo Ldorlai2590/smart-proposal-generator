@@ -143,7 +143,7 @@ export default function ProposalsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchWithTenant('/proposals?limit=50&offset=0', orgId)
+      const res = await fetch('/api/proposals')
       if (!res.ok) {
         throw new Error(`Error ${res.status}: ${res.statusText}`)
       }
