@@ -1,10 +1,8 @@
 import { streamObject } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
-import { getTrialStatus, incrementProposalUsage } from '@/lib/trial'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
-const DEMO_ORG_ID = 'org_3CLrWMV7SmXmUKGYauf8fYagW17'
 
 const ProposalSectionSchema = z.object({
   resumenEjecutivo: z.string().describe('Resumen ejecutivo de la propuesta'),
@@ -30,35 +28,28 @@ const RequestSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  let orgId: string | null = null
-
-  if (DEMO_MODE) {
-    orgId = DEMO_ORG_ID
-  } else {
+  if (!DEMO_MODE) {
     const { auth } = await import('@clerk/nextjs/server')
     const session = await auth()
     if (!session.userId || !session.orgId) {
       return new Response('Unauthorized', { status: 401 })
     }
-    orgId = session.orgId
-  }
 
-  // Gate: trial vencido o cuota agotada → 402 Payment Required
-  const trial = await getTrialStatus(orgId)
-  if (!trial || !trial.canGenerateProposals) {
-    return new Response(
-      JSON.stringify({
-        error: 'trial_expired_or_quota_exceeded',
-        stage: trial?.stage ?? 'unknown',
-        daysLeft: trial?.daysLeft ?? 0,
-        proposalsUsed: trial?.proposalsUsed ?? 0,
-        proposalsQuota: trial?.proposalsQuota ?? 0,
-      }),
-      {
-        status: 402,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
+    // Gate: trial vencido o cuota agotada → 402 Payment Required
+    const { getTrialStatus } = await import('@/lib/trial')
+    const trial = await getTrialStatus(session.orgId)
+    if (!trial || !trial.canGenerateProposals) {
+      return new Response(
+        JSON.stringify({
+          error: 'trial_expired_or_quota_exceeded',
+          stage: trial?.stage ?? 'unknown',
+          daysLeft: trial?.daysLeft ?? 0,
+          proposalsUsed: trial?.proposalsUsed ?? 0,
+          proposalsQuota: trial?.proposalsQuota ?? 0,
+        }),
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
   }
 
   const body = await req.json()
@@ -113,42 +104,25 @@ Consolida todo en una tabla final de inversión mostrando el total por servicio 
     ],
   })
 
-  // Save to PostgreSQL after streaming completes (non-blocking)
-  const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
-  result.object.then(async (sections) => {
-    // Incrementar contador de uso — no bloquea el stream
-    incrementProposalUsage(orgId).catch((e) =>
-      console.error('[stream] Failed to increment proposal usage:', e)
-    )
-    try {
-      const createRes = await fetch(`${apiUrl}/proposals/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': orgId },
-        body: JSON.stringify({
-          client_id: input.clientId,
-          title: `Propuesta para ${input.company}`,
-          context: {
-            problema: input.problema,
-            services: input.services,
-            budget: input.budget,
-            timeline: input.timeline,
-            tono: input.tono,
-          },
-        }),
-      })
-      if (createRes.ok) {
-        const { id } = await createRes.json()
-        await fetch(`${apiUrl}/proposals/${id}/sections`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': orgId },
-          body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
+  // Save to PostgreSQL after streaming completes (non-blocking, skip in demo)
+  if (!DEMO_MODE) {
+    const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+    result.object.then(async (sections) => {
+      try {
+        const { incrementProposalUsage } = await import('@/lib/trial')
+        await incrementProposalUsage('').catch(() => {})
+        const createRes = await fetch(`${apiUrl}/proposals/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: input.clientId, title: `Propuesta para ${input.company}`, context: { problema: input.problema, services: input.services, budget: input.budget, timeline: input.timeline, tono: input.tono } }),
         })
-      }
-    } catch {
-      // Non-blocking — log only, don't fail the stream
-      console.error('[stream] Failed to save proposal to DB')
-    }
-  })
+        if (createRes.ok) {
+          const { id } = await createRes.json()
+          await fetch(`${apiUrl}/proposals/${id}/sections`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }) })
+        }
+      } catch { console.error('[stream] Failed to save proposal to DB') }
+    })
+  }
 
   return result.toTextStreamResponse()
 }

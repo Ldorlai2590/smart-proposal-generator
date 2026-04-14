@@ -2,11 +2,23 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from '@/db/schema'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set')
+// Lazy initialization — don't crash at module load in DEMO_MODE if DATABASE_URL is unreachable
+let _db: ReturnType<typeof drizzle<typeof schema>> | null = null
+
+function getDb() {
+  if (!_db) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set')
+    }
+    const client = postgres(process.env.DATABASE_URL, { prepare: false, ssl: 'require' })
+    _db = drizzle(client, { schema })
+  }
+  return _db
 }
 
-// Direct connection to Supabase — SSL required, prepare disabled for compatibility
-const client = postgres(process.env.DATABASE_URL, { prepare: false, ssl: 'require' })
-
-export const db = drizzle(client, { schema })
+// Proxy that lazy-initializes on first property access
+export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
+  get(_target, prop) {
+    return (getDb() as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
