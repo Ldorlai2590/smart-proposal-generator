@@ -11,7 +11,6 @@ COPY . .
 RUN pnpm install --no-frozen-lockfile
 
 # ─── Build-time env vars ─────────────────────────────────────
-# NEXT_PUBLIC_* are baked into the JS bundle at build time
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWxpdmUtYm9uZWZpc2gtMTguY2xlcmsuYWNjb3VudHMuZGV2JA
 ARG NEXT_PUBLIC_APP_URL=https://Giraldo34-smart-proposal-generator.hf.space
 ARG NEXT_PUBLIC_API_URL=https://Giraldo34-smart-proposal-generator.hf.space
@@ -30,7 +29,7 @@ ENV DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 # Ensure public/ exists
 RUN mkdir -p apps/web/public
 
-# Build Next.js
+# Build Next.js (standalone output)
 RUN pnpm --filter web build
 
 # ─── Production runner ─────────────────────────────────────
@@ -40,13 +39,14 @@ ENV NODE_ENV=production
 ENV PORT=7860
 ENV HOSTNAME=0.0.0.0
 
-# Standalone output
+# Standalone output includes node_modules (minimal, traced)
 COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
 
-# Custom server that serves static files (standalone server.js doesn't)
-COPY --from=builder /app/apps/web/server.custom.js ./apps/web/server.custom.js
+# Static assets: CSS, JS chunks, fonts — MUST be next to server in .next/static
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+
+# Public files: favicon, images, etc.
+COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Prompts YAML files
 COPY --from=builder /app/packages/prompts ./packages/prompts
@@ -56,4 +56,4 @@ COPY --from=builder /app/packages/prompts ./packages/prompts
 # STRIPE_SECRET_KEY, RESEND_API_KEY, DOCUFORGE_API_KEY
 
 EXPOSE 7860
-CMD ["node", "apps/web/server.custom.js"]
+CMD ["node", "apps/web/server.js"]
