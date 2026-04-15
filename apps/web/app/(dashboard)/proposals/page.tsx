@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   useReactTable,
   getCoreRowModel,
@@ -140,6 +141,7 @@ function SkeletonRows({ count }: { count: number }) {
 
 export default function ProposalsPage() {
   const { orgId } = useDemoAuth()
+  const router = useRouter()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -174,10 +176,10 @@ export default function ProposalsPage() {
         accessorKey: 'title',
         header: 'Propuesta',
         cell: ({ row }) => (
-          <div>
-            <p className="text-sm font-medium text-gray-900">{row.original.title}</p>
+          <Link href={`/proposals/${row.original.id}`} className="block group">
+            <p className="text-sm font-medium text-gray-900 group-hover:text-[#1D9E75] transition-colors">{row.original.title}</p>
             <p className="text-xs text-gray-400">{row.original.client}</p>
-          </div>
+          </Link>
         ),
       },
       {
@@ -211,7 +213,7 @@ export default function ProposalsPage() {
       {
         id: 'actions',
         header: '',
-        cell: () => (
+        cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger>
               <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
@@ -219,7 +221,10 @@ export default function ProposalsPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem className="gap-2 text-sm">
+              <DropdownMenuItem
+                className="gap-2 text-sm cursor-pointer"
+                onClick={() => router.push(`/proposals/${row.original.id}`)}
+              >
                 <Eye className="h-3.5 w-3.5" /> Ver
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-2 text-sm">
@@ -236,7 +241,7 @@ export default function ProposalsPage() {
         ),
       },
     ],
-    [],
+    [router],
   )
 
   const filteredData = useMemo(() => {

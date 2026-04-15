@@ -165,12 +165,22 @@ async function handlePDF(
   input: ExportRequest,
   _orgId: string,
 ): Promise<Response> {
-  const docuforgeKey = process.env.DOCUFORGE_API_KEY
-  if (!docuforgeKey || docuforgeKey === 'df_...') {
-    return jsonResponse({ error: 'PDF export is not configured.' }, 503)
-  }
-
   const html = buildProposalHTML(input.sections)
+
+  // In DEMO_MODE or when DocuForge is not configured, return HTML as a
+  // downloadable file. Users can open it in a browser and print to PDF.
+  const docuforgeKey = process.env.DOCUFORGE_API_KEY
+  if (DEMO_MODE || !docuforgeKey || docuforgeKey === 'df_...') {
+    const encoder = new TextEncoder()
+    const bytes = encoder.encode(html)
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId}.html"`,
+      },
+    })
+  }
 
   let upstream: Response
   try {

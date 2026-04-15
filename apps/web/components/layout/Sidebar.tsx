@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Zap,
   User,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,14 +26,27 @@ const NAV_ITEMS = [
   { href: '/billing', label: 'Facturación', icon: CreditCard },
 ]
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const orgName = DEMO_MODE ? 'Demo Organization' : undefined
   const [collapsed, setCollapsed] = useState(false)
+  const [demoUserName, setDemoUserName] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('spg-sidebar-collapsed')
     if (stored !== null) setCollapsed(JSON.parse(stored))
+  }, [])
+
+  useEffect(() => {
+    if (DEMO_MODE) {
+      setDemoUserName(getCookie('demo-user-name'))
+    }
   }, [])
 
   function toggleCollapse() {
@@ -106,12 +120,40 @@ export function Sidebar() {
 
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-2 px-1')}>
           {DEMO_MODE ? (
-            <div className="h-7 w-7 rounded-full bg-[#1D9E75] flex items-center justify-center">
-              <User className="h-4 w-4 text-white" />
-            </div>
+            <>
+              <div className="h-7 w-7 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                {demoUserName ? (
+                  <span className="text-xs font-bold text-white leading-none">
+                    {demoUserName.charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  <User className="h-4 w-4 text-white" />
+                )}
+              </div>
+              {!collapsed && demoUserName && (
+                <span className="text-xs text-[#F8FAFC] truncate font-medium">
+                  {demoUserName}
+                </span>
+              )}
+            </>
           ) : null}
           {!DEMO_MODE && <ClerkUserButton />}
         </div>
+
+        {/* Demo logout */}
+        {DEMO_MODE && !collapsed && demoUserName && (
+          <button
+            onClick={() => {
+              document.cookie = 'demo-user-email=;path=/;max-age=0'
+              document.cookie = 'demo-user-name=;path=/;max-age=0'
+              window.location.href = '/demo-login'
+            }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Cerrar sesion
+          </button>
+        )}
 
         {/* Collapse toggle */}
         <button

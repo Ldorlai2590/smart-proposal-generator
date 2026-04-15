@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, FileText, CheckCircle2, Clock, DollarSign, RefreshCw } from 'lucide-react'
+import { Plus, FileText, TrendingUp, Users, DollarSign, RefreshCw } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { ProposalsBarChart, ClosingRateDonut } from '@/components/dashboard/ProposalsChart'
 
@@ -113,8 +113,23 @@ function SkeletonRecentProposals() {
   )
 }
 
+function getDemoCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 function useClerkAuth() {
-  if (DEMO_MODE) return { orgId: 'demo', firstName: 'Demo' }
+  const [demoName, setDemoName] = useState<string>('equipo')
+
+  useEffect(() => {
+    if (DEMO_MODE) {
+      const name = getDemoCookie('demo-user-name')
+      if (name) setDemoName(name)
+    }
+  }, [])
+
+  if (DEMO_MODE) return { orgId: 'demo', firstName: demoName }
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useAuth, useUser } = require('@clerk/nextjs')
   const { orgId } = useAuth()
@@ -158,8 +173,11 @@ export default function DashboardPage() {
   // Calculate stats
   const totalProposals = proposals.length
   const acceptedCount = proposals.filter((p) => p.status === 'accepted').length
-  const inReviewCount = proposals.filter((p) => p.status === 'sent').length
-  const totalValue = proposals.reduce((sum, p) => sum + (p.budget ?? 0), 0)
+  const closingRate = totalProposals > 0 ? Math.round((acceptedCount / totalProposals) * 100) : 0
+  const uniqueClients = new Set(proposals.map((p) => p.client)).size
+  const acceptedValue = proposals
+    .filter((p) => p.status === 'accepted')
+    .reduce((sum, p) => sum + (p.budget ?? 0), 0)
 
   // Get 5 most recent proposals
   const recentProposals = proposals.slice(0, 5)
@@ -216,31 +234,33 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatCard
-              label="Propuestas totales"
+              label="Propuestas este mes"
               value={totalProposals}
               icon={FileText}
               trendLabel={totalProposals > 0 ? 'propuestas generadas' : 'sin propuestas'}
             />
             <StatCard
-              label="Aceptadas"
-              value={acceptedCount}
-              icon={CheckCircle2}
+              label="Tasa de aceptación"
+              value={`${closingRate}%`}
+              icon={TrendingUp}
               iconColor="#1D9E75"
               iconBg="#e6f7f2"
+              trendLabel={`${acceptedCount} de ${totalProposals} aceptadas`}
             />
             <StatCard
-              label="En revisión"
-              value={inReviewCount}
-              icon={Clock}
-              iconColor="#F59E0B"
-              iconBg="#FFFBEB"
+              label="Clientes activos"
+              value={uniqueClients}
+              icon={Users}
+              iconColor="#2563EB"
+              iconBg="#EFF6FF"
             />
             <StatCard
-              label="Valor total"
-              value={totalValue > 0 ? formatBudget(totalValue) : '—'}
+              label="Ingresos estimados"
+              value={acceptedValue > 0 ? `$${acceptedValue.toLocaleString('en-US')}` : '—'}
               icon={DollarSign}
               iconColor="#7C3AED"
               iconBg="#F5F3FF"
+              trendLabel="en propuestas aceptadas"
             />
           </>
         )}

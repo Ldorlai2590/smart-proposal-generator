@@ -6,14 +6,38 @@ const DEMO_MODE = process.env.DEMO_MODE === 'true'
 function demoMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // In demo mode, redirect landing + auth pages straight to /dashboard
+  // Let demo-login page pass through
+  if (pathname === '/demo-login') {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-next-pathname', pathname)
+    requestHeaders.set('X-Demo-Mode', 'true')
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  }
+
+  // Redirect landing + auth pages to /demo-login
   if (
     pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/select-org')
   ) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/demo-login', request.url))
+  }
+
+  // Protected routes: require demo-user-email cookie
+  const isProtected =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/proposals') ||
+    pathname.startsWith('/clients') ||
+    pathname.startsWith('/analytics') ||
+    pathname.startsWith('/billing') ||
+    pathname.startsWith('/onboarding')
+
+  if (isProtected) {
+    const hasSession = request.cookies.get('demo-user-email')?.value
+    if (!hasSession) {
+      return NextResponse.redirect(new URL('/demo-login', request.url))
+    }
   }
 
   // Let everything else through without Clerk

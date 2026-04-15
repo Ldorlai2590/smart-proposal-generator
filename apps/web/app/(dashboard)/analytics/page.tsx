@@ -5,8 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { FileText, CheckCircle2, DollarSign, TrendingUp, Clock, Users } from 'lucide-react'
-import { fetchWithTenant } from '@/lib/api'
+import { FileText, CheckCircle2, TrendingUp, Users } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
@@ -23,6 +22,7 @@ type ProposalStatus = 'draft' | 'generating' | 'generated' | 'sent' | 'accepted'
 interface ApiProposal {
   id: string
   status: ProposalStatus
+  client_id: string
   created_at: string
   updated_at: string
 }
@@ -67,15 +67,6 @@ interface TopClientData {
   proposals: number
   acceptedCount: number
   closingRate: string
-}
-
-const STATUS_COLORS: Record<ProposalStatus, string> = {
-  draft: '#94A3B8',
-  generating: '#F59E0B',
-  generated: '#2563EB',
-  sent: '#2563EB',
-  accepted: '#1D9E75',
-  rejected: '#FCA5A5',
 }
 
 const STATUS_LABELS: Record<ProposalStatus, string> = {
@@ -219,14 +210,9 @@ export default function AnalyticsPage() {
 
   // Compute revenue by industry
   const industryMap = new Map<string, number>()
-  const clientCount = new Map<string, number>()
-  clients.forEach((client) => {
-    const industry = client.industry || 'Sin industria'
-    clientCount.set(industry, (clientCount.get(industry) || 0) + 1)
-  })
 
   proposals.forEach((proposal) => {
-    const client = clients.find((c) => c.id === proposal.id)
+    const client = clients.find((c) => c.name === proposal.client_id || c.id === proposal.client_id)
     if (client && client.industry) {
       const amount = 5000 // placeholder: average per proposal
       industryMap.set(client.industry, (industryMap.get(client.industry) || 0) + amount)
@@ -240,7 +226,7 @@ export default function AnalyticsPage() {
   // Compute top clients by proposal count
   const clientProposalMap = new Map<string, { name: string; industry: string; proposals: number; accepted: number }>()
   proposals.forEach((proposal) => {
-    const client = clients.find((c) => c.id === proposal.id)
+    const client = clients.find((c) => c.name === proposal.client_id || c.id === proposal.client_id)
     if (client) {
       const existing = clientProposalMap.get(client.id) || {
         name: client.name,

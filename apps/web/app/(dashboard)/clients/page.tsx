@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Plus, Building2, TrendingUp, Users, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Plus, Building2, TrendingUp, Users, AlertCircle, Mail } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -475,9 +476,10 @@ export default function ClientsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((client, i) => (
-            <div
+            <Link
+              href={`/clients/${client.id}`}
               key={client.id}
-              className="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all relative overflow-hidden"
+              className="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-[#1D9E75]/30 transition-all relative overflow-hidden cursor-pointer block"
             >
               <div className="flex items-start gap-3 mb-4">
                 <div
@@ -497,6 +499,13 @@ export default function ClientsPage() {
                 </span>
               </div>
 
+              {client.email && (
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Mail className="h-3 w-3 text-gray-400" />
+                  <span className="text-xs text-gray-500 truncate">{client.email}</span>
+                </div>
+              )}
+
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -514,11 +523,11 @@ export default function ClientsPage() {
                 <span className="text-xs text-gray-400">
                   {client.proposals} propuesta{client.proposals !== 1 ? 's' : ''}
                 </span>
-                <button className="text-xs text-[#1D9E75] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Ver propuestas →
-                </button>
+                <span className="text-xs text-[#1D9E75] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                  Ver detalle →
+                </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

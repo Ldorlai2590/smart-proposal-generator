@@ -4,11 +4,11 @@ const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
 // ─── Demo mock data ─────────────────────────────────────────
 const DEMO_CLIENTS = [
-  { id: 'demo-1', tenant_id: 'demo', name: 'María García', company: 'TechFlow Solutions', email: 'maria@techflow.cl', industry: 'Tecnología', company_size: '50-200', score: 85, created_at: '2026-03-15T10:00:00Z' },
-  { id: 'demo-2', tenant_id: 'demo', name: 'Carlos Mendoza', company: 'Retail Plus Chile', email: 'carlos@retailplus.cl', industry: 'Retail', company_size: '200-500', score: 72, created_at: '2026-03-10T14:00:00Z' },
-  { id: 'demo-3', tenant_id: 'demo', name: 'Ana Rodríguez', company: 'HealthCare Innovations', email: 'ana@hcinnovations.cl', industry: 'Salud', company_size: '10-50', score: 91, created_at: '2026-02-28T09:00:00Z' },
-  { id: 'demo-4', tenant_id: 'demo', name: 'Roberto Silva', company: 'EduPlatform LATAM', email: 'roberto@eduplatform.cl', industry: 'Educación', company_size: '50-200', score: 68, created_at: '2026-02-20T16:00:00Z' },
-  { id: 'demo-5', tenant_id: 'demo', name: 'Valentina Torres', company: 'FinanzApp SpA', email: 'valentina@finanzapp.cl', industry: 'Finanzas', company_size: '10-50', score: 78, created_at: '2026-01-15T11:00:00Z' },
+  { id: 'demo-1', tenant_id: 'demo', name: 'TechFlow Solutions', company: 'TechFlow Solutions', email: 'maria@techflow.cl', industry: 'Tecnología', company_size: '50-200', score: 85, created_at: '2026-03-15T10:00:00Z' },
+  { id: 'demo-2', tenant_id: 'demo', name: 'Retail Plus Chile', company: 'Retail Plus Chile', email: 'carlos@retailplus.cl', industry: 'Retail', company_size: '200-500', score: 72, created_at: '2026-03-10T14:00:00Z' },
+  { id: 'demo-3', tenant_id: 'demo', name: 'Grupo Andino SpA', company: 'Grupo Andino SpA', email: 'contacto@grupoandino.cl', industry: 'Construcción', company_size: '200-500', score: 91, created_at: '2026-02-28T09:00:00Z' },
+  { id: 'demo-4', tenant_id: 'demo', name: 'FoodTech Ltda', company: 'FoodTech Ltda', email: 'ventas@foodtech.cl', industry: 'Alimentación', company_size: '10-50', score: 68, created_at: '2026-02-20T16:00:00Z' },
+  { id: 'demo-5', tenant_id: 'demo', name: 'Innova Labs', company: 'Innova Labs', email: 'contacto@innovalabs.cl', industry: 'Tecnología', company_size: '10-50', score: 78, created_at: '2026-01-15T11:00:00Z' },
 ]
 
 // ─── Handlers ───────────────────────────────────────────────
