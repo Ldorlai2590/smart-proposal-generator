@@ -2,15 +2,16 @@ import { eq, and } from 'drizzle-orm'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
+// Aligned with /api/clients/route.ts DEMO_CLIENTS — same names, accents, companies
 const DEMO_CLIENTS = [
   {
-    id: 'demo-1', tenant_id: 'demo', name: 'Maria Garcia', company: 'TechFlow Solutions',
-    email: 'maria@techflow.cl', industry: 'Tecnologia', company_size: '50-200', score: 85,
+    id: 'demo-1', tenant_id: 'demo', name: 'María García', company: 'TechFlow Solutions',
+    email: 'maria@techflow.cl', industry: 'Tecnología', company_size: '50-200', score: 85,
     created_at: '2026-03-15T10:00:00Z',
     proposals: [
-      { id: 'prop-1', title: 'Plataforma de automatizacion interna', status: 'accepted', created_at: '2026-03-20T10:00:00Z', value: 12500000 },
-      { id: 'prop-2', title: 'Migracion a cloud AWS', status: 'sent', created_at: '2026-04-01T14:00:00Z', value: 8700000 },
-      { id: 'prop-3', title: 'Dashboard de metricas en tiempo real', status: 'draft', created_at: '2026-04-10T09:00:00Z', value: 5200000 },
+      { id: 'demo-prop-1', title: 'Propuesta Paid Media + Landing Page', status: 'accepted', created_at: '2026-04-13T14:00:00Z', value: 3500 },
+      { id: 'demo-prop-8', title: 'Optimización de CRM HubSpot', status: 'accepted', created_at: '2026-04-02T09:00:00Z', value: 2200 },
+      { id: 'demo-prop-11', title: 'Automatización de marketing', status: 'draft', created_at: '2026-04-12T11:00:00Z', value: 1800 },
     ],
   },
   {
@@ -18,35 +19,36 @@ const DEMO_CLIENTS = [
     email: 'carlos@retailplus.cl', industry: 'Retail', company_size: '200-500', score: 72,
     created_at: '2026-03-10T14:00:00Z',
     proposals: [
-      { id: 'prop-4', title: 'Sistema de inventario omnicanal', status: 'sent', created_at: '2026-03-25T11:00:00Z', value: 15000000 },
-      { id: 'prop-5', title: 'App de fidelizacion de clientes', status: 'draft', created_at: '2026-04-05T16:00:00Z', value: 9800000 },
+      { id: 'demo-prop-2', title: 'Propuesta SEO + Content Marketing', status: 'sent', created_at: '2026-04-12T10:00:00Z', value: 2800 },
+      { id: 'demo-prop-6', title: 'Programa de fidelización omnicanal', status: 'accepted', created_at: '2026-04-05T13:00:00Z', value: 4100 },
     ],
   },
   {
-    id: 'demo-3', tenant_id: 'demo', name: 'Ana Rodriguez', company: 'HealthCare Innovations',
-    email: 'ana@hcinnovations.cl', industry: 'Salud', company_size: '10-50', score: 91,
+    id: 'demo-3', tenant_id: 'demo', name: 'Ana Rodríguez', company: 'Grupo Andino SpA',
+    email: 'ana@grupoandino.cl', industry: 'Construcción', company_size: '200-500', score: 91,
     created_at: '2026-02-28T09:00:00Z',
     proposals: [
-      { id: 'prop-6', title: 'Portal de telemedicina', status: 'accepted', created_at: '2026-03-05T08:00:00Z', value: 22000000 },
-      { id: 'prop-7', title: 'Sistema de gestion de citas', status: 'accepted', created_at: '2026-03-18T10:00:00Z', value: 7500000 },
-      { id: 'prop-8', title: 'Integracion con FONASA/ISAPRE', status: 'sent', created_at: '2026-04-02T13:00:00Z', value: 11000000 },
+      { id: 'demo-prop-3', title: 'Estrategia Digital Integral', status: 'accepted', created_at: '2026-04-10T11:00:00Z', value: 5200 },
+      { id: 'demo-prop-7', title: 'Rebranding y presencia web', status: 'accepted', created_at: '2026-04-04T10:00:00Z', value: 3800 },
+      { id: 'demo-prop-12', title: 'Campaña LinkedIn Ads B2B', status: 'rejected', created_at: '2026-04-11T15:00:00Z', value: 2100 },
     ],
   },
   {
-    id: 'demo-4', tenant_id: 'demo', name: 'Roberto Silva', company: 'EduPlatform LATAM',
-    email: 'roberto@eduplatform.cl', industry: 'Educacion', company_size: '50-200', score: 68,
+    id: 'demo-4', tenant_id: 'demo', name: 'Roberto Silva', company: 'FoodTech Ltda',
+    email: 'roberto@foodtech.cl', industry: 'Alimentación', company_size: '10-50', score: 68,
     created_at: '2026-02-20T16:00:00Z',
     proposals: [
-      { id: 'prop-9', title: 'LMS para educacion corporativa', status: 'draft', created_at: '2026-04-08T15:00:00Z', value: 18000000 },
+      { id: 'demo-prop-4', title: 'Rediseño de e-commerce + checkout', status: 'accepted', created_at: '2026-04-09T09:00:00Z', value: 2900 },
+      { id: 'demo-prop-9', title: 'Packaging y branding de línea premium', status: 'accepted', created_at: '2026-04-01T14:00:00Z', value: 1700 },
     ],
   },
   {
-    id: 'demo-5', tenant_id: 'demo', name: 'Valentina Torres', company: 'FinanzApp SpA',
-    email: 'valentina@finanzapp.cl', industry: 'Finanzas', company_size: '10-50', score: 78,
+    id: 'demo-5', tenant_id: 'demo', name: 'Valentina Torres', company: 'Innova Labs',
+    email: 'valentina@innovalabs.cl', industry: 'Tecnología', company_size: '10-50', score: 78,
     created_at: '2026-01-15T11:00:00Z',
     proposals: [
-      { id: 'prop-10', title: 'Motor de scoring crediticio', status: 'accepted', created_at: '2026-02-10T09:00:00Z', value: 25000000 },
-      { id: 'prop-11', title: 'Dashboard regulatorio CMF', status: 'sent', created_at: '2026-03-22T14:00:00Z', value: 14000000 },
+      { id: 'demo-prop-5', title: 'Go-to-market para SaaS LATAM', status: 'accepted', created_at: '2026-04-08T10:00:00Z', value: 4600 },
+      { id: 'demo-prop-10', title: 'Setup de Google Analytics 4', status: 'accepted', created_at: '2026-03-28T16:00:00Z', value: 1100 },
     ],
   },
 ]
