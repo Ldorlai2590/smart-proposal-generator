@@ -12,7 +12,7 @@ export function CTAFinal() {
           Únete a los equipos de ventas que ya usan SmartSPG para ganar más propuestas en menos tiempo.
         </p>
         <Link
-          href="/sign-up"
+          href="/demo-login"
           className="inline-flex items-center gap-2 bg-white text-[#1D9E75] font-bold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
         >
           Empezar gratis hoy

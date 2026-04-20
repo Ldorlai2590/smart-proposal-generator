@@ -21,22 +21,31 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
 async function demoMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Public: login page, auth API, health, webhooks
-  if (
+  // Public pages — always accessible, no auth needed
+  // Landing (/), login page, auth API, health, webhooks
+  const isPublic =
+    pathname === '/' ||
     pathname === '/demo-login' ||
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/webhooks')
-  ) {
+
+  if (isPublic) {
+    // If user is already logged in and visits login page, send to dashboard
+    if (pathname === '/demo-login') {
+      const hasSession = await hasValidSession(request)
+      if (hasSession) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-next-pathname', pathname)
     requestHeaders.set('X-Demo-Mode', 'true')
     return NextResponse.next({ request: { headers: requestHeaders } })
   }
 
-  // Redirect landing + Clerk auth pages to /demo-login
+  // Redirect Clerk auth pages to /demo-login (JWT login)
   if (
-    pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/select-org')
