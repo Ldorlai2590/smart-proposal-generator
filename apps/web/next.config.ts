@@ -3,14 +3,16 @@ import type { NextConfig } from 'next'
 /**
  * Content Security Policy.
  *
- * Next.js (App Router) needs 'unsafe-inline' for style-src because of its runtime
- * style injection and for script-src only in dev (Turbopack). In production we allow
- * 'unsafe-inline' on style-src; script-src stays strict with 'self' plus the Anthropic
- * SDK origin (only used from the server in this app, but documented here for clarity).
+ * Next.js (App Router) needs:
+ *  - 'unsafe-inline' for style-src (runtime style injection by React + Tailwind JIT)
+ *  - 'unsafe-inline' for script-src (inline bootstrap scripts for hydration +
+ *    framer-motion dynamic styles). Without this, the page ships but client JS
+ *    never hydrates and components stuck at initial opacity:0 stay invisible.
+ *  - 'unsafe-eval' in dev for Turbopack HMR; NOT needed in production.
  *
- * connect-src is broad enough for our Anthropic API calls and our own origin.
- * frame-ancestors 'none' duplicates X-Frame-Options: DENY for browsers that only
- * honor one or the other.
+ * Future hardening: migrate to nonce-based CSP (middleware generates nonce per
+ * request, Next.js inlines it into script tags via generateMetadata + headers).
+ * That would let us drop 'unsafe-inline' on script-src.
  */
 const CSP_DIRECTIVES: Array<[string, string]> = [
   ['default-src', "'self'"],
@@ -24,7 +26,7 @@ const CSP_DIRECTIVES: Array<[string, string]> = [
   [
     'script-src',
     process.env.NODE_ENV === 'production'
-      ? "'self'"
+      ? "'self' 'unsafe-inline'"
       : "'self' 'unsafe-eval' 'unsafe-inline'",
   ],
   ['connect-src', "'self' https://api.anthropic.com"],
