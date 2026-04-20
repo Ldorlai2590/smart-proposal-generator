@@ -1,46 +1,74 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { jwtVerify } from 'jose'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
+const JWT_SECRET = process.env.JWT_SECRET ?? 'demo-secret-key-change-in-production-please-12345678'
+const SESSION_COOKIE = 'spg-session'
+const secretKey = new TextEncoder().encode(JWT_SECRET)
 
-function demoMiddleware(request: NextRequest) {
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(SESSION_COOKIE)?.value
+  if (!token) return false
+  try {
+    await jwtVerify(token, secretKey)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function demoMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Let demo-login page pass through
-  if (pathname === '/demo-login') {
+  // Public: login page, auth API, health, webhooks
+  if (
+    pathname === '/demo-login' ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/webhooks')
+  ) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-next-pathname', pathname)
     requestHeaders.set('X-Demo-Mode', 'true')
     return NextResponse.next({ request: { headers: requestHeaders } })
   }
 
-  // Redirect landing + auth pages to /demo-login
+  // Redirect landing + Clerk auth pages to /demo-login
   if (
     pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
     pathname.startsWith('/select-org')
   ) {
+    const hasSession = await hasValidSession(request)
+    if (hasSession) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
     return NextResponse.redirect(new URL('/demo-login', request.url))
   }
 
-  // Protected routes: require demo-user-email cookie
+  // Protected routes: require valid JWT session
   const isProtected =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/proposals') ||
     pathname.startsWith('/clients') ||
     pathname.startsWith('/analytics') ||
     pathname.startsWith('/billing') ||
-    pathname.startsWith('/onboarding')
+    pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/api/clients') ||
+    pathname.startsWith('/api/proposals')
 
   if (isProtected) {
-    const hasSession = request.cookies.get('demo-user-email')?.value
+    const hasSession = await hasValidSession(request)
     if (!hasSession) {
+      if (pathname.startsWith('/api/')) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      }
       return NextResponse.redirect(new URL('/demo-login', request.url))
     }
   }
 
-  // Let everything else through without Clerk
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-next-pathname', pathname)
   requestHeaders.set('X-Demo-Mode', 'true')

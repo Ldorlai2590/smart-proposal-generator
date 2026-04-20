@@ -113,19 +113,20 @@ function SkeletonRecentProposals() {
   )
 }
 
-function getDemoCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'))
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 function useClerkAuth() {
   const [demoName, setDemoName] = useState<string>('equipo')
 
   useEffect(() => {
     if (DEMO_MODE) {
-      const name = getDemoCookie('demo-user-name')
-      if (name) setDemoName(name)
+      fetch('/api/auth/session')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.authenticated && data.user?.name) {
+            // Use first word of name only for greeting
+            setDemoName(data.user.name.split(' ')[0])
+          }
+        })
+        .catch(() => {})
     }
   }, [])
 

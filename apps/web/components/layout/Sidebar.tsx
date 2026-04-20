@@ -34,9 +34,9 @@ function getCookie(name: string): string | null {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const orgName = DEMO_MODE ? 'Demo Organization' : undefined
   const [collapsed, setCollapsed] = useState(false)
   const [demoUserName, setDemoUserName] = useState<string | null>(null)
+  const [demoUserEmail, setDemoUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('spg-sidebar-collapsed')
@@ -45,9 +45,25 @@ export function Sidebar() {
 
   useEffect(() => {
     if (DEMO_MODE) {
-      setDemoUserName(getCookie('demo-user-name'))
+      // Fetch real session from JWT via API
+      fetch('/api/auth/session')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.authenticated) {
+            setDemoUserName(data.user.name)
+            setDemoUserEmail(data.user.email)
+          }
+        })
+        .catch(() => {})
     }
   }, [])
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {}
+    window.location.href = '/demo-login'
+  }
 
   function toggleCollapse() {
     const next = !collapsed
@@ -112,16 +128,10 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className="p-3 border-t border-[#1E293B] space-y-3 flex-shrink-0">
-        {!collapsed && (DEMO_MODE ? orgName : null) && (
-          <p className="text-xs text-[#94A3B8] px-2 truncate font-medium">
-            {orgName}
-          </p>
-        )}
-
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-2 px-1')}>
           {DEMO_MODE ? (
             <>
-              <div className="h-7 w-7 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+              <div className="h-8 w-8 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
                 {demoUserName ? (
                   <span className="text-xs font-bold text-white leading-none">
                     {demoUserName.charAt(0).toUpperCase()}
@@ -130,10 +140,19 @@ export function Sidebar() {
                   <User className="h-4 w-4 text-white" />
                 )}
               </div>
-              {!collapsed && demoUserName && (
-                <span className="text-xs text-[#F8FAFC] truncate font-medium">
-                  {demoUserName}
-                </span>
+              {!collapsed && (
+                <div className="flex flex-col min-w-0 flex-1">
+                  {demoUserName && (
+                    <span className="text-xs text-[#F8FAFC] truncate font-medium leading-tight">
+                      {demoUserName}
+                    </span>
+                  )}
+                  {demoUserEmail && (
+                    <span className="text-[10px] text-[#94A3B8] truncate leading-tight">
+                      {demoUserEmail}
+                    </span>
+                  )}
+                </div>
               )}
             </>
           ) : null}
@@ -143,15 +162,11 @@ export function Sidebar() {
         {/* Demo logout */}
         {DEMO_MODE && !collapsed && demoUserName && (
           <button
-            onClick={() => {
-              document.cookie = 'demo-user-email=;path=/;max-age=0'
-              document.cookie = 'demo-user-name=;path=/;max-age=0'
-              window.location.href = '/demo-login'
-            }}
+            onClick={handleLogout}
             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
-            Cerrar sesion
+            Cerrar sesión
           </button>
         )}
 
