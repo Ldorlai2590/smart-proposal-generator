@@ -1,15 +1,25 @@
 import { eq, desc, ilike, or, and } from 'drizzle-orm'
+import { z } from 'zod'
+import {
+  _DEMO_CLIENTS_MUTABLE,
+  capDemoClients,
+  type DemoClient,
+} from '@/lib/demo-data'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
-// ─── Demo mock data ─────────────────────────────────────────
-export const DEMO_CLIENTS = [
-  { id: 'demo-1', tenant_id: 'demo', name: 'María García', company: 'TechFlow Solutions', email: 'maria@techflow.cl', industry: 'Tecnología', company_size: '50-200', score: 85, created_at: '2026-03-15T10:00:00Z' },
-  { id: 'demo-2', tenant_id: 'demo', name: 'Carlos Mendoza', company: 'Retail Plus Chile', email: 'carlos@retailplus.cl', industry: 'Retail', company_size: '200-500', score: 72, created_at: '2026-03-10T14:00:00Z' },
-  { id: 'demo-3', tenant_id: 'demo', name: 'Ana Rodríguez', company: 'Grupo Andino SpA', email: 'ana@grupoandino.cl', industry: 'Construcción', company_size: '200-500', score: 91, created_at: '2026-02-28T09:00:00Z' },
-  { id: 'demo-4', tenant_id: 'demo', name: 'Roberto Silva', company: 'FoodTech Ltda', email: 'roberto@foodtech.cl', industry: 'Alimentación', company_size: '10-50', score: 68, created_at: '2026-02-20T16:00:00Z' },
-  { id: 'demo-5', tenant_id: 'demo', name: 'Valentina Torres', company: 'Innova Labs', email: 'valentina@innovalabs.cl', industry: 'Tecnología', company_size: '10-50', score: 78, created_at: '2026-01-15T11:00:00Z' },
-]
+// Re-export for any consumer still importing DEMO_CLIENTS from here (backward compat).
+export { DEMO_CLIENTS } from '@/lib/demo-data'
+
+// ─── Validation ─────────────────────────────────────────────
+
+const NewClientSchema = z.object({
+  name: z.string().min(1, 'name is required').max(200),
+  company: z.string().max(200).nullable().optional(),
+  email: z.string().email().max(200).nullable().optional(),
+  industry: z.string().max(100).nullable().optional(),
+  company_size: z.string().max(50).nullable().optional(),
+})
 
 // Accent-insensitive search helper
 function normalize(s: string): string {
@@ -24,9 +34,18 @@ export async function GET(req: Request) {
     const rawSearch = url.searchParams.get('search') ?? ''
     const searchNorm = normalize(rawSearch)
     const filtered = searchNorm
-      ? DEMO_CLIENTS.filter(c => normalize(c.name).includes(searchNorm) || normalize(c.company).includes(searchNorm))
-      : DEMO_CLIENTS
-    return Response.json({ data: filtered, total: filtered.length, items: filtered, page: 1, per_page: 50, pages: 1 })
+      ? _DEMO_CLIENTS_MUTABLE.filter(
+          (c) => normalize(c.name).includes(searchNorm) || normalize(c.company).includes(searchNorm),
+        )
+      : _DEMO_CLIENTS_MUTABLE
+    return Response.json({
+      data: filtered,
+      total: filtered.length,
+      items: filtered,
+      page: 1,
+      per_page: 50,
+      pages: 1,
+    })
   }
 
   // Production: use real DB
@@ -65,14 +84,36 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const parsed = NewClientSchema.safeParse(body)
+  if (!parsed.success) {
+    return Response.json(
+      { error: 'Validation failed', issues: parsed.error.issues },
+      { status: 400 },
+    )
+  }
+  const data = parsed.data
+
   if (DEMO_MODE) {
-    const body = await req.json()
-    const newClient = {
-      id: `demo-${Date.now()}`, tenant_id: 'demo', name: body.name,
-      company: body.company ?? null, email: body.email ?? null,
-      industry: body.industry ?? null, company_size: body.company_size ?? null, score: 0,
+    const newClient: DemoClient = {
+      id: `demo-${Date.now()}`,
+      tenant_id: 'demo',
+      name: data.name,
+      company: data.company ?? '',
+      email: data.email ?? '',
+      industry: data.industry ?? '',
+      company_size: data.company_size ?? '',
+      score: 0,
+      created_at: new Date().toISOString(),
     }
-    DEMO_CLIENTS.unshift({ ...newClient, created_at: new Date().toISOString() } as typeof DEMO_CLIENTS[0])
+    _DEMO_CLIENTS_MUTABLE.unshift(newClient)
+    capDemoClients()
     return Response.json(newClient)
   }
 
@@ -86,10 +127,9 @@ export async function POST(req: Request) {
   if (!tenant) return Response.json({ error: 'Tenant not found' }, { status: 404 })
 
   try {
-    const body = await req.json()
     const [newClient] = await db.insert(clients).values({
-      tenantId: tenant.id, name: body.name, company: body.company ?? null,
-      email: body.email ?? null, industry: body.industry ?? null, companySize: body.company_size ?? null,
+      tenantId: tenant.id, name: data.name, company: data.company ?? null,
+      email: data.email ?? null, industry: data.industry ?? null, companySize: data.company_size ?? null,
     }).returning()
     return Response.json({
       id: newClient.id, tenant_id: newClient.tenantId, name: newClient.name,

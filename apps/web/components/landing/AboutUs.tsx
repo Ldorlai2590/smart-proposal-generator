@@ -63,11 +63,11 @@ export function AboutUs() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            La plataforma que transforma tu{' '}
-            <span className="text-[#1D9E75]">proceso comercial</span>
+            La única herramienta que agrupa{' '}
+            <span className="text-[#1D9E75]">múltiples servicios en UNA propuesta ganadora</span>
           </h2>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Diseñada para agencias, consultoras y empresas de servicios que necesitan generar propuestas profesionales rápidamente.
+            Mientras otras herramientas te obligan a generar una propuesta por servicio, SmartSPG estructura todos tus servicios — consultoría, desarrollo, diseño, marketing — en un solo documento coherente que cierra más rápido.
           </p>
         </motion.div>
 
@@ -117,8 +117,11 @@ export function AboutUs() {
           className="max-w-3xl mx-auto"
         >
           <div className="bg-gradient-to-r from-[#f0faf8] to-[#e6f7f2] rounded-2xl p-8 border border-[#d0ebe5]">
+            <p className="text-xs font-semibold text-[#1D9E75] uppercase tracking-wider text-center mb-3">
+              Nuestra diferencia
+            </p>
             <p className="text-gray-700 leading-relaxed text-center">
-              Somos un equipo enfocado en acelerar el ciclo de ventas B2B en LATAM. Creemos que las agencias, consultoras y empresas de servicios merecen herramientas que les permitan generar propuestas profesionales sin perder horas en formato y redacción. Por eso construimos una plataforma impulsada por inteligencia artificial que convierte información de clientes en propuestas estructuradas, persuasivas y listas para cerrar negocios.
+              Somos un equipo latinoamericano enfocado en acelerar el ciclo de ventas B2B en Chile, México y Colombia. Construimos <strong>la única herramienta que agrupa múltiples servicios en UNA propuesta ganadora</strong>: Claude analiza el contexto de tu cliente, estructura cada alcance de forma independiente y exporta en PDF y Word listos para enviar. Menos horas formateando, más deals cerrados.
             </p>
           </div>
         </motion.div>

@@ -12,7 +12,7 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table'
-import { Plus, Search, MoreHorizontal, Eye, Copy, Archive, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Eye, Download, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -216,25 +216,28 @@ export default function ProposalsPage() {
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
+              <button
+                type="button"
+                aria-label={`Acciones para ${row.original.title}`}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]"
+              >
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem
                 className="gap-2 text-sm cursor-pointer"
                 onClick={() => router.push(`/proposals/${row.original.id}`)}
               >
-                <Eye className="h-3.5 w-3.5" /> Ver
+                <Eye className="h-3.5 w-3.5" /> Ver detalle
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 text-sm">
-                <Copy className="h-3.5 w-3.5" /> Duplicar
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 text-sm">
-                <Archive className="h-3.5 w-3.5" /> Archivar
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 text-sm text-red-500">
-                <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              <DropdownMenuItem
+                className="gap-2 text-sm cursor-pointer"
+                onClick={() =>
+                  router.push(`/proposals/${row.original.id}?export=pdf`)
+                }
+              >
+                <Download className="h-3.5 w-3.5" /> Descargar PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

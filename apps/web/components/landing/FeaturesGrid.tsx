@@ -6,34 +6,34 @@ import { Zap, Shield, FileDown, Layers, BarChart3, Mail } from 'lucide-react'
 
 const FEATURES = [
   {
-    icon: Zap,
-    title: 'Streaming IA',
-    description: 'Genera propuestas en tiempo real con Claude Sonnet. Ves cada sección aparecer mientras se escribe.',
+    icon: Layers,
+    title: 'Multi-servicio en una propuesta',
+    description: 'La única IA que agrupa consultoría, desarrollo, diseño y marketing en UN solo documento. Cada alcance estructurado de forma independiente.',
   },
   {
-    icon: Shield,
-    title: 'Multi-tenant seguro',
-    description: 'Organizaciones completamente separadas. Tus datos nunca se mezclan con los de otros clientes.',
+    icon: Zap,
+    title: 'Generación en 3 minutos',
+    description: 'Claude escribe tu propuesta en streaming — ves cada sección aparecer en tiempo real. De brief a propuesta lista en minutos.',
   },
   {
     icon: FileDown,
     title: 'Export PDF y Word',
-    description: 'Descarga con un clic en formato profesional. PDF con diseño premium o Word para edición posterior.',
-  },
-  {
-    icon: Layers,
-    title: 'Templates por industria',
-    description: 'Software, consultoría, marketing, cloud y más. Cada template está optimizado para su sector.',
+    description: 'Descarga con un clic en formato profesional. PDF con diseño premium o Word editable para ajustes finales.',
   },
   {
     icon: BarChart3,
-    title: 'Analytics de propuestas',
-    description: 'Mide tu tasa de cierre, el valor promedio por propuesta y los clientes más rentables.',
+    title: 'Analytics de cierre',
+    description: 'Mide tu tasa de cierre, el valor promedio por propuesta y los clientes más rentables. Decisiones con datos.',
   },
   {
     icon: Mail,
-    title: 'Integración con email',
-    description: 'Envía la propuesta directamente desde la plataforma. El cliente recibe un PDF profesional.',
+    title: 'Envío desde la plataforma',
+    description: 'Manda la propuesta por email sin salir de SmartSPG. El cliente recibe un PDF con tu marca, no un enlace genérico.',
+  },
+  {
+    icon: Shield,
+    title: 'Datos aislados y seguros',
+    description: 'Multi-tenant con organizaciones separadas. Cumple Ley 19.628 Chile. SOC 2 en progreso.',
   },
 ]
 
@@ -45,9 +45,9 @@ export function FeaturesGrid() {
     <section id="features" className="py-20 bg-gray-50" ref={ref}>
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Todo lo que necesitas para cerrar</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Todo lo que necesitas para cerrar más rápido</h2>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">
-            Construido para equipos de ventas que no tienen tiempo que perder.
+            Construido para agencias y consultoras B2B en LATAM que no tienen tiempo que perder.
           </p>
         </div>
 

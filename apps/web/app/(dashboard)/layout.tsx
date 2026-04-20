@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { tenants } from '@/db/schema'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { MobileNav } from '@/components/layout/MobileNav'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
@@ -38,9 +39,12 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-6">{children}</div>
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <MobileNav />
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto p-4 sm:p-6">{children}</div>
+        </main>
+      </div>
     </div>
   )
 }

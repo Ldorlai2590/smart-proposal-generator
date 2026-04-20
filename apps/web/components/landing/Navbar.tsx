@@ -65,7 +65,7 @@ export function Navbar() {
             href="/demo-login"
             className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg hover:bg-[#158a63] transition-colors"
           >
-            Empezar gratis
+            Empezar gratis ahora
           </Link>
         </div>
 
@@ -99,7 +99,7 @@ export function Navbar() {
               href="/demo-login"
               className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg text-center"
             >
-              Empezar gratis
+              Empezar gratis ahora
             </Link>
           </div>
         </div>

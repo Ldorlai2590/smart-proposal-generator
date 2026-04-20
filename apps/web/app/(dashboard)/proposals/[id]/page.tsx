@@ -13,6 +13,8 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/format'
+import { sanitizeHTML } from '@/lib/sanitize'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
@@ -65,18 +67,9 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
   rejected: 'Rechazada',
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('es-CL', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 function formatBudget(budget?: unknown): string {
   if (budget == null || typeof budget !== 'number') return ''
-  return `$${budget.toLocaleString('en-US')} USD`
+  return formatCurrency(budget, 'USD')
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -346,7 +339,7 @@ export default function ProposalDetailPage() {
                   prose-table:w-full prose-table:text-sm
                   prose-th:text-left prose-th:px-3 prose-th:py-2 prose-th:bg-gray-50 prose-th:font-semibold prose-th:text-gray-700 prose-th:border prose-th:border-gray-200
                   prose-td:px-3 prose-td:py-2 prose-td:border prose-td:border-gray-200"
-                dangerouslySetInnerHTML={{ __html: sections[key] }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHTML(sections[key]) }}
               />
             </div>
           ))}

@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { getProposalById } from '@/lib/demo-data'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
@@ -9,9 +10,7 @@ export async function GET(
   const { id } = await params
 
   if (DEMO_MODE) {
-    // Dynamic import to access the shared demo data
-    const { DEMO_PROPOSALS } = await import('../route')
-    const proposal = DEMO_PROPOSALS.find((p) => p.id === id)
+    const proposal = getProposalById(id)
     if (!proposal) {
       return Response.json({ error: 'Proposal not found' }, { status: 404 })
     }

@@ -7,6 +7,7 @@ import {
 } from 'recharts'
 import { FileText, CheckCircle2, TrendingUp, Users } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
+import { formatCompact, formatCurrency } from '@/lib/format'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
@@ -383,9 +384,9 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={barData} layout="vertical" barSize={10}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v / 1000}K`} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatCompact(v)} />
                     <YAxis type="category" dataKey="industry" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} width={70} />
-                    <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px' }} formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Valor']} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px' }} formatter={(v) => [formatCurrency(Number(v), 'USD'), 'Valor']} />
                     <Bar dataKey="value" fill="#1D9E75" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

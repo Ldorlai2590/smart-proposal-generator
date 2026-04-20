@@ -6,17 +6,17 @@ const LINKS = {
     { label: 'Características', href: '#features' },
     { label: 'Precios', href: '#pricing' },
     { label: 'Integraciones', href: '#integrations' },
-    { label: 'Changelog', href: '#' },
+    { label: 'Changelog', href: '/changelog' },
   ],
   Empresa: [
-    { label: 'Sobre nosotros', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Contacto', href: 'mailto:hola@smartspg.io' },
+    { label: 'Sobre nosotros', href: '/about' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'Contacto', href: 'mailto:hola@smartspg.com' },
   ],
   Legal: [
-    { label: 'Términos de uso', href: '#' },
-    { label: 'Privacidad', href: '#' },
-    { label: 'Cookies', href: '#' },
+    { label: 'Términos de uso', href: '/legal/terms' },
+    { label: 'Privacidad', href: '/legal/privacy' },
+    { label: 'Cookies', href: '/legal/cookies' },
   ],
 }
 
@@ -34,7 +34,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              Propuestas comerciales con IA para equipos de ventas en LATAM.
+              Propuestas comerciales con IA para agencias y consultoras en LATAM.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export function Footer() {
             © {new Date().getFullYear()} SmartSPG. Todos los derechos reservados.
           </p>
           <p className="text-xs text-gray-400">
-            Hecho con ❤️ para equipos de ventas en LATAM
+            Hecho en LATAM · Chile · México · Colombia
           </p>
         </div>
       </div>

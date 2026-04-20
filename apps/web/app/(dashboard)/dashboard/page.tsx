@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus, FileText, TrendingUp, Users, DollarSign, RefreshCw } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { ProposalsBarChart, ClosingRateDonut } from '@/components/dashboard/ProposalsChart'
+import { formatCompact, formatCurrency, formatDate, formatDateRelative } from '@/lib/format'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
@@ -48,24 +49,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 function formatBudget(budget?: number): string {
   if (budget == null) return '—'
-  return `$${(budget / 1000).toFixed(1)}K`
-}
-
-function formatDateRelative(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Hoy'
-  if (diffDays === 1) return 'Ayer'
-  if (diffDays < 7) return `Hace ${diffDays} días`
-  if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7)
-    return `Hace ${weeks} semana${weeks > 1 ? 's' : ''}`
-  }
-  const months = Math.floor(diffDays / 30)
-  return `Hace ${months} mes${months > 1 ? 'es' : ''}`
+  return formatCompact(budget)
 }
 
 function mapApiProposal(p: ApiProposal): Proposal {
@@ -192,12 +176,7 @@ export default function DashboardPage() {
             {greeting}, {firstName} 👋
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {new Date().toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {formatDate(new Date(), 'es-ES')}
           </p>
         </div>
         <Link
@@ -257,7 +236,7 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Ingresos estimados"
-              value={acceptedValue > 0 ? `$${acceptedValue.toLocaleString('en-US')}` : '—'}
+              value={acceptedValue > 0 ? formatCurrency(acceptedValue, 'USD') : '—'}
               icon={DollarSign}
               iconColor="#7C3AED"
               iconBg="#F5F3FF"

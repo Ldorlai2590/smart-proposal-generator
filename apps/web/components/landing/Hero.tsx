@@ -13,8 +13,8 @@ const STREAMING_SECTIONS = [
 ]
 
 const TRUST_ITEMS = [
-  '30 días gratis sin tarjeta',
-  'Multi-servicio B2B',
+  '30 días gratis · Sin tarjeta',
+  '20 propuestas incluidas',
   'PDF y Word al instante',
 ]
 
@@ -40,33 +40,44 @@ export function Hero() {
           >
             <div className="inline-flex items-center gap-2 bg-[#e6f7f2] text-[#1D9E75] text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
               <Sparkles className="h-3.5 w-3.5" />
-              Powered by Claude AI
+              Powered by Claude (Anthropic)
             </div>
 
             <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-              Propuestas comerciales{' '}
-              <span className="text-[#1D9E75]">multi-servicio, generadas con IA en minutos</span>
+              Cierra más ventas B2B:{' '}
+              <span className="text-[#1D9E75]">propuestas profesionales en 3 minutos</span>
             </h1>
 
             <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">
-              Agrupa múltiples servicios en una sola propuesta profesional. Claude analiza tu cliente, estructura cada alcance de forma independiente y exporta en PDF o Word.
+              La única IA que genera propuestas multi-servicio con PDF y Word listos para enviar. Para agencias y consultoras en Chile, México y Colombia.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <Link
                 href="/demo-login"
                 className="inline-flex items-center justify-center gap-2 bg-[#1D9E75] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#158a63] transition-colors text-sm"
               >
-                Empezar gratis — 60 días sin tarjeta
+                Generar mi primera propuesta
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
                 href="#how-it-works"
                 className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-medium px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
               >
-                Ver cómo funciona
+                Ver demo
               </a>
             </div>
+
+            <p className="text-xs text-gray-400 mb-8">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex -space-x-1">
+                  <span className="h-4 w-4 rounded-full bg-[#1D9E75] border border-white" />
+                  <span className="h-4 w-4 rounded-full bg-[#158a63] border border-white" />
+                  <span className="h-4 w-4 rounded-full bg-[#0f6b4c] border border-white" />
+                </span>
+                +120 equipos ya lo usan en LATAM
+              </span>
+            </p>
 
             <div className="flex flex-wrap gap-4">
               {TRUST_ITEMS.map((item) => (

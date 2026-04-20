@@ -1,8 +1,20 @@
 import { streamObject } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
+import { checkLimit, getClientIp } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
+
+// Rate-limit config — only applied in DEMO_MODE. Keeps the public playground
+// from being abused to burn Anthropic tokens. Authenticated production users
+// are already gated by trial/quota.
+const DEMO_RATE_LIMIT = 3
+const DEMO_RATE_WINDOW_SEC = 5 * 60 // 5 minutes
+
+// Hard upper bound on the full generation. Anthropic streams can hang on
+// upstream errors; this guarantees a client-visible failure within 60s.
+const STREAM_TIMEOUT_MS = 60_000
 
 const ProposalSectionSchema = z.object({
   resumenEjecutivo: z.string().describe('Resumen ejecutivo de la propuesta'),
@@ -28,6 +40,10 @@ const RequestSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const log = logger.withRequestId(req)
+  const start = Date.now()
+
+  // --- Auth & quota gate (production only) ---------------------------------
   if (!DEMO_MODE) {
     const { auth } = await import('@clerk/nextjs/server')
     const session = await auth()
@@ -35,7 +51,6 @@ export async function POST(req: Request) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    // Gate: trial vencido o cuota agotada → 402 Payment Required
     const { getTrialStatus } = await import('@/lib/trial')
     const trial = await getTrialStatus(session.orgId)
     if (!trial || !trial.canGenerateProposals) {
@@ -52,8 +67,65 @@ export async function POST(req: Request) {
     }
   }
 
-  const body = await req.json()
-  const input = RequestSchema.parse(body)
+  // --- Rate limit (DEMO_MODE only) -----------------------------------------
+  // Applied AFTER auth so authenticated prod users are unaffected, and
+  // BEFORE body parsing so we don't waste cycles on throttled traffic.
+  if (DEMO_MODE) {
+    const ip = getClientIp(req)
+    const rl = checkLimit(ip, 'proposals:stream', DEMO_RATE_LIMIT, DEMO_RATE_WINDOW_SEC)
+    if (!rl.allowed) {
+      log.warn('stream_rate_limited', { ip, retryAfter: rl.retryAfter })
+      return new Response(
+        JSON.stringify({
+          error: 'Límite alcanzado. Espera 5 minutos.',
+          retryAfter: rl.retryAfter,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(rl.retryAfter),
+            'X-RateLimit-Limit': String(DEMO_RATE_LIMIT),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': rl.resetAt.toISOString(),
+          },
+        }
+      )
+    }
+  }
+
+  // --- Body parsing + validation -------------------------------------------
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'invalid_json', message: 'Body must be valid JSON.' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // safeParse — never throw on user input.
+  const parsed = RequestSchema.safeParse(body)
+  if (!parsed.success) {
+    log.warn('stream_bad_request', { issues: parsed.error.issues })
+    return new Response(
+      JSON.stringify({
+        error: 'invalid_request',
+        message: 'Request body failed validation.',
+        issues: parsed.error.issues,
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+  const input = parsed.data
+
+  log.info('stream_start', {
+    clientId: input.clientId,
+    company: input.company,
+    industry: input.industry,
+    services: input.services?.length ?? 0,
+  })
 
   const system = `Eres un experto consultor de negocios especializado en propuestas B2B multi-servicio para el mercado LATAM.
 
@@ -89,40 +161,111 @@ IMPORTANTE: Para cada servicio, incluye:
 
 Consolida todo en una tabla final de inversión mostrando el total por servicio y el total general.`
 
-  const result = streamObject({
-    model: anthropic('claude-sonnet-4-5'),
-    schema: ProposalSectionSchema,
-    messages: [
-      {
-        role: 'system',
-        content: system,
-        experimental_providerMetadata: {
-          anthropic: { cacheControl: { type: 'ephemeral' } },
+  // --- LLM call wrapped in try/catch + timeout -----------------------------
+  try {
+    const result = streamObject({
+      model: anthropic('claude-sonnet-4-5'),
+      schema: ProposalSectionSchema,
+      abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
+      messages: [
+        {
+          role: 'system',
+          content: system,
+          experimental_providerMetadata: {
+            anthropic: { cacheControl: { type: 'ephemeral' } },
+          },
         },
-      },
-      { role: 'user', content: prompt },
-    ],
-  })
-
-  // Save to PostgreSQL after streaming completes (non-blocking, skip in demo)
-  if (!DEMO_MODE) {
-    const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
-    result.object.then(async (sections) => {
-      try {
-        const { incrementProposalUsage } = await import('@/lib/trial')
-        await incrementProposalUsage('').catch(() => {})
-        const createRes = await fetch(`${apiUrl}/proposals/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ client_id: input.clientId, title: `Propuesta para ${input.company}`, context: { problema: input.problema, services: input.services, budget: input.budget, timeline: input.timeline, tono: input.tono } }),
-        })
-        if (createRes.ok) {
-          const { id } = await createRes.json()
-          await fetch(`${apiUrl}/proposals/${id}/sections`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }) })
-        }
-      } catch { console.error('[stream] Failed to save proposal to DB') }
+        { role: 'user', content: prompt },
+      ],
     })
-  }
 
-  return result.toTextStreamResponse()
+    // Post-stream persistence (production only). Attach handlers BEFORE
+    // returning the stream so we don't miss completion/error events.
+    if (!DEMO_MODE) {
+      const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+      result.object
+        .then(async (sections) => {
+          try {
+            const { incrementProposalUsage } = await import('@/lib/trial')
+            await incrementProposalUsage('').catch(() => {})
+            const createRes = await fetch(`${apiUrl}/proposals/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                client_id: input.clientId,
+                title: `Propuesta para ${input.company}`,
+                context: {
+                  problema: input.problema,
+                  services: input.services,
+                  budget: input.budget,
+                  timeline: input.timeline,
+                  tono: input.tono,
+                },
+              }),
+            })
+            if (createRes.ok) {
+              const { id } = await createRes.json()
+              await fetch(`${apiUrl}/proposals/${id}/sections`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
+              })
+            }
+            log.info('stream_persisted', {
+              clientId: input.clientId,
+              durationMs: Date.now() - start,
+            })
+          } catch (err) {
+            log.error('stream_persist_failed', {
+              err: err instanceof Error ? err.message : String(err),
+            })
+          }
+        })
+        .catch((err) => {
+          // Stream itself failed (timeout / upstream). Log it; the client
+          // already got an aborted response so nothing else to do here.
+          log.error('stream_failed_post', {
+            err: err instanceof Error ? err.message : String(err),
+            durationMs: Date.now() - start,
+          })
+        })
+    } else {
+      // In demo, still record duration once the object resolves.
+      result.object
+        .then(() =>
+          log.info('stream_end', {
+            clientId: input.clientId,
+            durationMs: Date.now() - start,
+          })
+        )
+        .catch((err) =>
+          log.error('stream_failed_post', {
+            err: err instanceof Error ? err.message : String(err),
+            durationMs: Date.now() - start,
+          })
+        )
+    }
+
+    return result.toTextStreamResponse()
+  } catch (err) {
+    // Synchronous errors from streamObject (bad config, provider init, etc).
+    // Timeout/abort errors surface via the abortSignal as AbortError.
+    const isTimeout =
+      err instanceof Error &&
+      (err.name === 'AbortError' || err.name === 'TimeoutError')
+    log.error('stream_failed', {
+      err: err instanceof Error ? err.message : String(err),
+      timeout: isTimeout,
+      durationMs: Date.now() - start,
+    })
+    return new Response(
+      JSON.stringify({
+        error: 'generation_failed',
+        message: isTimeout
+          ? 'La generación tardó demasiado. Intenta nuevamente.'
+          : 'No pudimos generar la propuesta. Intenta nuevamente en unos segundos.',
+      }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
 }

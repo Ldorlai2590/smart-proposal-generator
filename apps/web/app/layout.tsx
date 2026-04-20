@@ -5,9 +5,50 @@ import './globals.css'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://smartspg.com'
+
 export const metadata: Metadata = {
-  title: 'Smart Proposal Generator',
-  description: 'Genera propuestas comerciales personalizadas con IA',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'SmartSPG · Smart Proposal Generator',
+    template: '%s · SmartSPG',
+  },
+  description: 'Genera propuestas comerciales personalizadas con IA en minutos.',
+  applicationName: 'SmartSPG',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'SmartSPG',
+    title: 'SmartSPG · Smart Proposal Generator',
+    description:
+      'Genera propuestas comerciales personalizadas con IA en minutos.',
+    url: SITE_URL,
+    locale: 'es_CL',
+    images: [
+      {
+        url: '/favicon.svg',
+        width: 512,
+        height: 512,
+        alt: 'SmartSPG',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'SmartSPG · Smart Proposal Generator',
+    description:
+      'Genera propuestas comerciales personalizadas con IA en minutos.',
+    images: ['/favicon.svg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default async function RootLayout({

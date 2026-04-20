@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Send,
   Edit3,
+  ChevronRight,
 } from 'lucide-react'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
@@ -329,42 +330,49 @@ export default function ClientDetailPage() {
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <ul className="divide-y divide-gray-50">
                 {client.proposals.map((proposal) => {
                   const config = STATUS_CONFIG[proposal.status] ?? STATUS_CONFIG.draft
                   const Icon = config.icon
                   return (
-                    <div
-                      key={proposal.id}
-                      className="flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors"
-                    >
-                      <div className={`h-9 w-9 rounded-lg border ${config.bg} flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`h-4 w-4 ${config.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {proposal.title}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {new Date(proposal.created_at).toLocaleDateString('es-CL', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {formatCLP(proposal.value)}
-                        </p>
-                        <span className={`text-xs font-medium ${config.color}`}>
-                          {config.label}
-                        </span>
-                      </div>
-                    </div>
+                    <li key={proposal.id}>
+                      <Link
+                        href={`/proposals/${proposal.id}`}
+                        aria-label={`Ver propuesta ${proposal.title}`}
+                        className="group flex items-center gap-4 p-4 cursor-pointer hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75] focus-visible:ring-inset"
+                      >
+                        <div className={`h-9 w-9 rounded-lg border ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                          <Icon className={`h-4 w-4 ${config.color}`} aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate group-hover:text-[#1D9E75] transition-colors">
+                            {proposal.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {new Date(proposal.created_at).toLocaleDateString('es-CL', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatCLP(proposal.value)}
+                          </p>
+                          <span className={`text-xs font-medium ${config.color}`}>
+                            {config.label}
+                          </span>
+                        </div>
+                        <ChevronRight
+                          className="h-4 w-4 text-gray-300 group-hover:text-[#1D9E75] group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                          aria-hidden="true"
+                        />
+                      </Link>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             )}
           </div>
         </div>

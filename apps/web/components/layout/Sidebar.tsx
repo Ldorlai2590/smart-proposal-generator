@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   CreditCard,
+  Settings,
   ChevronLeft,
   Zap,
   User,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/clients', label: 'Clientes', icon: Users },
   { href: '/analytics', label: 'Analítica', icon: BarChart3 },
   { href: '/billing', label: 'Facturación', icon: CreditCard },
+  { href: '/settings', label: 'Configuración', icon: Settings },
 ]
 
 function getCookie(name: string): string | null {
@@ -79,7 +81,8 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'relative flex flex-col h-screen bg-[#0F172A] border-r border-[#1E293B] transition-all duration-200 flex-shrink-0',
+        'relative h-screen bg-[#0F172A] border-r border-[#1E293B] transition-all duration-200 flex-shrink-0 no-print',
+        'hidden md:flex md:flex-col',
         collapsed ? 'w-16' : 'w-60',
       )}
     >

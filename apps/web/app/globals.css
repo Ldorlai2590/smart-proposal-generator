@@ -162,3 +162,32 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ── Print styles ─────────────────────────────────────────────── */
+@media print {
+  .no-print,
+  aside,
+  nav,
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"] {
+    display: none !important;
+  }
+  .page-break-before { page-break-before: always; }
+  .page-break-after  { page-break-after: always; }
+  .avoid-page-break  { page-break-inside: avoid; }
+  body {
+    color: black;
+    background: white;
+  }
+  main,
+  .print-full-width {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  a[href]::after {
+    content: "";
+  }
+}

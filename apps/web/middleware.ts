@@ -3,15 +3,64 @@ import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
 const DEMO_MODE = process.env.DEMO_MODE === 'true'
-const JWT_SECRET = process.env.JWT_SECRET ?? 'demo-secret-key-change-in-production-please-12345678'
 const SESSION_COOKIE = 'spg-session'
-const secretKey = new TextEncoder().encode(JWT_SECRET)
+const JWT_ISSUER = 'smart-proposal-generator'
+const JWT_AUDIENCE = 'spg-web'
+const MIN_SECRET_BYTES = 32
+
+/**
+ * Edge-runtime-safe secret resolver. Mirrors lib/auth-jwt.ts but uses Web Crypto
+ * (crypto.getRandomValues) instead of node:crypto so it runs in middleware.
+ *
+ * Identical fail-fast rules:
+ *  - JWT_SECRET present -> must be >= 32 bytes
+ *  - Missing + !DEMO_MODE -> throw
+ *  - Missing + DEMO_MODE -> ephemeral per-boot secret + warn once
+ *
+ * NOTE: Because middleware runs in a separate runtime from route handlers, its
+ * ephemeral demo secret will NOT match the secret used by /api/auth/login. That is
+ * acceptable only for a true demo deployment — in practice DEMO_MODE deployments
+ * SHOULD set JWT_SECRET explicitly so signing and verification agree across runtimes.
+ */
+function resolveJwtSecret(): Uint8Array {
+  const envSecret = process.env.JWT_SECRET
+  if (envSecret && envSecret.length > 0) {
+    const bytes = new TextEncoder().encode(envSecret)
+    if (bytes.byteLength < MIN_SECRET_BYTES) {
+      throw new Error(
+        `JWT_SECRET must be at least ${MIN_SECRET_BYTES} bytes (got ${bytes.byteLength}). Use a strong random secret.`
+      )
+    }
+    return bytes
+  }
+
+  if (!DEMO_MODE) {
+    throw new Error('JWT_SECRET env var is required')
+  }
+
+  const buf = new Uint8Array(32)
+  crypto.getRandomValues(buf)
+  const hex = Array.from(buf)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[middleware] WARN: JWT_SECRET not set. DEMO_MODE=true detected — using an ephemeral per-boot secret in middleware. Set JWT_SECRET to allow cookies signed by the API route to be verified here.'
+  )
+  return new TextEncoder().encode(hex)
+}
+
+const secretKey = resolveJwtSecret()
 
 async function hasValidSession(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get(SESSION_COOKIE)?.value
   if (!token) return false
   try {
-    await jwtVerify(token, secretKey)
+    await jwtVerify(token, secretKey, {
+      algorithms: ['HS256'],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    })
     return true
   } catch {
     return false

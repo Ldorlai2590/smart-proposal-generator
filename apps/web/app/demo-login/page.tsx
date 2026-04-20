@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Zap, AlertCircle, Loader2 } from 'lucide-react'
 
+const DEMO_EMAIL = 'demo@smartspg.com'
+
 export default function DemoLoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -42,28 +42,14 @@ export default function DemoLoginPage() {
     }
   }
 
-  async function handleQuickDemo() {
-    setEmail('demo@smartspg.com')
-    setPassword('demo123456')
-    setLoading(true)
+  // Pre-fill the email field with the demo address. No password is ever
+  // hard-coded into the client bundle — the user types their own.
+  function handleQuickDemo() {
+    setEmail(DEMO_EMAIL)
     setError(null)
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'demo@smartspg.com', password: 'demo123456' }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error ?? 'Error')
-        setLoading(false)
-        return
-      }
-      window.location.href = '/dashboard'
-    } catch {
-      setError('No se pudo conectar')
-      setLoading(false)
-    }
+    // Move focus to the password field so the user can keep typing.
+    const pwInput = document.getElementById('password') as HTMLInputElement | null
+    pwInput?.focus()
   }
 
   return (
@@ -169,7 +155,7 @@ export default function DemoLoginPage() {
             className="w-full flex items-center justify-center gap-2.5 py-2.5 bg-[#0F172A] border border-[#334155] rounded-xl text-sm font-medium text-[#F8FAFC] hover:bg-[#1a2744] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Zap className="h-4 w-4 text-[#1D9E75]" />
-            Entrar como demo@smartspg.com
+            Usar correo demo
           </button>
         </div>
 
