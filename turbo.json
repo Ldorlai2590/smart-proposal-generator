@@ -16,7 +16,11 @@
         "DATABASE_URL",
         "API_URL",
         "JWT_SECRET",
-        "NODE_ENV"
+        "NODE_ENV",
+        "NEXT_PUBLIC_CLERK_SIGN_IN_URL",
+        "NEXT_PUBLIC_CLERK_SIGN_UP_URL",
+        "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL",
+        "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL"
       ]
     },
     "dev": {
