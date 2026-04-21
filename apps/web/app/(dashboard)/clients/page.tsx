@@ -7,17 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { fetchWithTenant } from '@/lib/api'
 import { z } from 'zod/v4'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 interface Client {
   id: string
@@ -108,12 +99,10 @@ function NewClientDialog({
   open,
   onOpenChange,
   onClientCreated,
-  orgId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onClientCreated: () => void
-  orgId: string
 }) {
   const [formData, setFormData] = useState<ClientFormData>({
     name: '',
@@ -329,7 +318,7 @@ function NewClientDialog({
 }
 
 export default function ClientsPage() {
-  const { orgId } = useDemoAuth()
+  
   const [clients, setClients] = useState<Client[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -340,8 +329,7 @@ export default function ClientsPage() {
 
   const fetchClients = useCallback(
     async (query: string) => {
-      if (!orgId) return
-      setLoading(true)
+          setLoading(true)
       try {
         const path = query
           ? `/api/clients?search=${encodeURIComponent(query)}&limit=50`
@@ -357,7 +345,7 @@ export default function ClientsPage() {
         setLoading(false)
       }
     },
-    [orgId],
+    [],
   )
 
   // Initial fetch
@@ -406,14 +394,11 @@ export default function ClientsPage() {
         </button>
       </div>
 
-      {orgId && (
-        <NewClientDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onClientCreated={() => fetchClients(search)}
-          orgId={orgId}
-        />
-      )}
+      <NewClientDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onClientCreated={() => fetchClients(search)}
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap gap-3 mb-6">

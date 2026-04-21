@@ -3,10 +3,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
-const DEMO_MODE = process.env.DEMO_MODE === 'true'
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://smartspg.com'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://smartspg.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -25,48 +22,24 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'SmartSPG',
     title: 'SmartSPG · Smart Proposal Generator',
-    description:
-      'Genera propuestas comerciales personalizadas con IA en minutos.',
+    description: 'Genera propuestas comerciales personalizadas con IA en minutos.',
     url: SITE_URL,
     locale: 'es_CL',
-    images: [
-      {
-        url: '/favicon.svg',
-        width: 512,
-        height: 512,
-        alt: 'SmartSPG',
-      },
-    ],
+    images: [{ url: '/favicon.svg', width: 512, height: 512, alt: 'SmartSPG' }],
   },
   twitter: {
     card: 'summary',
     title: 'SmartSPG · Smart Proposal Generator',
-    description:
-      'Genera propuestas comerciales personalizadas con IA en minutos.',
+    description: 'Genera propuestas comerciales personalizadas con IA en minutos.',
     images: ['/favicon.svg'],
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: { index: true, follow: true },
 }
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const htmlContent = (
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
     <html lang="es" className={`${GeistSans.variable} ${GeistMono.variable} font-sans`}>
       <body>{children}</body>
     </html>
   )
-
-  if (DEMO_MODE) {
-    return htmlContent
-  }
-
-  // Only import ClerkProvider when not in demo mode
-  const { ClerkProvider } = await import('@clerk/nextjs')
-  return <ClerkProvider>{htmlContent}</ClerkProvider>
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Settings as SettingsIcon, User, Globe, DollarSign, LogOut, KeyRound } from 'lucide-react'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
 
 type Currency = 'USD' | 'CLP'
 
@@ -59,7 +59,7 @@ export default function SettingsPage() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
     } catch {}
-    window.location.href = DEMO_MODE ? '/demo-login' : '/'
+    window.location.href = '/'
   }
 
   return (

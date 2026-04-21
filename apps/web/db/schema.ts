@@ -21,7 +21,7 @@ import { relations } from 'drizzle-orm'
 //   'expired'    → trial agotado, acceso bloqueado hasta pagar
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
-  clerkOrgId: varchar('clerk_org_id', { length: 255 }).unique().notNull(),
+  supabaseUserId: varchar('supabase_user_id', { length: 255 }).unique().notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   plan: varchar('plan', { length: 50 }).default('free').notNull(),
 
@@ -57,7 +57,7 @@ export const users = pgTable('users', {
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => tenants.id, { onDelete: 'cascade' }),
-  clerkUserId: varchar('clerk_user_id', { length: 255 }).unique().notNull(),
+  supabaseUserId: varchar('supabase_user_id', { length: 255 }).unique().notNull(),
   email: varchar('email', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).default('member'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),

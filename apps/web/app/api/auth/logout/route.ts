@@ -1,6 +1,7 @@
-import { clearSessionCookie } from '@/lib/auth-jwt'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
-  await clearSessionCookie()
+  const supabase = await createClient()
+  await supabase.auth.signOut()
   return Response.json({ success: true })
 }

@@ -1,7 +1,5 @@
 import { z } from 'zod/v4'
 
-const DEMO_MODE = process.env.DEMO_MODE === 'true'
-const DEMO_ORG_ID = 'org_3CLrWMV7SmXmUKGYauf8fYagW17'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -170,7 +168,7 @@ async function handlePDF(
   // In DEMO_MODE or when DocuForge is not configured, return HTML as a
   // downloadable file. Users can open it in a browser and print to PDF.
   const docuforgeKey = process.env.DOCUFORGE_API_KEY
-  if (DEMO_MODE || !docuforgeKey || docuforgeKey === 'df_...') {
+  if (!docuforgeKey || docuforgeKey === 'df_...') {
     const encoder = new TextEncoder()
     const bytes = encoder.encode(html)
     return new Response(bytes, {
@@ -322,17 +320,14 @@ async function handleEmail(
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: Request): Promise<Response> {
-  // Auth guard — require both user and org (tenant)
-  let orgId: string | null = null
-  if (DEMO_MODE) {
-    orgId = DEMO_ORG_ID
-  } else {
-    const { auth } = await import('@clerk/nextjs/server')
-    const session = await auth()
-    if (!session.userId || !session.orgId) {
-      return jsonResponse({ error: 'Unauthorized' }, 401)
-    }
-    orgId = session.orgId
+  // Auth guard
+  let tenantId: string
+  try {
+    const { requireAuth } = await import('@/lib/auth')
+    const session = await requireAuth()
+    tenantId = session.tenantId
+  } catch {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
   // Parse body
@@ -356,10 +351,10 @@ export async function POST(req: Request): Promise<Response> {
 
   switch (input.format) {
     case 'pdf':
-      return handlePDF(input, orgId)
+      return handlePDF(input, tenantId)
     case 'docx':
-      return handleDOCX(input, orgId)
+      return handleDOCX(input, tenantId)
     case 'email':
-      return handleEmail(input, orgId)
+      return handleEmail(input, tenantId)
   }
 }

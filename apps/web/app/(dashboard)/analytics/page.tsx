@@ -9,15 +9,6 @@ import { FileText, CheckCircle2, TrendingUp, Users } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { formatCompact, formatCurrency } from '@/lib/format'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
-
 type ProposalStatus = 'draft' | 'generating' | 'generated' | 'sent' | 'accepted' | 'rejected'
 
 interface ApiProposal {
@@ -166,14 +157,13 @@ function computeStatusData(proposals: ApiProposal[]): StatusData[] {
 }
 
 export default function AnalyticsPage() {
-  const { orgId } = useDemoAuth()
+  
   const [proposals, setProposals] = useState<ApiProposal[]>([])
   const [clients, setClients] = useState<ApiClient[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!orgId) return
-
+  
     async function fetchData() {
       setLoading(true)
       try {
@@ -199,7 +189,7 @@ export default function AnalyticsPage() {
     }
 
     fetchData()
-  }, [orgId])
+  }, [])
 
   // Compute analytics
   const totalProposals = proposals.length

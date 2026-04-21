@@ -7,7 +7,6 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { ProposalsBarChart, ClosingRateDonut } from '@/components/dashboard/ProposalsChart'
 import { formatCompact, formatCurrency, formatDate, formatDateRelative } from '@/lib/format'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 interface ApiProposal {
   id: string
@@ -97,33 +96,23 @@ function SkeletonRecentProposals() {
   )
 }
 
-function useClerkAuth() {
-  const [demoName, setDemoName] = useState<string>('equipo')
-
+function useUserName() {
+  const [firstName, setFirstName] = useState<string>('equipo')
   useEffect(() => {
-    if (DEMO_MODE) {
-      fetch('/api/auth/session')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.authenticated && data.user?.name) {
-            // Use first word of name only for greeting
-            setDemoName(data.user.name.split(' ')[0])
-          }
-        })
-        .catch(() => {})
-    }
+    fetch('/api/auth/session')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.authenticated && data.user?.name) {
+          setFirstName(data.user.name.split(' ')[0])
+        }
+      })
+      .catch(() => {})
   }, [])
-
-  if (DEMO_MODE) return { orgId: 'demo', firstName: demoName }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth, useUser } = require('@clerk/nextjs')
-  const { orgId } = useAuth()
-  const { user } = useUser()
-  return { orgId, firstName: user?.firstName ?? 'equipo' }
+  return firstName
 }
 
 export default function DashboardPage() {
-  const { orgId, firstName } = useClerkAuth()
+  const firstName = useUserName()
 
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,7 +122,6 @@ export default function DashboardPage() {
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
 
   const fetchProposals = useCallback(async () => {
-    if (!orgId) return
     setLoading(true)
     setError(null)
     try {
@@ -149,7 +137,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [orgId])
+  }, [])
 
   useEffect(() => {
     fetchProposals()

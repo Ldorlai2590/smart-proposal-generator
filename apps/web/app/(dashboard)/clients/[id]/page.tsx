@@ -18,14 +18,6 @@ import {
   ChevronRight,
 } from 'lucide-react'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 interface Proposal {
   id: string
@@ -102,7 +94,7 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export default function ClientDetailPage() {
-  const { orgId } = useDemoAuth()
+  
   const params = useParams()
   const router = useRouter()
   const clientId = params.id as string
@@ -112,7 +104,7 @@ export default function ClientDetailPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (!orgId || !clientId) return
+    if (!clientId) return
     setLoading(true)
     fetch(`/api/clients/${clientId}`)
       .then((r) => {
@@ -122,9 +114,8 @@ export default function ClientDetailPage() {
       .then((data) => setClient(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
-  }, [orgId, clientId])
+  }, [clientId])
 
-  if (!orgId) return null
 
   if (loading) {
     return (

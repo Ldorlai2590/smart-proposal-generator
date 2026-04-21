@@ -1,19 +1,19 @@
-import { getSession } from '@/lib/auth-jwt'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const session = await getSession()
-  if (!session) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
     return Response.json({ authenticated: false }, { status: 401 })
   }
   return Response.json({
     authenticated: true,
     user: {
-      email: session.email,
-      name: session.name,
-      orgId: session.orgId,
-      loginAt: session.loginAt,
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name ?? user.email?.split('@')[0],
     },
   })
 }

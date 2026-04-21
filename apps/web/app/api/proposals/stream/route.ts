@@ -4,14 +4,6 @@ import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 
-const DEMO_MODE = process.env.DEMO_MODE === 'true'
-
-// Rate-limit config — only applied in DEMO_MODE. Keeps the public playground
-// from being abused to burn Anthropic tokens. Authenticated production users
-// are already gated by trial/quota.
-const DEMO_RATE_LIMIT = 3
-const DEMO_RATE_WINDOW_SEC = 5 * 60 // 5 minutes
-
 // Hard upper bound on the full generation. Anthropic streams can hang on
 // upstream errors; this guarantees a client-visible failure within 60s.
 const STREAM_TIMEOUT_MS = 60_000
@@ -43,55 +35,29 @@ export async function POST(req: Request) {
   const log = logger.withRequestId(req)
   const start = Date.now()
 
-  // --- Auth & quota gate (production only) ---------------------------------
-  if (!DEMO_MODE) {
-    const { auth } = await import('@clerk/nextjs/server')
-    const session = await auth()
-    if (!session.userId || !session.orgId) {
-      return new Response('Unauthorized', { status: 401 })
-    }
-
-    const { getTrialStatus } = await import('@/lib/trial')
-    const trial = await getTrialStatus(session.orgId)
-    if (!trial || !trial.canGenerateProposals) {
-      return new Response(
-        JSON.stringify({
-          error: 'trial_expired_or_quota_exceeded',
-          stage: trial?.stage ?? 'unknown',
-          daysLeft: trial?.daysLeft ?? 0,
-          proposalsUsed: trial?.proposalsUsed ?? 0,
-          proposalsQuota: trial?.proposalsQuota ?? 0,
-        }),
-        { status: 402, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+  // --- Auth & quota gate ---------------------------------------------------
+  let tenantId: string
+  try {
+    const { requireAuth } = await import('@/lib/auth')
+    const session = await requireAuth()
+    tenantId = session.tenantId
+  } catch {
+    return new Response('Unauthorized', { status: 401 })
   }
 
-  // --- Rate limit (DEMO_MODE only) -----------------------------------------
-  // Applied AFTER auth so authenticated prod users are unaffected, and
-  // BEFORE body parsing so we don't waste cycles on throttled traffic.
-  if (DEMO_MODE) {
-    const ip = getClientIp(req)
-    const rl = checkLimit(ip, 'proposals:stream', DEMO_RATE_LIMIT, DEMO_RATE_WINDOW_SEC)
-    if (!rl.allowed) {
-      log.warn('stream_rate_limited', { ip, retryAfter: rl.retryAfter })
-      return new Response(
-        JSON.stringify({
-          error: 'Límite alcanzado. Espera 5 minutos.',
-          retryAfter: rl.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': String(rl.retryAfter),
-            'X-RateLimit-Limit': String(DEMO_RATE_LIMIT),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': rl.resetAt.toISOString(),
-          },
-        }
-      )
-    }
+  const { getTrialStatus } = await import('@/lib/trial')
+  const trial = await getTrialStatus(tenantId)
+  if (!trial || !trial.canGenerateProposals) {
+    return new Response(
+      JSON.stringify({
+        error: 'trial_expired_or_quota_exceeded',
+        stage: trial?.stage ?? 'unknown',
+        daysLeft: trial?.daysLeft ?? 0,
+        proposalsUsed: trial?.proposalsUsed ?? 0,
+        proposalsQuota: trial?.proposalsQuota ?? 0,
+      }),
+      { status: 402, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 
   // --- Body parsing + validation -------------------------------------------
@@ -179,72 +145,47 @@ Consolida todo en una tabla final de inversión mostrando el total por servicio 
       ],
     })
 
-    // Post-stream persistence (production only). Attach handlers BEFORE
-    // returning the stream so we don't miss completion/error events.
-    if (!DEMO_MODE) {
-      const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
-      result.object
-        .then(async (sections) => {
-          try {
-            const { incrementProposalUsage } = await import('@/lib/trial')
-            await incrementProposalUsage('').catch(() => {})
-            const createRes = await fetch(`${apiUrl}/proposals/`, {
-              method: 'POST',
+    // Post-stream: persist usage + proposal record
+    const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+    result.object
+      .then(async (sections) => {
+        try {
+          const { incrementProposalUsage } = await import('@/lib/trial')
+          await incrementProposalUsage(tenantId).catch(() => {})
+          const createRes = await fetch(`${apiUrl}/proposals/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client_id: input.clientId,
+              title: `Propuesta para ${input.company}`,
+              context: {
+                problema: input.problema,
+                services: input.services,
+                budget: input.budget,
+                timeline: input.timeline,
+                tono: input.tono,
+              },
+            }),
+          })
+          if (createRes.ok) {
+            const { id } = await createRes.json()
+            await fetch(`${apiUrl}/proposals/${id}/sections`, {
+              method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                client_id: input.clientId,
-                title: `Propuesta para ${input.company}`,
-                context: {
-                  problema: input.problema,
-                  services: input.services,
-                  budget: input.budget,
-                  timeline: input.timeline,
-                  tono: input.tono,
-                },
-              }),
-            })
-            if (createRes.ok) {
-              const { id } = await createRes.json()
-              await fetch(`${apiUrl}/proposals/${id}/sections`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
-              })
-            }
-            log.info('stream_persisted', {
-              clientId: input.clientId,
-              durationMs: Date.now() - start,
-            })
-          } catch (err) {
-            log.error('stream_persist_failed', {
-              err: err instanceof Error ? err.message : String(err),
+              body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
             })
           }
+          log.info('stream_persisted', { clientId: input.clientId, durationMs: Date.now() - start })
+        } catch (err) {
+          log.error('stream_persist_failed', { err: err instanceof Error ? err.message : String(err) })
+        }
+      })
+      .catch((err) => {
+        log.error('stream_failed_post', {
+          err: err instanceof Error ? err.message : String(err),
+          durationMs: Date.now() - start,
         })
-        .catch((err) => {
-          // Stream itself failed (timeout / upstream). Log it; the client
-          // already got an aborted response so nothing else to do here.
-          log.error('stream_failed_post', {
-            err: err instanceof Error ? err.message : String(err),
-            durationMs: Date.now() - start,
-          })
-        })
-    } else {
-      // In demo, still record duration once the object resolves.
-      result.object
-        .then(() =>
-          log.info('stream_end', {
-            clientId: input.clientId,
-            durationMs: Date.now() - start,
-          })
-        )
-        .catch((err) =>
-          log.error('stream_failed_post', {
-            err: err instanceof Error ? err.message : String(err),
-            durationMs: Date.now() - start,
-          })
-        )
-    }
+      })
 
     return result.toTextStreamResponse()
   } catch (err) {

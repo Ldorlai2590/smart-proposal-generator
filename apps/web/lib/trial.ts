@@ -36,15 +36,15 @@ export interface TrialStatus {
 }
 
 /**
- * Devuelve el estado actual del trial de un tenant por su Clerk orgId.
+ * Devuelve el estado actual del trial de un tenant por su ID interno.
  * Hace "lazy expiration": si trialEndsAt ya pasó, marca stage='expired' en memoria
  * (el webhook de Stripe es quien lo persiste cuando corresponde).
  */
-export async function getTrialStatus(orgId: string): Promise<TrialStatus | null> {
+export async function getTrialStatus(tenantId: string): Promise<TrialStatus | null> {
   const rows = await db
     .select()
     .from(tenants)
-    .where(eq(tenants.clerkOrgId, orgId))
+    .where(eq(tenants.id, tenantId))
     .limit(1)
 
   if (rows.length === 0) return null
@@ -86,7 +86,7 @@ export async function getTrialStatus(orgId: string): Promise<TrialStatus | null>
  * Extiende el trial 30 días adicionales desde ahora.
  */
 export async function extendTrialWithCard(
-  orgId: string,
+  tenantId: string,
   stripeCustomerId: string
 ): Promise<void> {
   const newEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -99,7 +99,7 @@ export async function extendTrialWithCard(
       stripeCustomerId,
       trialEndsAt: newEnd,
     })
-    .where(eq(tenants.clerkOrgId, orgId))
+    .where(eq(tenants.id, tenantId))
 }
 
 /**
@@ -125,11 +125,11 @@ export async function markSubscriptionActive(
 /**
  * Incrementa el contador de propuestas usadas. Llamar tras completar streaming.
  */
-export async function incrementProposalUsage(orgId: string): Promise<void> {
+export async function incrementProposalUsage(tenantId: string): Promise<void> {
   const rows = await db
     .select({ used: tenants.proposalsUsed })
     .from(tenants)
-    .where(eq(tenants.clerkOrgId, orgId))
+    .where(eq(tenants.id, tenantId))
     .limit(1)
 
   if (rows.length === 0) return
@@ -137,5 +137,5 @@ export async function incrementProposalUsage(orgId: string): Promise<void> {
   await db
     .update(tenants)
     .set({ proposalsUsed: rows[0].used + 1 })
-    .where(eq(tenants.clerkOrgId, orgId))
+    .where(eq(tenants.id, tenantId))
 }

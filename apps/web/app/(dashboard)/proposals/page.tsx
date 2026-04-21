@@ -21,16 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { fetchWithTenant } from '@/lib/api'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 interface Proposal {
   id: string
@@ -140,7 +131,7 @@ function SkeletonRows({ count }: { count: number }) {
 }
 
 export default function ProposalsPage() {
-  const { orgId } = useDemoAuth()
+  
   const router = useRouter()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,8 +140,7 @@ export default function ProposalsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   const fetchProposals = useCallback(async () => {
-    if (!orgId) return
-    setLoading(true)
+      setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/proposals')
@@ -164,7 +154,7 @@ export default function ProposalsPage() {
     } finally {
       setLoading(false)
     }
-  }, [orgId])
+  }, [])
 
   useEffect(() => {
     fetchProposals()

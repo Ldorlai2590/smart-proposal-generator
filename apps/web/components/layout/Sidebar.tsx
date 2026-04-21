@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   FileText,
@@ -16,8 +16,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,17 +27,12 @@ const NAV_ITEMS = [
   { href: '/settings', label: 'Configuración', icon: Settings },
 ]
 
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'))
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
-  const [demoUserName, setDemoUserName] = useState<string | null>(null)
-  const [demoUserEmail, setDemoUserEmail] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('spg-sidebar-collapsed')
@@ -46,25 +40,23 @@ export function Sidebar() {
   }, [])
 
   useEffect(() => {
-    if (DEMO_MODE) {
-      // Fetch real session from JWT via API
-      fetch('/api/auth/session')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.authenticated) {
-            setDemoUserName(data.user.name)
-            setDemoUserEmail(data.user.email)
-          }
-        })
-        .catch(() => {})
-    }
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserEmail(data.user.email ?? null)
+        const name = data.user.user_metadata?.full_name
+          ?? data.user.email?.split('@')[0]
+          ?? null
+        setUserName(name)
+      }
+    })
   }, [])
 
   async function handleLogout() {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch {}
-    window.location.href = '/demo-login'
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/sign-in')
+    router.refresh()
   }
 
   function toggleCollapse() {
@@ -132,38 +124,32 @@ export function Sidebar() {
       {/* Bottom section */}
       <div className="p-3 border-t border-[#1E293B] space-y-3 flex-shrink-0">
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-2 px-1')}>
-          {DEMO_MODE ? (
-            <>
-              <div className="h-8 w-8 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
-                {demoUserName ? (
-                  <span className="text-xs font-bold text-white leading-none">
-                    {demoUserName.charAt(0).toUpperCase()}
-                  </span>
-                ) : (
-                  <User className="h-4 w-4 text-white" />
-                )}
-              </div>
-              {!collapsed && (
-                <div className="flex flex-col min-w-0 flex-1">
-                  {demoUserName && (
-                    <span className="text-xs text-[#F8FAFC] truncate font-medium leading-tight">
-                      {demoUserName}
-                    </span>
-                  )}
-                  {demoUserEmail && (
-                    <span className="text-[10px] text-[#94A3B8] truncate leading-tight">
-                      {demoUserEmail}
-                    </span>
-                  )}
-                </div>
+          <div className="h-8 w-8 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+            {userName ? (
+              <span className="text-xs font-bold text-white leading-none">
+                {userName.charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <User className="h-4 w-4 text-white" />
+            )}
+          </div>
+          {!collapsed && (
+            <div className="flex flex-col min-w-0 flex-1">
+              {userName && (
+                <span className="text-xs text-[#F8FAFC] truncate font-medium leading-tight">
+                  {userName}
+                </span>
               )}
-            </>
-          ) : null}
-          {!DEMO_MODE && <ClerkUserButton />}
+              {userEmail && (
+                <span className="text-[10px] text-[#94A3B8] truncate leading-tight">
+                  {userEmail}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Demo logout */}
-        {DEMO_MODE && !collapsed && demoUserName && (
+        {!collapsed && userEmail && (
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors"
@@ -185,21 +171,5 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
-  )
-}
-
-function ClerkUserButton() {
-  // Dynamic import to avoid Clerk errors in demo mode
-  const { UserButton, useOrganization } = require('@clerk/nextjs')
-  const { organization } = useOrganization()
-  return (
-    <>
-      {organization && (
-        <p className="text-xs text-[#94A3B8] px-2 truncate font-medium">
-          {organization.name}
-        </p>
-      )}
-      <UserButton afterSignOutUrl="/" />
-    </>
   )
 }

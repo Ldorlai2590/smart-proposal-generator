@@ -16,14 +16,6 @@ import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { sanitizeHTML } from '@/lib/sanitize'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -75,7 +67,7 @@ function formatBudget(budget?: unknown): string {
 // ─── Component ───────────────────────────────────────────────
 
 export default function ProposalDetailPage() {
-  const { orgId } = useDemoAuth()
+  
   const params = useParams()
   const router = useRouter()
   const proposalId = params.id as string
@@ -86,7 +78,7 @@ export default function ProposalDetailPage() {
   const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null)
 
   const fetchProposal = useCallback(async () => {
-    if (!orgId || !proposalId) return
+    if (!proposalId) return
     setLoading(true)
     setError(null)
     try {
@@ -102,7 +94,7 @@ export default function ProposalDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [orgId, proposalId])
+  }, [proposalId])
 
   useEffect(() => {
     fetchProposal()

@@ -3,14 +3,6 @@
 import { useState, useEffect } from 'react'
 import { CreditCard, Check, Sparkles, Shield, Zap, FileText, Users, BarChart3 } from 'lucide-react'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 interface TrialStatus {
   stage: 'no_card' | 'with_card' | 'active' | 'expired'
@@ -54,26 +46,18 @@ function labelForStage(stage: string): string {
 }
 
 export default function BillingPage() {
-  const { orgId } = useDemoAuth()
+  
   const [trial, setTrial] = useState<TrialStatus | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!orgId) return
-    if (DEMO_MODE) {
-      setTrial(DEMO_TRIAL)
-      setLoading(false)
-      return
-    }
     // Production: fetch trial status from API
     fetch('/api/billing/status')
       .then((r) => r.json())
       .then((data) => setTrial(data))
       .catch(() => setTrial(null))
       .finally(() => setLoading(false))
-  }, [orgId])
-
-  if (!orgId) return null
+  }, [])
 
   if (loading) {
     return (
@@ -200,30 +184,7 @@ export default function BillingPage() {
               </li>
             ))}
           </ul>
-          {DEMO_MODE ? (
-            <div className="relative group inline-block">
-              <button
-                disabled
-                className="flex items-center gap-2 rounded-xl bg-gray-300 px-5 py-3 text-sm font-semibold text-gray-500 cursor-not-allowed"
-              >
-                <CreditCard className="h-4 w-4" />
-                Agregar tarjeta
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                No disponible en demo
-              </div>
-            </div>
-          ) : (
-            <form action="/api/billing/create-setup-intent" method="post">
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-xl bg-[#1D9E75] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#158a63]"
-              >
-                <CreditCard className="h-4 w-4" />
-                Anadir tarjeta y extender trial
-              </button>
-            </form>
-          )}
+
         </div>
       )}
 
@@ -251,25 +212,7 @@ export default function BillingPage() {
             Anade un metodo de pago y activa el plan Pro para continuar generando
             propuestas.
           </p>
-          {DEMO_MODE ? (
-            <button
-              disabled
-              className="flex items-center gap-2 rounded-xl bg-gray-300 px-5 py-3 text-sm font-semibold text-gray-500 cursor-not-allowed"
-            >
-              <CreditCard className="h-4 w-4" />
-              Activar plan Pro
-            </button>
-          ) : (
-            <form action="/api/billing/create-setup-intent" method="post">
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-              >
-                <CreditCard className="h-4 w-4" />
-                Activar plan Pro
-              </button>
-            </form>
-          )}
+
         </div>
       )}
     </div>

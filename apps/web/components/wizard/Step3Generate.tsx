@@ -7,16 +7,6 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { fetchWithTenant } from '@/lib/api'
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null, userId: 'demo-user' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null; userId: string | null }
-}
 
 import type { ClientData } from './Step1Client'
 import type { ContextData } from './Step2Context'
@@ -69,7 +59,6 @@ interface Step3GenerateProps {
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function Step3Generate({ client, context, onNext, onBack }: Step3GenerateProps) {
-  const { orgId, userId } = useDemoAuth()
   const { object, submit, isLoading, error } = useObject<ProposalSections>({
     api: '/api/proposals/stream',
     schema: ProposalSectionSchema,
@@ -105,7 +94,6 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
   // Save to FastAPI once streaming finishes
   useEffect(() => {
     if (!isComplete || hasSavedRef.current || !partial) return
-    if (!orgId || !userId) return
 
     hasSavedRef.current = true
     setSaveState('saving')
@@ -143,7 +131,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
         // Allow advancing even on save error — user can retry from Step4
         setProposalId('')
       })
-  }, [isComplete, orgId, userId, partial, client, context])
+  }, [isComplete, partial, client, context])
 
   function getStatus(key: keyof ProposalSections): 'done' | 'streaming' | 'pending' {
     if (partial?.[key]) return 'done'

@@ -7,16 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { fetchWithTenant } from '@/lib/api'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
-
-function useDemoAuth() {
-  if (DEMO_MODE) return { orgId: 'demo' as string | null }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useAuth } = require('@clerk/nextjs')
-  return useAuth() as { orgId: string | null }
-}
 
 export interface ClientData {
   id: string
@@ -67,7 +58,6 @@ function mapApiClient(c: ApiClient): ClientData {
 }
 
 export function Step1Client({ onNext }: Step1ClientProps) {
-  const { orgId } = useDemoAuth()
   const [query, setQuery] = useState('')
   const [clients, setClients] = useState<ClientData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -87,7 +77,6 @@ export function Step1Client({ onNext }: Step1ClientProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchClients = useCallback(async (search: string) => {
-    if (!orgId) return
     setIsLoading(true)
     setFetchError(null)
     try {
@@ -103,7 +92,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [orgId])
+  }, [])
 
   // Initial load
   useEffect(() => {
@@ -120,7 +109,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
   }
 
   async function handleCreate() {
-    if (!newClient.name || !newClient.company || !orgId) return
+    if (!newClient.name || !newClient.company) return
     setIsCreating(true)
     setCreateError(null)
     try {
@@ -241,7 +230,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         <div className="pt-2">
           <Button
             onClick={handleCreate}
-            disabled={!newClient.name || !newClient.company || isCreating || !orgId}
+            disabled={!newClient.name || !newClient.company || isCreating}
             className="w-full"
             size="lg"
           >

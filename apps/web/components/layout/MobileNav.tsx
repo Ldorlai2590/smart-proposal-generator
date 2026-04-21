@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -48,24 +47,22 @@ export function MobileNav() {
   }, [pathname])
 
   useEffect(() => {
-    if (DEMO_MODE) {
-      fetch('/api/auth/session')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.authenticated) {
-            setUserName(data.user.name)
-            setUserEmail(data.user.email)
-          }
-        })
-        .catch(() => {})
-    }
+    fetch('/api/auth/session')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.authenticated) {
+          setUserName(data.user.name)
+          setUserEmail(data.user.email)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   async function handleLogout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
     } catch {}
-    window.location.href = '/demo-login'
+    window.location.href = '/sign-in'
   }
 
   function isActive(href: string) {
@@ -165,44 +162,42 @@ export function MobileNav() {
           </nav>
 
           {/* Bottom section — user + logout */}
-          {DEMO_MODE && (
-            <div className="p-4 border-t border-[#1E293B] space-y-3 flex-shrink-0">
-              <div className="flex items-center gap-3 px-1">
-                <div className="h-9 w-9 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
-                  {userName ? (
-                    <span className="text-sm font-bold text-white leading-none">
-                      {userName.charAt(0).toUpperCase()}
-                    </span>
-                  ) : (
-                    <User className="h-4 w-4 text-white" aria-hidden="true" />
-                  )}
-                </div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  {userName && (
-                    <span className="text-sm text-[#F8FAFC] truncate font-medium leading-tight">
-                      {userName}
-                    </span>
-                  )}
-                  {userEmail && (
-                    <span className="text-xs text-[#94A3B8] truncate leading-tight">
-                      {userEmail}
-                    </span>
-                  )}
-                </div>
+          <div className="p-4 border-t border-[#1E293B] space-y-3 flex-shrink-0">
+            <div className="flex items-center gap-3 px-1">
+              <div className="h-9 w-9 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                {userName ? (
+                  <span className="text-sm font-bold text-white leading-none">
+                    {userName.charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  <User className="h-4 w-4 text-white" aria-hidden="true" />
+                )}
               </div>
-
-              {userName && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  Cerrar sesión
-                </button>
-              )}
+              <div className="flex flex-col min-w-0 flex-1">
+                {userName && (
+                  <span className="text-sm text-[#F8FAFC] truncate font-medium leading-tight">
+                    {userName}
+                  </span>
+                )}
+                {userEmail && (
+                  <span className="text-xs text-[#94A3B8] truncate leading-tight">
+                    {userEmail}
+                  </span>
+                )}
+              </div>
             </div>
-          )}
+
+            {userName && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Cerrar sesión
+              </button>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </header>
