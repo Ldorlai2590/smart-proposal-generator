@@ -44,3 +44,5 @@ apps/api/.venv/
 postgres_data/
 .claude/
 
+
+.vercel
