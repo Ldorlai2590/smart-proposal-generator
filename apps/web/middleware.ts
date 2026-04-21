@@ -1,162 +1,83 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-const DEMO_MODE = process.env.DEMO_MODE === 'true'
-const SESSION_COOKIE = 'spg-session'
-const JWT_ISSUER = 'smart-proposal-generator'
-const JWT_AUDIENCE = 'spg-web'
-const MIN_SECRET_BYTES = 32
+const PROTECTED_PATHS = [
+  '/dashboard',
+  '/proposals',
+  '/clients',
+  '/analytics',
+  '/billing',
+  '/onboarding',
+  '/settings',
+]
 
-function resolveJwtSecret(): Uint8Array {
-  const envSecret = process.env.JWT_SECRET
-  if (envSecret && envSecret.length > 0) {
-    const bytes = new TextEncoder().encode(envSecret)
-    if (bytes.byteLength < MIN_SECRET_BYTES) {
-      throw new Error(`JWT_SECRET must be at least ${MIN_SECRET_BYTES} bytes`)
+const AUTH_PATHS = ['/sign-in', '/sign-up', '/reset-password']
+
+const EXCLUDED_PATHS = ['/auth/callback']
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
     }
-    return bytes
-  }
-  if (!DEMO_MODE) {
-    throw new Error('JWT_SECRET env var is required')
-  }
-  const buf = new Uint8Array(32)
-  crypto.getRandomValues(buf)
-  return new TextEncoder().encode(
-    Array.from(buf).map((b) => b.toString(16).padStart(2, '0')).join('')
   )
-}
 
-const secretKey = resolveJwtSecret()
+  // Refresh session — required by @supabase/ssr
+  const { data: { user } } = await supabase.auth.getUser()
 
-async function hasValidSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get(SESSION_COOKIE)?.value
-  if (!token) return false
-  try {
-    await jwtVerify(token, secretKey, {
-      algorithms: ['HS256'],
-      issuer: JWT_ISSUER,
-      audience: JWT_AUDIENCE,
-    })
-    return true
-  } catch {
-    return false
-  }
-}
-
-// ── Demo middleware (JWT-based) ───────────────────────────────────────────────
-
-async function demoMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  const isPublic =
-    pathname === '/' ||
-    pathname === '/demo-login' ||
-    pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/health') ||
-    pathname.startsWith('/api/webhooks')
-
-  if (isPublic) {
-    if (pathname === '/demo-login') {
-      const hasSession = await hasValidSession(request)
-      if (hasSession) return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    const headers = new Headers(request.headers)
-    headers.set('x-next-pathname', pathname)
-    headers.set('X-Demo-Mode', 'true')
-    return NextResponse.next({ request: { headers } })
+  // Skip auth checks for excluded paths (OAuth callbacks, public endpoints)
+  if (EXCLUDED_PATHS.some((p) => pathname.startsWith(p))) {
+    return supabaseResponse
   }
 
-  if (
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/sign-up') ||
-    pathname.startsWith('/select-org')
-  ) {
-    const hasSession = await hasValidSession(request)
-    if (hasSession) return NextResponse.redirect(new URL('/dashboard', request.url))
-    return NextResponse.redirect(new URL('/demo-login', request.url))
+  const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p))
+  const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p))
+
+  // Redirect unauthenticated users from protected routes
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/sign-in'
+    return NextResponse.redirect(url)
   }
 
-  const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/proposals') ||
-    pathname.startsWith('/clients') ||
-    pathname.startsWith('/analytics') ||
-    pathname.startsWith('/billing') ||
-    pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/api/clients') ||
-    pathname.startsWith('/api/proposals')
-
-  if (isProtected) {
-    const hasSession = await hasValidSession(request)
-    if (!hasSession) {
-      if (pathname.startsWith('/api/')) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-      return NextResponse.redirect(new URL('/demo-login', request.url))
-    }
+  // Redirect authenticated users away from auth pages (sign-in, sign-up, reset-password)
+  // Covers both traditional and OAuth sessions
+  if (user && isAuthPage) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
 
-  const headers = new Headers(request.headers)
-  headers.set('x-next-pathname', pathname)
-  headers.set('X-Demo-Mode', 'true')
-  return NextResponse.next({ request: { headers } })
-}
-
-// ── Clerk middleware (production) ─────────────────────────────────────────────
-
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/select-org(.*)',
-  '/api/webhooks(.*)',
-  '/api/health(.*)',
-  '/demo-login',
-])
-
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/clients(.*)',
-  '/proposals(.*)',
-  '/analytics(.*)',
-  '/onboarding(.*)',
-  '/billing(.*)',
-  '/settings(.*)',
-])
-
-const clerkHandler = clerkMiddleware(async (auth, req) => {
-  const { userId, orgId } = await auth()
-  const pathname = req.nextUrl.pathname
-
-  if (isPublicRoute(req)) return NextResponse.next()
-
-  if (!userId) {
-    const signInUrl = new URL('/sign-in', req.url)
-    signInUrl.searchParams.set('redirect_url', req.url)
-    return NextResponse.redirect(signInUrl)
+  if (user) {
+    supabaseResponse.headers.set('x-next-pathname', pathname)
+    supabaseResponse.headers.set('X-User-ID', user.id)
   }
 
-  if (!orgId && isProtectedRoute(req)) {
-    return NextResponse.redirect(new URL('/select-org', req.url))
-  }
-
-  const requestHeaders = new Headers(req.headers)
-  requestHeaders.set('x-next-pathname', pathname)
-  if (orgId) requestHeaders.set('X-Tenant-ID', orgId)
-
-  return NextResponse.next({ request: { headers: requestHeaders } })
-})
-
-// ── Entry point ───────────────────────────────────────────────────────────────
-
-export default function middleware(request: NextRequest) {
-  if (DEMO_MODE) return demoMiddleware(request)
-  return clerkHandler(request, {} as never)
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
+    // Exclude Next.js internals and static files
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Include API and tRPC routes, including OAuth callbacks (auth/callback)
     '/(api|trpc)(.*)',
   ],
 }

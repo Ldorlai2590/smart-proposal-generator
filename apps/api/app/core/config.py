@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str
     redis_url: str = "redis://localhost:6379"
-    clerk_secret_key: str = ""
-    clerk_webhook_secret: str = ""
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
     docuforge_api_key: str = ""
     resend_api_key: str = ""
     email_from: str = "propuestas@smartproposal.ai"

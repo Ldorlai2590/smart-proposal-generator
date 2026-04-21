@@ -1,6 +1,6 @@
 export interface Tenant {
   id: string
-  clerkOrgId: string
+  supabaseUserId: string
   name: string
   plan: 'free' | 'pro' | 'enterprise'
   createdAt: Date
