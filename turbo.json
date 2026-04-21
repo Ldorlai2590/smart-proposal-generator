@@ -5,7 +5,19 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "ANTHROPIC_API_KEY",
+        "DEMO_MODE",
+        "NEXT_PUBLIC_DEMO_MODE",
+        "CLERK_SECRET_KEY",
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_APP_URL",
+        "DATABASE_URL",
+        "API_URL",
+        "JWT_SECRET",
+        "NODE_ENV"
+      ]
     },
     "dev": {
       "cache": false,
