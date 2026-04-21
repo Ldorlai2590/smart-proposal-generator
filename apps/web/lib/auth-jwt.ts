@@ -48,7 +48,11 @@ function resolveJwtSecret(): Uint8Array {
   return new TextEncoder().encode(generated)
 }
 
-const secretKey = resolveJwtSecret()
+let _secretKey: Uint8Array | null = null
+function getSecretKey(): Uint8Array {
+  if (!_secretKey) _secretKey = resolveJwtSecret()
+  return _secretKey
+}
 
 export interface SessionPayload {
   email: string
@@ -64,12 +68,12 @@ export async function signSession(payload: Omit<SessionPayload, 'loginAt'>): Pro
     .setAudience(JWT_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(secretKey)
+    .sign(getSecretKey())
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secretKey, {
+    const { payload } = await jwtVerify(token, getSecretKey(), {
       algorithms: ['HS256'],
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
