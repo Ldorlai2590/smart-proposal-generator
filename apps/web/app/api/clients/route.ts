@@ -1,5 +1,5 @@
 import { eq, desc, ilike, or, and } from 'drizzle-orm'
-import { z } from 'zod'
+import { z } from 'zod/v4'
 import { db } from '@/lib/db'
 import { clients } from '@/db/schema'
 import { requireAuth } from '@/lib/auth'
@@ -47,10 +47,17 @@ export async function GET(req: Request) {
 
     return Response.json({ data, total: data.length, items: data, page, per_page: limit, pages: 1 })
   } catch (err) {
-    if (err instanceof Error && err.message === 'Unauthenticated') {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[api/clients] GET Error:', msg, err)
+
+    if (msg === 'Unauthenticated') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.error('[api/clients] GET Error:', err)
+    if (msg === 'Tenant not found') {
+      return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
+    }
+
+    // Return empty for graceful degradation but log the actual error
     return Response.json({ data: [], total: 0, items: [], pages: 0, page: 1, per_page: 50 })
   }
 }
@@ -92,10 +99,22 @@ export async function POST(req: Request) {
       score: newClient.score ?? 0,
     })
   } catch (err) {
-    if (err instanceof Error && err.message === 'Unauthenticated') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[api/clients] POST Error:', msg, err)
+
+    if (msg === 'Unauthenticated') {
+      return Response.json({ error: 'No autenticado', detail: msg }, { status: 401 })
     }
-    console.error('[api/clients] POST Error:', err)
-    return Response.json({ error: 'Failed to create client' }, { status: 500 })
+    if (msg === 'Tenant not found') {
+      return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.', detail: msg }, { status: 401 })
+    }
+    if (msg.includes('DATABASE_URL')) {
+      return Response.json({ error: 'Base de datos no configurada', detail: msg }, { status: 503 })
+    }
+    if (msg.includes('relation') && msg.includes('does not exist')) {
+      return Response.json({ error: 'Tabla no existe en la base de datos. Ejecuta las migraciones.', detail: msg }, { status: 503 })
+    }
+
+    return Response.json({ error: `Error al crear cliente: ${msg}`, detail: msg }, { status: 500 })
   }
 }

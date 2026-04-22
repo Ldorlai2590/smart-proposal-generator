@@ -127,7 +127,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
       })
       if (!res.ok) {
         const detail = await res.json().catch(() => null)
-        throw new Error(detail?.detail ?? `Error ${res.status}`)
+        throw new Error(detail?.error ?? detail?.detail ?? `Error ${res.status}`)
       }
       const created: ApiClient = await res.json()
       const clientData: ClientData = { ...mapApiClient(created), isNew: true }

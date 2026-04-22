@@ -1,5 +1,5 @@
 import { eq, desc } from 'drizzle-orm'
-import { z } from 'zod'
+import { z } from 'zod/v4'
 import { db } from '@/lib/db'
 import { proposals, users } from '@/db/schema'
 import { requireAuth } from '@/lib/auth'
