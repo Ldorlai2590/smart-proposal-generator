@@ -38,7 +38,16 @@ export async function middleware(request: NextRequest) {
   )
 
   // Refresh session — required by @supabase/ssr
-  const { data: { user } } = await supabase.auth.getUser()
+  // Wrapped in try/catch: if Supabase throws (e.g. invalid config, network error),
+  // we pass the request through rather than returning an unhandled HTML 500.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Auth refresh failed — let route handlers deal with authentication
+    return supabaseResponse
+  }
 
   const pathname = request.nextUrl.pathname
 

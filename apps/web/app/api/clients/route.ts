@@ -56,6 +56,9 @@ export async function GET(req: Request) {
     if (msg === 'Tenant not found') {
       return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
     }
+    if (msg.includes('column') && msg.includes('does not exist')) {
+      return Response.json({ error: 'Esquema de base de datos desactualizado. Ejecuta las migraciones de Drizzle.', detail: msg }, { status: 503 })
+    }
 
     // Return empty for graceful degradation but log the actual error
     return Response.json({ data: [], total: 0, items: [], pages: 0, page: 1, per_page: 50 })
@@ -113,6 +116,9 @@ export async function POST(req: Request) {
     }
     if (msg.includes('relation') && msg.includes('does not exist')) {
       return Response.json({ error: 'Tabla no existe en la base de datos. Ejecuta las migraciones.', detail: msg }, { status: 503 })
+    }
+    if (msg.includes('column') && msg.includes('does not exist')) {
+      return Response.json({ error: 'Esquema de base de datos desactualizado. Ejecuta las migraciones de Drizzle.', detail: msg }, { status: 503 })
     }
 
     return Response.json({ error: `Error al crear cliente: ${msg}`, detail: msg }, { status: 500 })
