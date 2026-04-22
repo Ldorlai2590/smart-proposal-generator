@@ -55,8 +55,7 @@ export function Sidebar() {
   async function handleLogout() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/sign-in')
-    router.refresh()
+    window.location.href = '/sign-in'
   }
 
   function toggleCollapse() {
