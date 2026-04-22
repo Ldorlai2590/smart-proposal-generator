@@ -149,15 +149,17 @@ export function Sidebar() {
           )}
         </div>
 
-        {!collapsed && userEmail && (
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-[#94A3B8] hover:text-red-400 hover:bg-[#1E293B] rounded-lg transition-colors"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Cerrar sesión
-          </button>
-        )}
+        <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          className={cn(
+            'w-full flex items-center gap-2 px-2 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors',
+            collapsed && 'justify-center px-0',
+          )}
+        >
+          <LogOut className="h-4 w-4 flex-shrink-0" />
+          {!collapsed && 'Cerrar sesión'}
+        </button>
 
         {/* Collapse toggle */}
         <button
