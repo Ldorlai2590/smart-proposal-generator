@@ -56,13 +56,13 @@ export function Navbar() {
         {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            href="/demo-login"
+            href="/sign-in"
             className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2 transition-colors"
           >
             Iniciar sesión
           </Link>
           <Link
-            href="/demo-login"
+            href="/sign-in"
             className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg hover:bg-[#158a63] transition-colors"
           >
             Empezar gratis ahora
@@ -92,11 +92,11 @@ export function Navbar() {
             </a>
           ))}
           <div className="pt-2 flex flex-col gap-2">
-            <Link href="/demo-login" className="text-sm text-gray-600 py-2">
+            <Link href="/sign-in" className="text-sm text-gray-600 py-2">
               Iniciar sesión
             </Link>
             <Link
-              href="/demo-login"
+              href="/sign-in"
               className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg text-center"
             >
               Empezar gratis ahora

@@ -54,7 +54,7 @@ export function Hero() {
 
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <Link
-                href="/demo-login"
+                href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 bg-[#1D9E75] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#158a63] transition-colors text-sm"
               >
                 Generar mi primera propuesta

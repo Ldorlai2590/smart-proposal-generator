@@ -12,7 +12,7 @@ export function CTAFinal() {
           Únete a +120 equipos en Chile, México y Colombia que cierran más rápido con SmartSPG.
         </p>
         <Link
-          href="/demo-login"
+          href="/sign-in"
           className="inline-flex items-center gap-2 bg-white text-[#1D9E75] font-bold px-8 py-3.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
         >
           Empezar gratis ahora

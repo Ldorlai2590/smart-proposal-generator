@@ -21,7 +21,7 @@ const PLANS: Plan[] = [
     period: '',
     description: '3 propuestas/mes para siempre. Ideal para probar la plataforma.',
     cta: 'Crear cuenta gratis',
-    ctaHref: '/demo-login',
+    ctaHref: '/sign-in',
     popular: false,
     features: [
       { label: '3 propuestas al mes (gratis para siempre)', included: true },
@@ -42,7 +42,7 @@ const PLANS: Plan[] = [
     annualBadge: 'Ahorra 20% con plan anual',
     description: 'Prueba Pro 30 días gratis → luego USD $49/mes. Sin tarjeta, 20 propuestas incluidas.',
     cta: 'Empezar prueba de 30 días',
-    ctaHref: '/demo-login',
+    ctaHref: '/sign-in',
     popular: true,
     features: [
       { label: '30 días gratis · Sin tarjeta · 20 propuestas', included: true },
