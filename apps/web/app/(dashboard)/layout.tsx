@@ -29,11 +29,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isOnboardingPage = pathname.startsWith('/onboarding')
 
   if (!isOnboardingPage) {
-    const tenant = await db.query.tenants.findFirst({
-      where: eq(tenants.supabaseUserId, user.id),
-    })
-    if (tenant && !tenant.onboardingCompleted) {
-      redirect('/onboarding')
+    try {
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.supabaseUserId, user.id),
+      })
+      if (tenant && !tenant.onboardingCompleted) {
+        redirect('/onboarding')
+      }
+    } catch (dbError) {
+      console.error('[Dashboard] DB query failed:', dbError)
+      // Continue rendering without onboarding redirect if DB is unavailable
     }
   }
 
