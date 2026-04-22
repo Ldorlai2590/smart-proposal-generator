@@ -53,8 +53,7 @@ export function Sidebar() {
   }, [])
 
   async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/sign-in'
   }
 
