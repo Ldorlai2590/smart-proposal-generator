@@ -11,20 +11,18 @@ COPY . .
 RUN pnpm install --no-frozen-lockfile
 
 # ─── Build-time env vars ─────────────────────────────────────
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWxpdmUtYm9uZWZpc2gtMTguY2xlcmsuYWNjb3VudHMuZGV2JA
-ARG NEXT_PUBLIC_APP_URL=https://Giraldo34-smart-proposal-generator.hf.space
-ARG NEXT_PUBLIC_API_URL=https://Giraldo34-smart-proposal-generator.hf.space
+ARG NEXT_PUBLIC_SUPABASE_URL=https://xyzexample.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+ARG NEXT_PUBLIC_APP_URL=https://smart-proposal-generator-lyart.vercel.app
+ARG NEXT_PUBLIC_API_URL=https://smart-proposal-generator-lyart.vercel.app
 
 # Demo mode: skip Clerk auth entirely (NEXT_PUBLIC_ must be at build time for client JS)
 ARG NEXT_PUBLIC_DEMO_MODE=true
 ENV NEXT_PUBLIC_DEMO_MODE=$NEXT_PUBLIC_DEMO_MODE
 ENV DEMO_MODE=true
 
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-ENV NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
-ENV NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
@@ -58,8 +56,8 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 # Prompts YAML files
 COPY --from=builder /app/packages/prompts ./packages/prompts
 
-# Runtime secrets → set via HF Space Settings → Secrets:
-# CLERK_SECRET_KEY, ANTHROPIC_API_KEY, DATABASE_URL,
+# Runtime secrets → set via Docker environment or .env file:
+# SUPABASE_SERVICE_ROLE_KEY (optional), ANTHROPIC_API_KEY, DATABASE_URL,
 # STRIPE_SECRET_KEY, RESEND_API_KEY, DOCUFORGE_API_KEY
 
 EXPOSE 7860

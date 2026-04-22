@@ -1,175 +1,170 @@
-# SmartSPG — Guia de Despliegue
+# SmartSPG — Guía de Despliegue
 
-## Parte 1: Hacer funcionar Sign-In / Sign-Up en LOCAL
+## Parte 1: Configuración Local con Supabase Auth
 
-### Paso 1: Configurar Clerk Dashboard
+### Paso 1: Configurar Supabase Auth
 
-1. Ve a [dashboard.clerk.com](https://dashboard.clerk.com) e inicia sesion
-2. Selecciona tu aplicacion (o crea una nueva)
-3. En **Configure > Social connections**: activa Google y/o GitHub
-4. En **Configure > Email, Phone, Username**: activa Email + Password
-5. En **Configure > Organizations**: ACTIVAR organizaciones (es obligatorio para multi-tenancy)
-6. En **Configure > Paths**:
-   - Sign-in URL: `/sign-in`
-   - Sign-up URL: `/sign-up`
-   - After sign-in URL: `/dashboard`
-   - After sign-up URL: `/dashboard`
-7. En **Configure > Webhooks**: crear un endpoint:
-   - URL: `https://TU-DOMINIO/api/webhooks/clerk` (para local usa ngrok, ver Paso 3)
-   - Events: `organization.created`, `organizationMembership.created`
-   - Copia el **Signing Secret** → sera tu `CLERK_WEBHOOK_SECRET`
+1. Ve a tu proyecto Supabase: `https://app.supabase.com/`
+2. En **Authentication → Providers**:
+   - Habilita **Google** (ver `docs/GOOGLE-AUTH-SETUP.md` para configuración OAuth)
+   - Email está habilitado por defecto
+3. En **Authentication → URL Configuration**:
+   - Site URL: `http://localhost:3000` (desarrollo) y `https://smart-proposal-generator-lyart.vercel.app` (producción)
+4. En **Settings → API**:
+   - Copia tu **anon public key** y **project URL**
 
 ### Paso 2: Variables de entorno (.env.local)
 
-Verifica que `apps/web/.env.local` tenga estos valores correctos:
+Crea o verifica que `apps/web/.env.local` tenga estos valores:
 
 ```bash
-# Clerk (copia de tu dashboard → API Keys)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...  # ← ya lo tienes
-CLERK_SECRET_KEY=sk_test_...                    # ← ya lo tienes
-CLERK_WEBHOOK_SECRET=whsec_...                  # ← del paso anterior
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...  # anon public key
 
-# URLs de Clerk
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
-NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
+# Base de datos (para Server Actions)
+DATABASE_URL=postgresql://postgres:PASSWORD@db.YOUR-PROJECT.supabase.co:5432/postgres
 
-# Base de datos (tu Supabase ya esta configurado)
-DATABASE_URL=postgresql://...
+# Anthropic API
+ANTHROPIC_API_KEY=sk-ant-...
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### Paso 3: Webhooks en local (ngrok)
+**Nota:** Las variables `NEXT_PUBLIC_*` son públicas (visibles en el navegador). Nunca metas secrets reales en ellas.
 
-Los webhooks de Clerk necesitan una URL publica. Usa ngrok:
+### Paso 3: Ejecutar migraciones
 
-```bash
-# Instalar ngrok (una sola vez)
-brew install ngrok   # macOS
-# o descarga de https://ngrok.com/download
-
-# Exponer puerto 3000
-ngrok http 3000
-```
-
-Ngrok te dara una URL tipo `https://abc123.ngrok-free.app`. Usa esa URL en el webhook de Clerk:
-`https://abc123.ngrok-free.app/api/webhooks/clerk`
-
-### Paso 4: Ejecutar migraciones
+Crea las tablas en tu base de datos PostgreSQL:
 
 ```bash
-# Crear las tablas en Supabase
 cd apps/api
 uv run alembic upgrade head
 ```
 
-### Paso 5: Arrancar el proyecto
+Si es la primera vez, esto crea todas las tablas necesarias (clients, proposals, exports, embeddings, etc.).
+
+### Paso 4: Arrancar el proyecto
 
 ```bash
-# Desde la raiz del proyecto
+# Desde la raíz del proyecto
 pnpm install
 pnpm dev
 ```
 
-Abre `http://localhost:3000` — deberas ver la landing page. Click en "Registrate gratis" para crear una cuenta.
+Abre `http://localhost:3000` — deberás ver la landing page. Haz clic en "Registrate gratis" para crear una cuenta.
 
-### Flujo completo de registro:
+### Flujo completo de registro (local):
 
-1. Usuario llega a `/sign-up` → panel con branding + formulario Clerk
-2. Clerk crea el usuario → redirige a `/select-org`
-3. Usuario crea una organizacion → Clerk dispara webhook `organization.created`
-4. Webhook crea el tenant en PostgreSQL con trial de 30 dias
-5. Redirige a `/onboarding` (wizard de 5 pasos)
-6. Al completar onboarding → redirige a `/dashboard`
+1. Usuario llega a `/sign-up` → panel con email/Google
+2. Elige "Continuar con Google" o usa email + código de verificación
+3. Supabase crea el usuario en `auth.users`
+4. Después de autenticarse, la app redirige a `/dashboard`
+5. El dashboard carga las propuestas del usuario autenticado
+
+**Testing local sin Google:** Usa `http://localhost:3000/sign-up` con cualquier email. Supabase envía un magic link (o código si está configurado).
 
 ---
 
-## Parte 2: Desplegar en HuggingFace Spaces
+## Parte 2: Desplegar en Vercel
 
-### Paso 1: Crear el Space
+### Paso 1: Conectar GitHub a Vercel
 
-1. Ve a [huggingface.co/new-space](https://huggingface.co/new-space)
-2. Configuracion:
-   - **Owner**: tu usuario (ej: `Ldorlai2590`)
-   - **Space name**: `smart-proposal-gen`
-   - **SDK**: Docker
-   - **Hardware**: CPU basic (gratis) — suficiente para Next.js
-   - **Visibility**: Private (recomendado mientras desarrollas)
+1. Ve a [vercel.com/new](https://vercel.com/new)
+2. Selecciona tu repositorio `smart-proposal-generator`
+3. Haz clic en **Import**
 
-### Paso 2: Configurar Secrets en HF
+Vercel detectará automáticamente que es un monorepo Turborepo y configurará el root y packages correctamente.
 
-En tu Space → Settings → Variables and secrets, agrega estos **secrets**:
+### Paso 2: Configurar Environment Variables en Vercel
 
-| Secret | Valor | Notas |
-|--------|-------|-------|
-| `CLERK_SECRET_KEY` | `sk_test_...` | De tu dashboard Clerk |
-| `ANTHROPIC_API_KEY` | `sk-ant-...` | Para generacion de propuestas con IA |
-| `DATABASE_URL` | `postgresql://...` | URL de Supabase (pooler) |
-| `CLERK_WEBHOOK_SECRET` | `whsec_...` | Del webhook de Clerk |
-| `STRIPE_SECRET_KEY` | `sk_test_...` | Cuando lo tengas configurado |
-| `RESEND_API_KEY` | `re_...` | Cuando lo tengas configurado |
+En el formulario "Environment Variables" de Vercel, agrega:
 
-### Paso 3: Actualizar Clerk para la URL de HF
+| Variable | Valor | Notas |
+|----------|-------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://YOUR-PROJECT.supabase.co` | De Supabase Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGci...` | anon public key |
+| `DATABASE_URL` | `postgresql://...` | Connection string con pooler (Session Mode) |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` | Tu API key de Anthropic |
+| `STRIPE_SECRET_KEY` | `sk_test_...` | (opcional) si tienes billing |
+| `RESEND_API_KEY` | `re_...` | (opcional) para emails |
+| `DOCUFORGE_API_KEY` | `...` | (opcional) para export PDF |
 
-En Clerk Dashboard:
-1. Ve a **Configure > Domains**
-2. Agrega: `https://Ldorlai2590-smart-proposal-generator.hf.space`
-3. Actualiza el webhook URL a: `https://Ldorlai2590-smart-proposal-generator.hf.space/api/webhooks/clerk`
+**Importante:** No metas valores que empiezan con `NEXT_PUBLIC_` en variables privadas. Las variables privadas nunca llegan al navegador; las públicas sí.
 
-### Paso 4: Subir el codigo a HuggingFace
+### Paso 3: Actualizar Supabase para Vercel
 
-```bash
-# Opcion A: Push directo via git
-git remote add hf https://huggingface.co/spaces/Ldorlai2590/smart-proposal-gen
-git push hf main
+En tu proyecto Supabase:
+1. Ve a **Authentication → URL Configuration**
+2. Agrega a "Redirect URLs" (lista):
+   - `https://smart-proposal-generator-lyart.vercel.app/auth/callback`
+   - `https://smart-proposal-generator-lyart.vercel.app/sign-in`
 
-# Opcion B: Desde GitHub con sync automatico
-# En HF Space → Settings → Repository → Link a GitHub repo
-```
+3. Ve a **Settings → API** y asegúrate de que tu anon key está visible (para `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+
+### Paso 4: Deploy automático
+
+1. Haz `git push origin main` desde tu máquina local
+2. Vercel detecta el push en GitHub automáticamente
+3. El deploy comienza (~3-5 min)
+4. Una vez listo, abre `https://smart-proposal-generator-lyart.vercel.app`
+
+Puedes ver el estado del deploy en tu dashboard de Vercel o en el comentario de Vercel Bot en tu GitHub PR.
 
 ### Paso 5: Verificar el despliegue
 
-1. HF construira la imagen Docker automaticamente (~5-10 min la primera vez)
-2. Ve los logs en: Space → Logs
-3. Una vez "Running", abre: `https://Ldorlai2590-smart-proposal-generator.hf.space`
-4. Deberas ver la landing page
-5. Prueba el flujo completo: registro → onboarding → dashboard → crear propuesta
+1. Abre `https://smart-proposal-generator-lyart.vercel.app`
+2. Verás la landing page
+3. Haz clic en "Registrate gratis"
+4. Prueba registro con Google o email
+5. Después de autenticarte, deberías acceder a `/dashboard`
+6. Prueba crear una propuesta: Clientes → Crear cliente → Propuestas → Generar propuesta
 
-### Troubleshooting comun en HF
+### Troubleshooting en Vercel
 
-- **Build falla por pnpm-lock.yaml**: asegurate de que el lockfile esta commiteado
-- **Error de Clerk**: verifica que la URL del Space esta en los dominios permitidos de Clerk
-- **502 Bad Gateway**: revisa los logs, probablemente falta un secret
-- **Puerto incorrecto**: el Dockerfile ya esta configurado para puerto 7860 (requerido por HF)
-
----
-
-## Resumen: Que necesitas tener configurado
-
-| Servicio | Estado | Accion |
-|----------|--------|--------|
-| Clerk | Ya tienes keys | Activar Organizations + crear webhook |
-| Supabase (DB) | Ya tienes URL | Ejecutar migraciones (`alembic upgrade head`) |
-| Anthropic | Ya tienes key | Listo para generar propuestas |
-| Stripe | Pendiente | Crear cuenta test en stripe.com cuando quieras billing |
-| Resend | Pendiente | Crear cuenta en resend.com cuando quieras emails |
-| DocuForge | Pendiente | Crear cuenta en getdocuforge.dev para export PDF |
-| ngrok | Necesario para local | `brew install ngrok` + exponer puerto 3000 |
+| Problema | Solución |
+|----------|----------|
+| "500 Internal Server Error" | Revisa Vercel Logs → verifica que todas las env vars están setadas |
+| "Supabase connection refused" | Verifica `DATABASE_URL` en Vercel + que tu IP está whitelistada en Supabase |
+| "Google OAuth error" | Verifica que la redirect URL está en Supabase → URL Configuration |
+| "CSS no se carga" | Verifica `postcss.config.mjs` existe y Tailwind v4 está configurado |
+| Deploy se cuelga en "building" | Probablemente falta una env var critical. Revisa el build log. |
 
 ---
 
-## Checklist rapido para primer despliegue
+## Comparación: Local vs Vercel
 
-- [ ] Clerk: organizaciones activadas
-- [ ] Clerk: webhook endpoint creado con los 2 events
-- [ ] Clerk: dominio de HF agregado (si aplica)
-- [ ] Supabase: migraciones ejecutadas
-- [ ] .env.local: todas las variables con valores reales
+| Aspecto | Local | Vercel |
+|--------|-------|--------|
+| Auth | Supabase Auth (email/Google) | Supabase Auth (email/Google) |
+| Base de datos | PostgreSQL (Supabase) | PostgreSQL (Supabase) |
+| URLs Supabase | `http://localhost:3000` | `https://smart-proposal-generator-lyart.vercel.app` |
+| Webhooks | No necesarios | No necesarios (Supabase maneja auth) |
+| Secretos | `.env.local` local | Vercel Environment Variables |
+| AI Streaming | Funciona igual | Funciona igual (Vercel serverless) |
+| PDF Export | Funciona igual | Funciona igual (DocuForge API) |
+
+---
+
+## Checklist rápido para primer despliegue
+
+### Local
+- [ ] Supabase project creado y URL copiada
+- [ ] Google OAuth configurado en Supabase (ver `docs/GOOGLE-AUTH-SETUP.md`)
+- [ ] `.env.local` completo con Supabase + Anthropic keys
+- [ ] Migraciones ejecutadas: `alembic upgrade head`
 - [ ] `pnpm install` exitoso
 - [ ] `pnpm dev` arranca sin errores
-- [ ] Puedes ver `/sign-up` y crear cuenta
-- [ ] Webhook crea tenant en DB
-- [ ] Onboarding completo redirige a dashboard
+- [ ] Puedes ver `/sign-up` y crear cuenta con email/Google
+- [ ] Dashboard carga y muestra propuestas
+
+### Vercel
+- [ ] GitHub repo conectado a Vercel
+- [ ] Environment Variables configuradas en Vercel
+- [ ] Supabase: redirect URLs agregadas para Vercel domain
+- [ ] `git push origin main` dispara deploy automático
+- [ ] Deploy completa sin errores (3-5 min)
+- [ ] Vercel domain accesible y muestra landing page
+- [ ] Sign-up/Sign-in funciona con email/Google
+- [ ] Dashboard y generación de propuestas funcionan

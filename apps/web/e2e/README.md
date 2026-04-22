@@ -9,12 +9,12 @@ Dos "agentes" Playwright que simulan 2 usuarios reales usando la app en paralelo
 | 🔵 **A** — Tech Consulting | Acme Tech Consulting LATAM | FinTech Latam SA (Fintech, 51-200) | Migración COBOL → microservicios AWS, USD 150k, 16 semanas |
 | 🟢 **B** — Marketing Agency | Estudio Bruno — Digital Growth | Retail Andino SAS (Retail, 201-500) | Performance marketing full-funnel, USD 45k, 12 semanas |
 
-Cada uno pasa por: landing → signup (Clerk test mode) → onboarding → crear cliente → wizard 4 pasos → listado / analytics.
+Cada uno pasa por: landing → signup (Supabase email+password) → onboarding → crear cliente → wizard 4 pasos → listado / analytics.
 
 ## Prerequisitos
 
-1. **Clerk en test mode** — la app debe estar usando `pk_test_*`. Los emails con `+clerk_test` bypasean verificación con el código fijo `424242`.
-2. **Dev server o HF Space arriba** — con todas las env vars (DB, Anthropic, etc).
+1. **Supabase con email auth habilitado** — la app debe estar configurada para usar Supabase Auth con email+password.
+2. **Dev server o Vercel deployment arriba** — con todas las env vars (DB, Anthropic, etc).
 3. **Instalar browsers Playwright** (solo la primera vez):
    ```bash
    cd apps/web
@@ -23,11 +23,11 @@ Cada uno pasa por: landing → signup (Clerk test mode) → onboarding → crear
 
 ## Cómo correrlos
 
-### Contra HF Space (producción)
+### Contra Vercel (producción)
 
 ```bash
 cd apps/web
-BASE_URL=https://Giraldo34-smart-proposal-generator.hf.space pnpm test:e2e --headed
+BASE_URL=https://smart-proposal-generator-lyart.vercel.app pnpm test:e2e --headed
 ```
 
 ### Contra localhost (dev)
@@ -67,7 +67,7 @@ pnpm exec playwright show-report
 
 ## Troubleshooting
 
-- **"locator not visible"** en el form de Clerk → la publishable key probablemente es de producción. Necesita `pk_test_*`.
+- **"locator not visible"** en el form de signup → verificar que Supabase Auth esté habilitado con email+password.
 - **Timeout en Paso 3 (streaming)** → revisar que `ANTHROPIC_API_KEY` esté cargada en el server.
 - **"Cliente no aparece en el listado"** → revisar que `DATABASE_URL` del server apunte a una Postgres alcanzable y con migraciones aplicadas.
-- **El agente se queda en `/onboarding`** → hay un bug en la lógica de redirect o la Clerk org no se creó. Corre solo el usuario A con `--debug`.
+- **El agente se queda en `/onboarding`** → hay un bug en la lógica de redirect o no se creó la sesión correctamente. Corre solo el usuario A con `--debug`.

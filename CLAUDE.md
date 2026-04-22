@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Smart Proposal Generator** — SaaS multi-tenant de generación de propuestas comerciales con IA para el mercado LATAM. Flujo core: analizar cliente → generar propuesta con Claude → exportar PDF/DOCX/HTML. Billing: Free / Pro / Enterprise (metered por propuestas generadas).
+**Smart Proposal Generator** — SaaS multi-tenant de generación de propuestas comerciales con IA para el mercado LATAM. Flujo core: analizar cliente → generar propuesta con Claude → exportar PDF/DOCX/HTML. Billing: Trial híbrido 30+30 días, luego suscripción Stripe.
 
 ---
 
@@ -17,7 +17,7 @@ smart-proposal-generator/
 ├── apps/
 │   ├── web/                          # Next.js 16 (App Router)
 │   │   ├── app/
-│   │   │   ├── (auth)/               # Sign-in / sign-up (Clerk)
+│   │   │   ├── (auth)/               # Sign-in / sign-up (Supabase Auth)
 │   │   │   ├── (dashboard)/
 │   │   │   │   ├── clients/
 │   │   │   │   ├── proposals/
@@ -31,7 +31,8 @@ smart-proposal-generator/
 │   │   └── lib/
 │   │       ├── ai.ts                 # Vercel AI SDK config
 │   │       ├── db.ts                 # DrizzleORM client
-│   │       └── auth.ts               # Clerk helpers
+│   │       ├── auth.ts               # Supabase Auth helpers
+│   │       └── supabase/              # Supabase client (client.ts, server.ts)
 │   └── api/                          # FastAPI
 │       ├── app/
 │       │   ├── main.py
@@ -118,7 +119,7 @@ docker exec -it spg_postgres psql -U spg_user -d spg_db
 ## Architecture
 
 ### Multi-Tenancy
-`tenant_id` obligatorio en **todas** las tablas. Clerk usa `orgId` como `tenant_id`. El `orgId` del JWT viaja al backend vía header `X-Tenant-ID`. Todo `shared/tenant.py` lo extrae y aplica.
+`tenant_id` obligatorio en **todas** las tablas. `supabaseUserId` en tabla tenants vincula el usuario de Supabase Auth con el tenant. El frontend extrae `tenantId` vía `requireAuth()` (Supabase session) y lo envía al backend vía `X-Tenant-ID`. Todo `shared/tenant.py` lo extrae y aplica.
 
 ```sql
 -- CORRECTO — siempre tenant_id primero
@@ -255,7 +256,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE tenants (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    clerk_org_id  VARCHAR(255) UNIQUE NOT NULL,
+    supabase_user_id  VARCHAR(255) UNIQUE NOT NULL,
     name          VARCHAR(255) NOT NULL,
     plan          VARCHAR(50) DEFAULT 'free',
     created_at    TIMESTAMPTZ DEFAULT NOW()
@@ -264,7 +265,7 @@ CREATE TABLE tenants (
 CREATE TABLE users (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    clerk_user_id VARCHAR(255) UNIQUE NOT NULL,
+    supabase_user_id VARCHAR(255) UNIQUE NOT NULL,
     email         VARCHAR(255) NOT NULL,
     role          VARCHAR(50) DEFAULT 'member',
     created_at    TIMESTAMPTZ DEFAULT NOW()
@@ -368,7 +369,7 @@ volumes:
 
 | Servicio | Propósito | Env vars |
 |----------|-----------|----------|
-| Clerk | Auth + multi-tenant (`orgId` = `tenant_id`) | `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+| Supabase | Auth + multi-tenant (`supabaseUserId` = `tenant_id`) | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | Anthropic | Claude via Vercel AI SDK | `ANTHROPIC_API_KEY` |
 | Stripe | Billing + metered usage | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
 | Resend | Emails transaccionales | `RESEND_API_KEY` |
@@ -377,7 +378,7 @@ volumes:
 
 ### Environment Files
 ```
-apps/web/.env.local   # NEXT_PUBLIC_* + server-only (Clerk, Anthropic, Stripe)
+apps/web/.env.local   # NEXT_PUBLIC_* + server-only (Supabase, Anthropic, Stripe)
 apps/api/.env         # Python vars (DB, Redis, Resend, DocuForge, Apitally)
 infra/.env            # Docker Compose overrides
 ```

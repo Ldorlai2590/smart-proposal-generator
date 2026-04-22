@@ -48,7 +48,7 @@ En la pantalla "Create OAuth 2.0 Client ID":
 - **Name:** SmartSPG OAuth
 - **Authorized JavaScript origins (Originating URIs):**
   ```
-  https://tu-app.vercel.app
+  https://smart-proposal-generator-lyart.vercel.app
   https://localhost:3000
   ```
 - **Authorized redirect URIs:**

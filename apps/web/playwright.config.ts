@@ -1,11 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * SmartSPG E2E tests — corre 2 usuarios en paralelo contra HF Space o localhost.
+ * SmartSPG E2E tests — corre 2 usuarios en paralelo contra Vercel o localhost.
  *
  * Uso:
- *   # Contra HF Space (producción)
- *   BASE_URL=https://Giraldo34-smart-proposal-generator.hf.space npx playwright test --headed
+ *   # Contra Vercel (producción)
+ *   BASE_URL=https://smart-proposal-generator-lyart.vercel.app npx playwright test --headed
  *
  *   # Contra dev local
  *   BASE_URL=http://localhost:3000 npx playwright test --ui

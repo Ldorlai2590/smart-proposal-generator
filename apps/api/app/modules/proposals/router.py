@@ -62,7 +62,7 @@ async def list_proposals(
 @router.post("/", response_model=ProposalSaveResponse, status_code=201)
 async def create_proposal(
     body: ProposalCreate,
-    x_clerk_user_id: str | None = Header(None),
+    x_user_id: str | None = Header(None, alias="X-User-ID"),
     tenant_id: str = Depends(require_tenant),
     db: AsyncSession = Depends(get_db),
 ):
@@ -75,9 +75,9 @@ async def create_proposal(
     - tokens_used, model
 
     If sections are provided, status is set to "generated" automatically.
-    The X-Clerk-User-ID header is used as created_by when available.
+    The X-User-ID header is used as created_by when available.
     """
-    created_by = x_clerk_user_id or "anonymous"
+    created_by = x_user_id or "anonymous"
 
     cmd = CreateProposalCommand(
         tenant_id=tenant_id,

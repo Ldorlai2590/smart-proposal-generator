@@ -2,7 +2,7 @@ import { test, expect, signUp, doOnboarding, createClient, runProposalWizard } f
 
 const user = {
   label: 'Usuario A — Tech Consulting',
-  email: `alice+clerk_test+${Date.now()}@smartspg.dev`,
+  email: `alice+${Date.now()}@smartspg.dev`,
   password: 'AliceTest123!Secure',
   orgName: 'Acme Tech Consulting LATAM',
   clientName: 'María González',
@@ -29,7 +29,7 @@ test.describe('Usuario A — Tech Consulting LATAM', () => {
       await page.screenshot({ path: 'test-results/user-a-01-landing.png', fullPage: true })
     })
 
-    await test.step('2. Sign up con Clerk test mode', async () => {
+    await test.step('2. Sign up con Supabase', async () => {
       await signUp(page, user)
       await page.screenshot({ path: 'test-results/user-a-02-after-signup.png', fullPage: true })
     })

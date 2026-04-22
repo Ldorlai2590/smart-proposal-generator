@@ -5,7 +5,7 @@ import { test as base, expect, Page } from '@playwright/test'
  */
 export interface UserProfile {
   label: string
-  email: string // usa +clerk_test@ para bypass de email verification en test mode
+  email: string // Supabase email+password auth
   password: string
   orgName: string
   clientName: string
@@ -23,7 +23,7 @@ export const test = base.extend<{ profile: UserProfile }>({
   profile: [
     {
       label: 'default',
-      email: 'test+clerk_test@smartspg.dev',
+      email: 'test@smartspg.dev',
       password: 'TestPass123!Test',
       orgName: 'Default Org',
       clientName: 'Default Client',
@@ -55,35 +55,29 @@ export async function step(page: Page, label: string, fn: () => Promise<void>) {
 }
 
 /**
- * Clerk test-mode signup.
- * Requiere que la Space/localhost use una publishable key de tipo pk_test_*.
- * El email debe contener el tag `+clerk_test` y el código de verificación es 424242.
+ * Supabase email+password signup.
+ * El formulario de sign-up tiene campos email y password.
+ * En dev mode, Supabase auto-confirma emails (no requiere verificación).
  */
 export async function signUp(page: Page, user: UserProfile) {
   await page.goto('/sign-up')
   await page.waitForLoadState('networkidle')
 
-  // Clerk <SignUp/> renderiza un iframe o un form inline — soportamos ambos
+  // Fill email
   const emailInput = page.getByLabel(/email/i).first()
   await emailInput.waitFor({ state: 'visible', timeout: 20_000 })
   await emailInput.fill(user.email)
 
+  // Fill password
   const passwordInput = page.getByLabel(/password/i).first()
-  if (await passwordInput.isVisible().catch(() => false)) {
-    await passwordInput.fill(user.password)
-  }
+  await passwordInput.waitFor({ state: 'visible', timeout: 10_000 })
+  await passwordInput.fill(user.password)
 
-  await page.getByRole('button', { name: /continue|sign up|registrarme/i }).click()
+  // Submit signup form
+  await page.getByRole('button', { name: /sign up|registrarme|continuar/i }).click()
 
-  // Verification code — en test mode siempre 424242
-  const codeInput = page.locator('input[name*="code"], input[inputmode="numeric"]').first()
-  if (await codeInput.isVisible({ timeout: 10_000 }).catch(() => false)) {
-    await codeInput.fill('424242')
-    await page.waitForTimeout(500)
-  }
-
-  // Esperar redirect a /onboarding o /dashboard
-  await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 30_000 })
+  // Esperar redirect a /auth/callback, /onboarding o /dashboard
+  await page.waitForURL(/\/(auth\/callback|onboarding|dashboard)/, { timeout: 30_000 })
 }
 
 /**
