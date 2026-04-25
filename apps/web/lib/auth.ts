@@ -1,20 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
-import { db } from '@/lib/db'
-import { tenants, users } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function requireAuth() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) throw new Error('Unauthenticated')
 
-  const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.supabaseUserId, user.id),
-  })
+  const admin = createAdminClient()
+  const { data: tenant } = await admin
+    .from('tenants')
+    .select('id')
+    .eq('supabase_user_id', user.id)
+    .maybeSingle()
 
   if (!tenant) throw new Error('Tenant not found')
 
-  return { userId: user.id, tenantId: tenant.id, email: user.email ?? '' }
+  return { userId: user.id, tenantId: tenant.id as string, email: user.email ?? '' }
 }
 
 export async function getTenantId(): Promise<string> {
@@ -30,31 +31,38 @@ export async function getApiHeaders(): Promise<HeadersInit> {
   }
 }
 
-/**
- * Creates tenant + user records on first login if they don't exist yet.
- * Called from the dashboard layout and the auth callback.
- */
 export async function ensureTenant(supabaseUserId: string, email: string): Promise<string> {
-  const existing = await db.query.tenants.findFirst({
-    where: eq(tenants.supabaseUserId, supabaseUserId),
-  })
+  const admin = createAdminClient()
 
-  if (existing) return existing.id
+  const { data: existing } = await admin
+    .from('tenants')
+    .select('id')
+    .eq('supabase_user_id', supabaseUserId)
+    .maybeSingle()
+
+  if (existing) return existing.id as string
 
   const name = email.split('@')[0]?.replace(/[._-]/g, ' ') ?? 'Mi Empresa'
   const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
-  const [tenant] = await db
-    .insert(tenants)
-    .values({ supabaseUserId, name, trialEndsAt })
-    .returning()
+  const { data: tenant, error: tErr } = await admin
+    .from('tenants')
+    .insert({
+      supabase_user_id: supabaseUserId,
+      name,
+      trial_ends_at: trialEndsAt.toISOString(),
+    })
+    .select('id')
+    .single()
 
-  await db.insert(users).values({
-    tenantId: tenant.id,
-    supabaseUserId,
+  if (tErr || !tenant) throw new Error(`Failed to create tenant: ${tErr?.message}`)
+
+  await admin.from('users').insert({
+    tenant_id: tenant.id,
+    supabase_user_id: supabaseUserId,
     email,
     role: 'owner',
   })
 
-  return tenant.id
+  return tenant.id as string
 }

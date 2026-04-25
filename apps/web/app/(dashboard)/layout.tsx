@@ -2,9 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ensureTenant } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { tenants } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNav } from '@/components/layout/MobileNav'
 
@@ -21,7 +19,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     await ensureTenant(user.id, user.email ?? '')
   } catch (error) {
     console.error('[Dashboard] Failed to ensure tenant:', error)
-    // Continue rendering — tenant creation may retry on next navigation
   }
 
   const headersList = await headers()
@@ -30,15 +27,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!isOnboardingPage) {
     try {
-      const tenant = await db.query.tenants.findFirst({
-        where: eq(tenants.supabaseUserId, user.id),
-      })
-      if (tenant && !tenant.onboardingCompleted) {
+      const admin = createAdminClient()
+      const { data: tenant } = await admin
+        .from('tenants')
+        .select('id, onboarding_completed')
+        .eq('supabase_user_id', user.id)
+        .maybeSingle()
+      if (tenant && !tenant.onboarding_completed) {
         redirect('/onboarding')
       }
     } catch (dbError) {
       console.error('[Dashboard] DB query failed:', dbError)
-      // Continue rendering without onboarding redirect if DB is unavailable
     }
   }
 

@@ -1,7 +1,5 @@
-import { eq, desc, ilike, or, and } from 'drizzle-orm'
 import { z } from 'zod/v4'
-import { db } from '@/lib/db'
-import { clients } from '@/db/schema'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 
 const NewClientSchema = z.object({
@@ -15,34 +13,38 @@ const NewClientSchema = z.object({
 export async function GET(req: Request) {
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
 
     const url = new URL(req.url)
     const search = url.searchParams.get('search') ?? ''
     const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50'), 200)
     const page = parseInt(url.searchParams.get('page') ?? '1')
+    const offset = (page - 1) * limit
 
-    const conditions = [eq(clients.tenantId, tenantId)]
+    let query = admin
+      .from('clients')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
     if (search) {
-      conditions.push(or(ilike(clients.name, `%${search}%`), ilike(clients.company, `%${search}%`))!)
+      query = query.or(`name.ilike.%${search}%,company.ilike.%${search}%`)
     }
 
-    const rows = await db.query.clients.findMany({
-      where: and(...conditions),
-      orderBy: [desc(clients.createdAt)],
-      limit,
-      offset: (page - 1) * limit,
-    })
+    const { data: rows, error } = await query
+    if (error) throw new Error(error.message)
 
-    const data = rows.map((r) => ({
+    const data = (rows ?? []).map((r) => ({
       id: r.id,
-      tenant_id: r.tenantId,
+      tenant_id: r.tenant_id,
       name: r.name,
       company: r.company,
       email: r.email,
       industry: r.industry,
-      company_size: r.companySize,
+      company_size: r.company_size,
       score: r.score ?? 0,
-      created_at: r.createdAt?.toISOString() ?? new Date().toISOString(),
+      created_at: r.created_at ?? new Date().toISOString(),
     }))
 
     return Response.json({ data, total: data.length, items: data, page, per_page: limit, pages: 1 })
@@ -50,17 +52,9 @@ export async function GET(req: Request) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[api/clients] GET Error:', msg, err)
 
-    if (msg === 'Unauthenticated') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    if (msg === 'Tenant not found') {
-      return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
-    }
-    if (msg.includes('column') && msg.includes('does not exist')) {
-      return Response.json({ error: 'Esquema de base de datos desactualizado. Ejecuta las migraciones de Drizzle.', detail: msg }, { status: 503 })
-    }
+    if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
 
-    // Return empty for graceful degradation but log the actual error
     return Response.json({ data: [], total: 0, items: [], pages: 0, page: 1, per_page: 50 })
   }
 }
@@ -80,46 +74,40 @@ export async function POST(req: Request) {
 
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
     const data = parsed.data
 
-    const [newClient] = await db.insert(clients).values({
-      tenantId,
-      name: data.name,
-      company: data.company ?? null,
-      email: data.email ?? null,
-      industry: data.industry ?? null,
-      companySize: data.company_size ?? null,
-    }).returning()
+    const { data: newClient, error } = await admin
+      .from('clients')
+      .insert({
+        tenant_id: tenantId,
+        name: data.name,
+        company: data.company ?? null,
+        email: data.email ?? null,
+        industry: data.industry ?? null,
+        company_size: data.company_size ?? null,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
 
     return Response.json({
       id: newClient.id,
-      tenant_id: newClient.tenantId,
+      tenant_id: newClient.tenant_id,
       name: newClient.name,
       company: newClient.company,
       email: newClient.email,
       industry: newClient.industry,
-      company_size: newClient.companySize,
+      company_size: newClient.company_size,
       score: newClient.score ?? 0,
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[api/clients] POST Error:', msg, err)
 
-    if (msg === 'Unauthenticated') {
-      return Response.json({ error: 'No autenticado', detail: msg }, { status: 401 })
-    }
-    if (msg === 'Tenant not found') {
-      return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.', detail: msg }, { status: 401 })
-    }
-    if (msg.includes('DATABASE_URL')) {
-      return Response.json({ error: 'Base de datos no configurada', detail: msg }, { status: 503 })
-    }
-    if (msg.includes('relation') && msg.includes('does not exist')) {
-      return Response.json({ error: 'Tabla no existe en la base de datos. Ejecuta las migraciones.', detail: msg }, { status: 503 })
-    }
-    if (msg.includes('column') && msg.includes('does not exist')) {
-      return Response.json({ error: 'Esquema de base de datos desactualizado. Ejecuta las migraciones de Drizzle.', detail: msg }, { status: 503 })
-    }
+    if (msg === 'Unauthenticated') return Response.json({ error: 'No autenticado', detail: msg }, { status: 401 })
+    if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.', detail: msg }, { status: 401 })
 
     return Response.json({ error: `Error al crear cliente: ${msg}`, detail: msg }, { status: 500 })
   }
