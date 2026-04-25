@@ -1,6 +1,4 @@
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { proposals } from '@/db/schema'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 
 export async function GET(
@@ -11,24 +9,26 @@ export async function GET(
 
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
 
-    const row = await db.query.proposals.findFirst({
-      where: eq(proposals.id, id),
-      with: { client: true },
-    })
+    const { data: row, error } = await admin
+      .from('proposals')
+      .select('*, clients(name)')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
 
-    if (!row || row.tenantId !== tenantId) {
-      return Response.json({ error: 'Proposal not found' }, { status: 404 })
-    }
+    if (error) throw new Error(error.message)
+    if (!row) return Response.json({ error: 'Proposal not found' }, { status: 404 })
 
     return Response.json({
       data: {
         id: row.id,
         title: row.title,
         status: row.status,
-        client_id: row.client?.name ?? row.clientId,
-        created_at: row.createdAt?.toISOString() ?? new Date().toISOString(),
-        updated_at: row.updatedAt?.toISOString() ?? new Date().toISOString(),
+        client_id: (row.clients as { name?: string } | null)?.name ?? row.client_id,
+        created_at: row.created_at ?? new Date().toISOString(),
+        updated_at: row.updated_at ?? new Date().toISOString(),
         context: (row.context as Record<string, unknown>) ?? {},
         sections: (row.sections as Record<string, string>) ?? {},
       },

@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { db } from '@/lib/db'
-import { tenants } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 
 export const metadata = {
@@ -14,11 +12,14 @@ export default async function OnboardingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/sign-in')
 
-  const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.supabaseUserId, user.id),
-  })
+  const admin = createAdminClient()
+  const { data: tenant } = await admin
+    .from('tenants')
+    .select('onboarding_completed')
+    .eq('supabase_user_id', user.id)
+    .maybeSingle()
 
-  if (tenant?.onboardingCompleted) redirect('/dashboard')
+  if (tenant?.onboarding_completed) redirect('/dashboard')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-slate-50">

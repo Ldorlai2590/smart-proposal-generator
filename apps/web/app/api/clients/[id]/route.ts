@@ -1,6 +1,4 @@
-import { eq, and } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { clients } from '@/db/schema'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 
 export async function GET(
@@ -11,23 +9,28 @@ export async function GET(
 
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
 
-    const client = await db.query.clients.findFirst({
-      where: and(eq(clients.id, id), eq(clients.tenantId, tenantId)),
-    })
+    const { data: client, error } = await admin
+      .from('clients')
+      .select('*')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
 
+    if (error) throw new Error(error.message)
     if (!client) return Response.json({ error: 'Client not found' }, { status: 404 })
 
     return Response.json({
       id: client.id,
-      tenant_id: client.tenantId,
+      tenant_id: client.tenant_id,
       name: client.name,
       company: client.company,
       email: client.email,
       industry: client.industry,
-      company_size: client.companySize,
+      company_size: client.company_size,
       score: client.score ?? 0,
-      created_at: client.createdAt?.toISOString() ?? new Date().toISOString(),
+      created_at: client.created_at ?? new Date().toISOString(),
       proposals: [],
     })
   } catch (err) {

@@ -1,7 +1,5 @@
-import { eq, desc } from 'drizzle-orm'
 import { z } from 'zod/v4'
-import { db } from '@/lib/db'
-import { proposals, users } from '@/db/schema'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 
 const StatusEnum = z.enum(['draft', 'generating', 'generated', 'sent', 'accepted', 'rejected'])
@@ -20,21 +18,24 @@ const NewProposalSchema = z.object({
 export async function GET() {
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
 
-    const rows = await db.query.proposals.findMany({
-      where: eq(proposals.tenantId, tenantId),
-      orderBy: [desc(proposals.createdAt)],
-      limit: 200,
-      with: { client: true },
-    })
+    const { data: rows, error } = await admin
+      .from('proposals')
+      .select('*, clients(name)')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .limit(200)
 
-    const data = rows.map((r) => ({
+    if (error) throw new Error(error.message)
+
+    const data = (rows ?? []).map((r) => ({
       id: r.id,
       title: r.title,
       status: r.status,
-      client_id: r.client?.name ?? r.clientId,
-      created_at: r.createdAt?.toISOString() ?? new Date().toISOString(),
-      updated_at: r.updatedAt?.toISOString() ?? new Date().toISOString(),
+      client_id: (r.clients as { name?: string } | null)?.name ?? r.client_id,
+      created_at: r.created_at ?? new Date().toISOString(),
+      updated_at: r.updated_at ?? new Date().toISOString(),
       context: (r.context as Record<string, unknown>) ?? {},
     }))
 
@@ -63,30 +64,40 @@ export async function POST(req: Request) {
 
   try {
     const { userId, tenantId } = await requireAuth()
+    const admin = createAdminClient()
     const data = parsed.data
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.supabaseUserId, userId),
-    })
-    if (!user) return Response.json({ error: 'User not found' }, { status: 404 })
+    const { data: userRow } = await admin
+      .from('users')
+      .select('id')
+      .eq('supabase_user_id', userId)
+      .maybeSingle()
 
-    const [newProposal] = await db.insert(proposals).values({
-      tenantId,
-      clientId: data.client_id,
-      createdBy: user.id,
-      title: data.title ?? null,
-      status: data.status ?? 'draft',
-      templateId: data.template_id ?? null,
-      context: data.context ?? {},
-      sections: data.sections ?? {},
-      tokensUsed: data.tokens_used ?? 0,
-      model: data.model ?? null,
-    }).returning()
+    if (!userRow) return Response.json({ error: 'User not found' }, { status: 404 })
+
+    const { data: newProposal, error } = await admin
+      .from('proposals')
+      .insert({
+        tenant_id: tenantId,
+        client_id: data.client_id,
+        created_by: userRow.id,
+        title: data.title ?? null,
+        status: data.status ?? 'draft',
+        template_id: data.template_id ?? null,
+        context: data.context ?? {},
+        sections: data.sections ?? {},
+        tokens_used: data.tokens_used ?? 0,
+        model: data.model ?? null,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
 
     return Response.json({
       id: newProposal.id,
       status: newProposal.status,
-      created_at: newProposal.createdAt?.toISOString() ?? new Date().toISOString(),
+      created_at: newProposal.created_at ?? new Date().toISOString(),
     })
   } catch (err) {
     if (err instanceof Error && err.message === 'Unauthenticated') {

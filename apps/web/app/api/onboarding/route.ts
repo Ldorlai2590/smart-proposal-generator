@@ -1,7 +1,5 @@
 import { requireAuth } from '@/lib/auth'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { tenants } from '@/db/schema'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod/v4'
 
 const OnboardingDataSchema = z.object({
@@ -16,6 +14,7 @@ const OnboardingDataSchema = z.object({
 export async function POST(req: Request) {
   try {
     const { tenantId } = await requireAuth()
+    const admin = createAdminClient()
 
     const body = await req.json()
     const validatedData = OnboardingDataSchema.parse(body)
@@ -30,10 +29,12 @@ export async function POST(req: Request) {
       completedAt: new Date().toISOString(),
     }
 
-    await db
-      .update(tenants)
-      .set({ metadata: onboardingMetadata as any, onboardingCompleted: true })
-      .where(eq(tenants.id, tenantId))
+    const { error } = await admin
+      .from('tenants')
+      .update({ metadata: onboardingMetadata, onboarding_completed: true })
+      .eq('id', tenantId)
+
+    if (error) throw new Error(error.message)
 
     return Response.json({ success: true }, { status: 200 })
   } catch (error) {
