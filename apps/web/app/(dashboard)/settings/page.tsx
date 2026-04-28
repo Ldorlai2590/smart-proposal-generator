@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings as SettingsIcon, User, Globe, DollarSign, LogOut, KeyRound, Save, Check } from 'lucide-react'
+import { Settings as SettingsIcon, User, Globe, DollarSign, LogOut, KeyRound, Save, Check, Eye, Sparkles } from 'lucide-react'
+import { isEmptyState, setEmptyState } from '@/lib/demo-mode'
 
 
 
@@ -30,12 +31,14 @@ export default function SettingsPage() {
   const [nameSaved, setNameSaved] = useState(false)
   const [currency, setCurrency] = useState<Currency>('CLP')
   const [saved, setSaved] = useState(false)
+  const [emptyMode, setEmptyModeState] = useState(false)
 
   useEffect(() => {
     const stored = getCookie('spg-currency') as Currency | null
     if (stored === 'USD' || stored === 'CLP') {
       setCurrency(stored)
     }
+    setEmptyModeState(isEmptyState())
   }, [])
 
   useEffect(() => {
@@ -226,6 +229,56 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Datos de ejemplo */}
+      <section
+        aria-labelledby="settings-demo"
+        className="rounded-2xl border border-gray-100 bg-white shadow-sm"
+      >
+        <header className="p-5 border-b border-gray-100 flex items-center gap-2">
+          <Eye className="h-4 w-4 text-gray-500" aria-hidden="true" />
+          <h2 id="settings-demo" className="text-sm font-semibold text-gray-900">
+            Datos de ejemplo
+          </h2>
+        </header>
+        <div className="p-5 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900">
+                {emptyMode ? 'Modo limpio activado' : 'Mostrar datos de ejemplo'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {emptyMode
+                  ? 'Estás viendo la app sin datos preseteados (modo limpio).'
+                  : 'Estás viendo Andes Digital, 8 servicios, 6 propuestas tracked y 5 clientes de ejemplo.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEmptyState(!emptyMode)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+                !emptyMode ? 'bg-[#1D9E75]' : 'bg-gray-300'
+              }`}
+              aria-label={emptyMode ? 'Activar datos de ejemplo' : 'Ocultar datos de ejemplo'}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  !emptyMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          {!emptyMode && (
+            <button
+              type="button"
+              onClick={() => setEmptyState(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#1D9E75] bg-[#1D9E75]/10 rounded-lg hover:bg-[#1D9E75]/20 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Empezar limpio ahora
+            </button>
+          )}
         </div>
       </section>
 

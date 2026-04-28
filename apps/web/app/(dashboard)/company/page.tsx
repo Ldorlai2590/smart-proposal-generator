@@ -1,8 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Upload, Plus, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Plus, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { DEMO_COMPANY } from '@/lib/demo-v2'
+import { DemoBanner } from '@/components/layout/DemoBanner'
+import { FileUpload, type UploadedFile } from '@/components/ui/file-upload'
+import { isEmptyState } from '@/lib/demo-mode'
+
+const EMPTY_COMPANY: typeof DEMO_COMPANY = {
+  ...DEMO_COMPANY,
+  name: '',
+  website: '',
+  email: '',
+  phone: '',
+  instagram: '',
+  facebook: '',
+  linkedin: '',
+  tiktok: '',
+  what_we_do: '',
+  purpose: '',
+  differentiators: [],
+  ideal_clients: '',
+  focus_industries: [],
+  has_brand_manual: false,
+  has_example_proposal: false,
+  onboarding_completed: false,
+}
 
 const COUNTRIES = ['Chile', 'México', 'Colombia', 'Argentina', 'Perú', 'Otro']
 const CURRENCIES = ['USD', 'CLP', 'MXN', 'COP', 'ARS', 'PEN'] as const
@@ -16,6 +39,17 @@ export default function CompanyPage() {
   const [data, setData] = useState(DEMO_COMPANY)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [diffInput, setDiffInput] = useState('')
+
+  // Files
+  const [logoFile, setLogoFile] = useState<UploadedFile | null>(null)
+  const [brandManualFile, setBrandManualFile] = useState<UploadedFile | null>(null)
+  const [exampleProposalFile, setExampleProposalFile] = useState<UploadedFile | null>(null)
+
+  useEffect(() => {
+    if (isEmptyState()) {
+      setData(EMPTY_COMPANY)
+    }
+  }, [])
 
   function update<K extends keyof typeof DEMO_COMPANY>(key: K, value: typeof DEMO_COMPANY[K]) {
     setData((d) => ({ ...d, [key]: value }))
@@ -45,6 +79,7 @@ export default function CompanyPage() {
 
   return (
     <div className="max-w-5xl">
+      <DemoBanner message="Mi Empresa muestra datos de Andes Digital Studio (ejemplo)." />
       <header className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -208,11 +243,13 @@ export default function CompanyPage() {
       {active === 'branding' && (
         <div className="space-y-6">
           <Card title="Logo">
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-[#1D9E75] transition-colors cursor-pointer">
-              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 font-medium">Arrastra tu logo aquí o haz click</p>
-              <p className="text-xs text-gray-400 mt-1">PNG, SVG · Mín 512x512 · Máx 2MB</p>
-            </div>
+            <FileUpload
+              value={logoFile}
+              onChange={setLogoFile}
+              variant="image"
+              hint="PNG, SVG, JPG · Mín 512x512 · Máx 5MB"
+              accept="image/png,image/jpeg,image/svg+xml"
+            />
           </Card>
 
           <Card title="Colores corporativos">
@@ -248,9 +285,39 @@ export default function CompanyPage() {
           </Card>
 
           <Card title="Manual de marca y propuesta ejemplo">
-            <div className="space-y-3">
-              <ToggleRow label="Tengo manual de marca" enabled={data.has_brand_manual} onChange={(v) => update('has_brand_manual', v)} hint={!data.has_brand_manual ? 'Crearemos identidad visual base profesional automáticamente' : 'Sube tu manual PDF para mantener consistencia'} />
-              <ToggleRow label="Tengo propuesta ejemplo" enabled={data.has_example_proposal} onChange={(v) => update('has_example_proposal', v)} hint={!data.has_example_proposal ? 'Crearemos un template profesional automáticamente' : 'Sube tu propuesta ejemplo para clonar el estilo'} />
+            <div className="space-y-4">
+              {/* Manual de marca */}
+              <div>
+                <ToggleRow label="Tengo manual de marca" enabled={data.has_brand_manual} onChange={(v) => update('has_brand_manual', v)} hint={!data.has_brand_manual ? 'Crearemos identidad visual base profesional automáticamente' : 'Sube tu manual PDF para mantener consistencia'} />
+                {data.has_brand_manual && (
+                  <div className="mt-3 pl-4 border-l-2 border-[#1D9E75]/30">
+                    <FileUpload
+                      value={brandManualFile}
+                      onChange={setBrandManualFile}
+                      variant="pdf"
+                      hint="PDF — Manual de marca · Máx 10MB"
+                      label="Sube tu manual de marca"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Propuesta ejemplo */}
+              <div>
+                <ToggleRow label="Tengo propuesta ejemplo" enabled={data.has_example_proposal} onChange={(v) => update('has_example_proposal', v)} hint={!data.has_example_proposal ? 'Crearemos un template profesional automáticamente' : 'Sube tu propuesta ejemplo para clonar el estilo'} />
+                {data.has_example_proposal && (
+                  <div className="mt-3 pl-4 border-l-2 border-[#1D9E75]/30">
+                    <FileUpload
+                      value={exampleProposalFile}
+                      onChange={setExampleProposalFile}
+                      variant="pdf"
+                      hint="PDF o PPTX — Propuesta ejemplo · Máx 10MB"
+                      label="Sube tu propuesta ejemplo"
+                      accept="application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         </div>
@@ -279,11 +346,15 @@ export default function CompanyPage() {
             </button>
           </Card>
 
-          <Card title="Logos de clientes" subtitle="Logos para mostrar en social proof">
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-sm text-gray-500">
-              <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-              Subir logos de clientes (próximamente)
-            </div>
+          <Card title="Logos de clientes" subtitle="Logos para mostrar en social proof (próximamente)">
+            <FileUpload
+              value={null}
+              onChange={() => {}}
+              variant="image"
+              compact
+              hint="PNG, SVG · máx 5MB cada uno"
+            />
+            <p className="text-xs text-gray-400 mt-2">Múltiples logos disponibles próximamente</p>
           </Card>
 
           <Card title="Certificaciones y FAQ comerciales">

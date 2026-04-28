@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { Activity, Search, Eye, Clock, ExternalLink, Bell, Send, MessageCircle, Mail, Copy, X, ChevronRight } from 'lucide-react'
 import { DEMO_TRACKED, DEMO_ALERTS, suggestFollowUp } from '@/lib/demo-v2'
 import { formatDateRelative } from '@/lib/format'
 import type { TrackedProposal, IntentionScore } from '@/lib/types/proposal-tracking'
+import { DemoBanner } from '@/components/layout/DemoBanner'
+import { isEmptyState } from '@/lib/demo-mode'
 
 type Filter = 'all' | 'high' | 'medium' | 'low' | 'none'
 
@@ -13,32 +15,70 @@ export default function TrackingPage() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<TrackedProposal | null>(null)
+  const [tracked, setTracked] = useState<TrackedProposal[]>(DEMO_TRACKED)
+  const [alerts, setAlerts] = useState(DEMO_ALERTS)
+
+  useEffect(() => {
+    if (isEmptyState()) {
+      setTracked([])
+      setAlerts([])
+    }
+  }, [])
 
   const filtered = useMemo(() => {
-    return DEMO_TRACKED.filter((p) => {
+    return tracked.filter((p) => {
       if (query && !p.title.toLowerCase().includes(query.toLowerCase()) && !p.client_name.toLowerCase().includes(query.toLowerCase())) return false
       if (filter !== 'all' && p.intention_score !== filter) return false
       return true
     })
-  }, [query, filter])
+  }, [tracked, query, filter])
 
   const stats = useMemo(() => {
-    const sent = DEMO_TRACKED.filter((p) => p.sent_at).length
-    const opened = DEMO_TRACKED.filter((p) => p.opened_at).length
-    const high = DEMO_TRACKED.filter((p) => p.intention_score === 'high').length
-    const cold = DEMO_TRACKED.filter((p) => p.intention_score === 'none' || p.intention_score === 'low').length
+    const sent = tracked.filter((p) => p.sent_at).length
+    const opened = tracked.filter((p) => p.opened_at).length
+    const high = tracked.filter((p) => p.intention_score === 'high').length
+    const cold = tracked.filter((p) => p.intention_score === 'none' || p.intention_score === 'low').length
     return {
       sent,
       openRate: sent > 0 ? Math.round((opened / sent) * 100) : 0,
       hot: high,
       cold,
     }
-  }, [])
+  }, [tracked])
 
-  const unreadAlerts = DEMO_ALERTS.filter((a) => !a.read)
+  const unreadAlerts = alerts.filter((a) => !a.read)
+
+  // Empty state
+  if (tracked.length === 0) {
+    return (
+      <div>
+        <DemoBanner message="Aún no has enviado propuestas." />
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Activity className="h-6 w-6 text-[#1D9E75]" />
+            Seguimiento de propuestas
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Cuando envíes propuestas, aquí verás cuándo las abrieron, cuánto tiempo las vieron y si vale la pena hacer follow-up.</p>
+        </header>
+        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-[#e6f7f2] mx-auto mb-4 flex items-center justify-center">
+            <Activity className="h-8 w-8 text-[#1D9E75]" />
+          </div>
+          <h2 className="font-semibold text-gray-900 mb-1">Sin propuestas en seguimiento</h2>
+          <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+            Envía tu primera propuesta y empieza a recibir alertas cuando el cliente la abra, vea el pricing o interactúe con ella.
+          </p>
+          <Link href="/proposals/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D9E75] text-white text-sm font-semibold rounded-xl hover:bg-[#158a63]">
+            Crear mi primera propuesta
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
+      <DemoBanner message="Estás viendo 6 propuestas de ejemplo con tracking simulado." />
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Activity className="h-6 w-6 text-[#1D9E75]" />

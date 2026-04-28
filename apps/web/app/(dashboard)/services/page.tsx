@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Package, Clock, Edit2, Trash2, Eye, Tag } from 'lucide-react'
 import { DEMO_SERVICES } from '@/lib/demo-v2'
 import { formatCurrency } from '@/lib/format'
 import type { Service, BillingType } from '@/lib/types/service'
+import { DemoBanner } from '@/components/layout/DemoBanner'
+import { isEmptyState } from '@/lib/demo-mode'
 
 const CATEGORIES = ['Todas', ...Array.from(new Set(DEMO_SERVICES.map((s) => s.category)))]
 const BILLING_TYPES: { value: BillingType | 'all'; label: string }[] = [
@@ -33,10 +35,14 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 }
 
 export default function ServicesPage() {
-  const [services] = useState<Service[]>(DEMO_SERVICES)
+  const [services, setServices] = useState<Service[]>(DEMO_SERVICES)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Todas')
   const [billing, setBilling] = useState<BillingType | 'all'>('all')
+
+  useEffect(() => {
+    if (isEmptyState()) setServices([])
+  }, [])
 
   const filtered = useMemo(() => {
     return services.filter((s) => {
@@ -47,8 +53,37 @@ export default function ServicesPage() {
     })
   }, [services, query, category, billing])
 
+  // Empty state — primer servicio
+  if (services.length === 0) {
+    return (
+      <div>
+        <DemoBanner message="Aún no tienes servicios cargados." />
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Package className="h-6 w-6 text-[#1D9E75]" />
+            Catálogo de servicios
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Crea tu primer servicio para empezar a usarlo en propuestas.</p>
+        </header>
+        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-[#e6f7f2] mx-auto mb-4 flex items-center justify-center">
+            <Package className="h-8 w-8 text-[#1D9E75]" />
+          </div>
+          <h2 className="font-semibold text-gray-900 mb-1">Tu catálogo está vacío</h2>
+          <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+            Define los servicios que ofreces (precio, alcance, qué incluye/excluye) para que aparezcan automáticamente al crear propuestas.
+          </p>
+          <Link href="/services/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D9E75] text-white text-sm font-semibold rounded-xl hover:bg-[#158a63]">
+            <Plus className="h-4 w-4" /> Crear mi primer servicio
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
+      <DemoBanner message="Estos son 8 servicios de ejemplo del estudio Andes Digital." />
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
