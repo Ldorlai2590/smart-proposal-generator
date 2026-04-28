@@ -5,7 +5,21 @@ import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Plu
 import { DEMO_COMPANY } from '@/lib/demo-v2'
 import { DemoBanner } from '@/components/layout/DemoBanner'
 import { FileUpload, type UploadedFile } from '@/components/ui/file-upload'
+import { CountedTextarea } from '@/components/ui/counted-textarea'
 import { isEmptyState } from '@/lib/demo-mode'
+
+// Field limits (synced with API)
+export const COMPANY_LIMITS = {
+  name: 200,
+  website: 500,
+  email: 200,
+  phone: 50,
+  what_we_do: 500,
+  purpose: 500,
+  ideal_clients: 500,
+  differentiator: 200,
+  social: 200,
+} as const
 
 const EMPTY_COMPANY: typeof DEMO_COMPANY = {
   ...DEMO_COMPANY,
@@ -185,14 +199,13 @@ export default function CompanyPage() {
         <div className="space-y-6">
           <Card title="¿Qué hace tu empresa?">
             <Field label="Descripción">
-              <textarea value={data.what_we_do ?? ''} onChange={(e) => update('what_we_do', e.target.value)} rows={3} maxLength={500} className={inputCls} />
-              <p className="text-xs text-gray-400 mt-1">{(data.what_we_do?.length ?? 0)}/500 caracteres</p>
+              <CountedTextarea value={data.what_we_do ?? ''} onChange={(e) => update('what_we_do', e.target.value)} rows={3} maxLength={COMPANY_LIMITS.what_we_do} placeholder="Ej: Estudio digital especializado en growth para pymes B2B en LATAM..." />
             </Field>
             <Field label="Propósito / Misión">
-              <textarea value={data.purpose ?? ''} onChange={(e) => update('purpose', e.target.value)} rows={2} className={inputCls} />
+              <CountedTextarea value={data.purpose ?? ''} onChange={(e) => update('purpose', e.target.value)} rows={3} maxLength={COMPANY_LIMITS.purpose} smart placeholder="Ej: Hacer que las marcas LATAM compitan con las grandes ligas digitales..." />
             </Field>
             <Field label="Tipo de cliente ideal">
-              <textarea value={data.ideal_clients ?? ''} onChange={(e) => update('ideal_clients', e.target.value)} rows={2} placeholder="Ej: Pymes B2B con $500K+ de facturación anual..." className={inputCls} />
+              <CountedTextarea value={data.ideal_clients ?? ''} onChange={(e) => update('ideal_clients', e.target.value)} rows={3} maxLength={COMPANY_LIMITS.ideal_clients} smart placeholder="Ej: Pymes B2B con $500K+ de facturación anual..." />
             </Field>
           </Card>
 
@@ -208,9 +221,12 @@ export default function CompanyPage() {
               ))}
             </div>
             {(data.differentiators?.length ?? 0) < 5 && (
-              <div className="flex gap-2">
-                <input value={diffInput} onChange={(e) => setDiffInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addDifferentiator()} placeholder="Ej: Equipo 100% LATAM" className={inputCls} />
-                <button onClick={addDifferentiator} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar</button>
+              <div>
+                <div className="flex gap-2">
+                  <input value={diffInput} onChange={(e) => setDiffInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addDifferentiator()} maxLength={COMPANY_LIMITS.differentiator} placeholder="Ej: Equipo 100% LATAM" className={inputCls} />
+                  <button onClick={addDifferentiator} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar</button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{data.differentiators?.length ?? 0}/5 diferenciadores · máx {COMPANY_LIMITS.differentiator} chars c/u</p>
               </div>
             )}
           </Card>

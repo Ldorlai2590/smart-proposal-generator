@@ -4,6 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Plus, X, Save } from 'lucide-react'
 import type { Service, BillingType } from '@/lib/types/service'
+import { CountedTextarea } from '@/components/ui/counted-textarea'
+
+// Service field limits (synced with API Zod)
+export const SERVICE_LIMITS = {
+  name: 200,
+  description: 1000,
+  objective: 500,
+  scope: 1000,
+  duration_estimate: 100,
+  chip: 200,            // each item in includes/excludes/deliverables
+  base_price_max: 9_999_999,
+} as const
 
 const CATEGORIES = ['Marketing Digital', 'Diseño', 'Desarrollo', 'Estrategia', 'Branding', 'Contenido', 'Social Media', 'Otros']
 const BILLING_OPTIONS: { value: BillingType; label: string }[] = [
@@ -42,23 +54,22 @@ export function ServiceForm({ initial }: { initial?: Partial<Service> }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-24">
       <Card title="Información básica">
-        <Field label="Nombre del servicio" required>
-          <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+        <Field label="Nombre del servicio" required hint={`Máx ${SERVICE_LIMITS.name} caracteres`}>
+          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={SERVICE_LIMITS.name} className={inputCls} />
         </Field>
         <Field label="Categoría">
           <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </Field>
-        <Field label="Descripción comercial" hint="Cómo se vende este servicio en una línea">
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={300} className={inputCls} />
-          <p className="text-xs text-gray-400 mt-1">{description.length}/300</p>
+        <Field label="Descripción comercial" hint="Cómo se vende este servicio en pocas líneas">
+          <CountedTextarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={SERVICE_LIMITS.description} placeholder="Ej: Gestión completa de campañas pagadas en Google y Meta con optimización semanal" />
         </Field>
         <Field label="Objetivo del servicio">
-          <textarea value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} className={inputCls} placeholder="¿Qué resultado entrega al cliente?" />
+          <CountedTextarea value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} maxLength={SERVICE_LIMITS.objective} smart placeholder="¿Qué resultado entrega al cliente?" />
         </Field>
         <Field label="Alcance del servicio">
-          <textarea value={scope} onChange={(e) => setScope(e.target.value)} rows={2} className={inputCls} placeholder="Resumen del alcance" />
+          <CountedTextarea value={scope} onChange={(e) => setScope(e.target.value)} rows={3} maxLength={SERVICE_LIMITS.scope} smart placeholder="Resumen del alcance del servicio, hitos clave, entregables principales..." />
         </Field>
       </Card>
 
@@ -73,7 +84,7 @@ export function ServiceForm({ initial }: { initial?: Partial<Service> }) {
 
       <Card title="Tiempo y entregables">
         <Field label="Tiempo estimado">
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="Ej: 3 semanas, mensual recurrente" className={inputCls} />
+          <input value={duration} onChange={(e) => setDuration(e.target.value)} maxLength={SERVICE_LIMITS.duration_estimate} placeholder="Ej: 3 semanas, mensual recurrente" className={inputCls} />
         </Field>
         <Field label="Entregables concretos">
           <ChipInput items={deliverables} onChange={setDeliverables} placeholder="Ej: Reporte mensual" />
@@ -147,29 +158,41 @@ function Field({ label, hint, required, children }: { label: string; hint?: stri
   )
 }
 
-function ChipInput({ items, onChange, placeholder }: { items: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+function ChipInput({ items, onChange, placeholder, maxItemLength = SERVICE_LIMITS.chip, maxItems = 30 }: { items: string[]; onChange: (v: string[]) => void; placeholder?: string; maxItemLength?: number; maxItems?: number }) {
   const [input, setInput] = useState('')
+  const reachedMax = items.length >= maxItems
+
   function add() {
     if (!input.trim()) return
-    onChange([...items, input.trim()])
+    if (reachedMax) return
+    onChange([...items, input.trim().slice(0, maxItemLength)])
     setInput('')
   }
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
         {items.map((item, idx) => (
-          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e6f7f2] text-[#1D9E75] text-xs font-medium rounded-full">
-            {item}
-            <button type="button" onClick={() => onChange(items.filter((_, i) => i !== idx))} className="hover:text-red-500"><X className="h-3 w-3" /></button>
+          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e6f7f2] text-[#1D9E75] text-xs font-medium rounded-full max-w-full">
+            <span className="truncate">{item}</span>
+            <button type="button" onClick={() => onChange(items.filter((_, i) => i !== idx))} className="hover:text-red-500 flex-shrink-0"><X className="h-3 w-3" /></button>
           </span>
         ))}
       </div>
       <div className="flex gap-2">
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }} placeholder={placeholder} className={inputCls} />
-        <button type="button" onClick={add} className="inline-flex items-center px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder={reachedMax ? `Máximo ${maxItems} items` : placeholder}
+          maxLength={maxItemLength}
+          disabled={reachedMax}
+          className={inputCls + (reachedMax ? ' opacity-50' : '')}
+        />
+        <button type="button" onClick={add} disabled={reachedMax || !input.trim()} className="inline-flex items-center px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="h-4 w-4" />
         </button>
       </div>
+      <p className="text-xs text-gray-400 mt-1">{items.length}/{maxItems} items · {maxItemLength} chars c/u</p>
     </div>
   )
 }

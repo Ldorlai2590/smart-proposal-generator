@@ -2,13 +2,22 @@
 
 import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { CountedTextarea } from '@/components/ui/counted-textarea'
 import { cn } from '@/lib/utils'
 import { Briefcase, Package, Target, Palette, Award, ChevronDown, Check, Plus, X, AlertCircle, Calendar } from 'lucide-react'
 import type { ClientData } from './Step1Client'
 import { DEMO_SERVICES } from '@/lib/demo-v2'
 import { formatCurrency } from '@/lib/format'
 import type { BillingType } from '@/lib/types/service'
+
+// Field limits for proposal context (synced with API)
+export const PROPOSAL_LIMITS = {
+  problema: 2000,
+  objectives: 1000,
+  current_problems: 1000,
+  budget: 100,
+  start_date: 50,
+} as const
 
 export interface SelectedService {
   service_id: string
@@ -179,32 +188,35 @@ export function Step2Context({ client, onNext, onBack }: Step2ContextProps) {
       <Block icon={<Briefcase className="h-4 w-4" />} title="1 · Contexto comercial" subtitle="¿Qué necesita el cliente y bajo qué condiciones?" defaultOpen>
         <div className="space-y-4">
           <Field label="¿Qué necesita el cliente? *" required>
-            <Textarea
+            <CountedTextarea
               placeholder={`¿Cuál es el principal desafío de ${client.company} que quieres abordar?`}
               value={problema}
               onChange={(e) => setProblema(e.target.value)}
-              className="min-h-[80px]"
+              rows={3}
+              maxLength={PROPOSAL_LIMITS.problema}
+              minLength={20}
             />
-            <p className={cn('text-xs text-right mt-1', problema.length < 20 ? 'text-gray-400' : 'text-[#1D9E75]')}>
-              {problema.length} / 20 mín
-            </p>
           </Field>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Objetivos principales">
-              <Textarea
+              <CountedTextarea
                 placeholder="Ej: Aumentar leads 3x en 6 meses"
                 value={objectives}
                 onChange={(e) => setObjectives(e.target.value)}
-                className="min-h-[60px]"
+                rows={3}
+                maxLength={PROPOSAL_LIMITS.objectives}
+                smart
               />
             </Field>
             <Field label="Problemas actuales detectados">
-              <Textarea
+              <CountedTextarea
                 placeholder="Ej: CAC alto, baja conversión..."
                 value={currentProblems}
                 onChange={(e) => setCurrentProblems(e.target.value)}
-                className="min-h-[60px]"
+                rows={3}
+                maxLength={PROPOSAL_LIMITS.current_problems}
+                smart
               />
             </Field>
           </div>

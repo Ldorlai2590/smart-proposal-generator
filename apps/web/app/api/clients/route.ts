@@ -8,6 +8,15 @@ const NewClientSchema = z.object({
   email: z.string().email().max(200).nullable().optional(),
   industry: z.string().max(100).nullable().optional(),
   company_size: z.string().max(50).nullable().optional(),
+  // v2 expanded fields
+  contact_name: z.string().max(200).nullable().optional(),
+  contact_role: z.string().max(200).nullable().optional(),
+  contact_phone: z.string().max(50).nullable().optional(),
+  website: z.string().max(500).nullable().optional(),
+  instagram: z.string().max(200).nullable().optional(),
+  facebook: z.string().max(200).nullable().optional(),
+  linkedin: z.string().max(200).nullable().optional(),
+  tiktok: z.string().max(200).nullable().optional(),
 })
 
 export async function GET(req: Request) {

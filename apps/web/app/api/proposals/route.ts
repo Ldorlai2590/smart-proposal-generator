@@ -7,6 +7,8 @@ const StatusEnum = z.enum(['draft', 'generating', 'generated', 'sent', 'accepted
 const NewProposalSchema = z.object({
   title: z.string().max(500).nullable().optional(),
   client_id: z.string().min(1, 'client_id is required').max(200),
+  // context object holds problema (max 2000), objectives (max 1000), current_problems (max 1000)
+  // sections holds 14 HTML sections, each max ~10000 chars (Claude output)
   status: StatusEnum.optional(),
   template_id: z.string().nullable().optional(),
   context: z.record(z.string(), z.unknown()).optional(),

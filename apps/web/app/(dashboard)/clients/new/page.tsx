@@ -5,6 +5,20 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, User, Building2, Globe, Instagram, Facebook, Linkedin, Sparkles, Loader2, CheckCircle2, AlertTriangle, Target, MessageSquare, TrendingUp, Save } from 'lucide-react'
 
+// Field limits (synced with API Zod)
+export const CLIENT_LIMITS = {
+  contact_name: 200,
+  contact_role: 200,
+  contact_email: 200,
+  contact_phone: 50,
+  company_name: 200,
+  website: 500,
+  social: 200,
+  industry: 100,
+  employees: 10,
+  revenue: 100,
+} as const
+
 const INDUSTRIES = ['Tecnología', 'SaaS', 'Salud', 'Retail', 'Finanzas', 'Educación', 'Inmobiliario', 'Manufactura', 'Servicios profesionales', 'Logística', 'Otros']
 const SIZES = [
   { id: 'micro', label: 'Micro', desc: '1-10 empleados' },
@@ -115,16 +129,16 @@ export default function NewClientPage() {
         <Card icon={<User className="h-4 w-4" />} title="Persona de contacto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Nombre" required>
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} placeholder="Ej: María García" />
+              <input value={contactName} onChange={(e) => setContactName(e.target.value)} maxLength={CLIENT_LIMITS.contact_name} className={inputCls} placeholder="Ej: María García" />
             </Field>
             <Field label="Cargo" hint="El sistema sugerirá tono según el cargo">
-              <input value={contactRole} onChange={(e) => setContactRole(e.target.value)} className={inputCls} placeholder="Ej: CEO, CFO, Marketing Manager" />
+              <input value={contactRole} onChange={(e) => setContactRole(e.target.value)} maxLength={CLIENT_LIMITS.contact_role} className={inputCls} placeholder="Ej: CEO, CFO, Marketing Manager" />
             </Field>
             <Field label="Email">
-              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} />
+              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} maxLength={CLIENT_LIMITS.contact_email} className={inputCls} />
             </Field>
             <Field label="Celular">
-              <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputCls} placeholder="+56 9 1234 5678" />
+              <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} maxLength={CLIENT_LIMITS.contact_phone} className={inputCls} placeholder="+56 9 1234 5678" />
             </Field>
           </div>
         </Card>
@@ -132,13 +146,13 @@ export default function NewClientPage() {
         {/* Empresa */}
         <Card icon={<Building2 className="h-4 w-4" />} title="Empresa">
           <Field label="Nombre de la empresa" required>
-            <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className={inputCls} placeholder="Ej: TechFlow Solutions" />
+            <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} maxLength={CLIENT_LIMITS.company_name} className={inputCls} placeholder="Ej: TechFlow Solutions" />
           </Field>
 
           <Field label="Sitio web">
             <div className="flex">
               <span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500"><Globe className="h-4 w-4" /></span>
-              <input value={website} onChange={(e) => setWebsite(e.target.value)} className={`${inputCls} rounded-l-none`} placeholder="https://" />
+              <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={CLIENT_LIMITS.website} className={`${inputCls} rounded-l-none`} placeholder="https://" />
             </div>
           </Field>
 
@@ -146,23 +160,23 @@ export default function NewClientPage() {
             <Field label="Instagram">
               <div className="flex">
                 <span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500"><Instagram className="h-4 w-4" /></span>
-                <input value={instagram} onChange={(e) => setInstagram(e.target.value)} className={`${inputCls} rounded-l-none`} placeholder="@usuario" />
+                <input value={instagram} onChange={(e) => setInstagram(e.target.value)} maxLength={CLIENT_LIMITS.social} className={`${inputCls} rounded-l-none`} placeholder="@usuario" />
               </div>
             </Field>
             <Field label="Facebook">
               <div className="flex">
                 <span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500"><Facebook className="h-4 w-4" /></span>
-                <input value={facebook} onChange={(e) => setFacebook(e.target.value)} className={`${inputCls} rounded-l-none`} />
+                <input value={facebook} onChange={(e) => setFacebook(e.target.value)} maxLength={CLIENT_LIMITS.social} className={`${inputCls} rounded-l-none`} />
               </div>
             </Field>
             <Field label="LinkedIn">
               <div className="flex">
                 <span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500"><Linkedin className="h-4 w-4" /></span>
-                <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className={`${inputCls} rounded-l-none`} />
+                <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} maxLength={CLIENT_LIMITS.social} className={`${inputCls} rounded-l-none`} />
               </div>
             </Field>
             <Field label="TikTok">
-              <input value={tiktok} onChange={(e) => setTiktok(e.target.value)} className={inputCls} placeholder="@usuario" />
+              <input value={tiktok} onChange={(e) => setTiktok(e.target.value)} maxLength={CLIENT_LIMITS.social} className={inputCls} placeholder="@usuario" />
             </Field>
           </div>
 
