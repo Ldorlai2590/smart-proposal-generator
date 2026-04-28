@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Settings as SettingsIcon, User, Globe, DollarSign, LogOut, KeyRound } from 'lucide-react'
+import { Settings as SettingsIcon, User, Globe, DollarSign, LogOut, KeyRound, Save, Check } from 'lucide-react'
 
 
 
@@ -23,8 +23,11 @@ function setCookie(name: string, value: string, days = 365) {
 
 export default function SettingsPage() {
   const [userName, setUserName] = useState<string | null>(null)
+  const [editedName, setEditedName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savingName, setSavingName] = useState(false)
+  const [nameSaved, setNameSaved] = useState(false)
   const [currency, setCurrency] = useState<Currency>('CLP')
   const [saved, setSaved] = useState(false)
 
@@ -41,12 +44,35 @@ export default function SettingsPage() {
       .then((data) => {
         if (data?.authenticated) {
           setUserName(data.user.name)
+          setEditedName(data.user.name ?? '')
           setUserEmail(data.user.email)
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleSaveName() {
+    if (!editedName.trim() || editedName === userName) return
+    setSavingName(true)
+    setNameSaved(false)
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editedName.trim() }),
+      })
+      if (!res.ok) throw new Error('Error al guardar')
+      setUserName(editedName.trim())
+      setNameSaved(true)
+      window.setTimeout(() => setNameSaved(false), 2000)
+    } catch (err) {
+      console.error(err)
+      alert('No se pudo guardar el nombre. Intenta de nuevo.')
+    } finally {
+      setSavingName(false)
+    }
+  }
 
   function handleCurrencyChange(next: Currency) {
     setCurrency(next)
@@ -90,21 +116,38 @@ export default function SettingsPage() {
         </header>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label htmlFor="name-input" className="block text-xs font-medium text-gray-500 mb-1">
               Nombre
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
+                id="name-input"
                 type="text"
-                readOnly
-                value={loading ? 'Cargando…' : userName ?? '—'}
-                className="flex-1 h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-600 focus:outline-none"
-                aria-readonly="true"
+                value={loading ? '' : editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                placeholder={loading ? 'Cargando…' : 'Tu nombre completo'}
+                disabled={loading || savingName}
+                maxLength={120}
+                className="flex-1 h-10 px-3 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40 focus:border-[#1D9E75] disabled:bg-gray-50 disabled:text-gray-400"
               />
-              <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide text-[#1D9E75] bg-[#e6f7f2] px-2 py-1 rounded-full whitespace-nowrap">
-                Próximamente editable
-              </span>
+              <button
+                type="button"
+                onClick={handleSaveName}
+                disabled={loading || savingName || !editedName.trim() || editedName === userName}
+                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[#1D9E75] text-white hover:bg-[#158a63]"
+              >
+                {savingName ? (
+                  'Guardando…'
+                ) : nameSaved ? (
+                  <><Check className="h-3.5 w-3.5" /> Guardado</>
+                ) : (
+                  <><Save className="h-3.5 w-3.5" /> Guardar</>
+                )}
+              </button>
             </div>
+            <p className="text-xs text-gray-400 mt-1.5">
+              Este nombre aparecerá en el sidebar y en las propuestas que generes.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
