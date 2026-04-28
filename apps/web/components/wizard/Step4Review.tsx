@@ -12,25 +12,37 @@ import type { ProposalSections } from './Step3Generate'
 // ─── Section metadata ─────────────────────────────────────────────────────────
 
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
-  resumenEjecutivo: 'Resumen Ejecutivo',
-  problema: 'El Problema',
-  serviciosPropuestos: 'Servicios Propuestos',
-  alcancePorServicio: 'Alcance por Servicio',
-  timeline: 'Cronograma',
+  portada: 'Portada',
+  contextoCliente: 'Contexto del cliente',
+  diagnostico: 'Diagnóstico',
+  oportunidad: 'Oportunidad detectada',
+  solucion: 'Solución propuesta',
+  alcance: 'Alcance detallado',
+  incluyeNoIncluye: 'Qué incluye / no incluye',
+  metodologia: 'Metodología',
+  cronograma: 'Cronograma',
+  casosExito: 'Casos de éxito',
+  diferenciadores: 'Diferenciadores',
   inversion: 'Inversión',
-  casoDeExito: 'Caso de Éxito',
-  proximosPasos: 'Próximos Pasos',
+  proximosPasos: 'Próximos pasos',
+  ctaFinal: 'CTA final',
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'resumenEjecutivo',
-  'problema',
-  'serviciosPropuestos',
-  'alcancePorServicio',
-  'timeline',
+  'portada',
+  'contextoCliente',
+  'diagnostico',
+  'oportunidad',
+  'solucion',
+  'alcance',
+  'incluyeNoIncluye',
+  'metodologia',
+  'cronograma',
+  'casosExito',
+  'diferenciadores',
   'inversion',
-  'casoDeExito',
   'proximosPasos',
+  'ctaFinal',
 ]
 
 // ─── Props ────────────────────────────────────────────────────────────────────

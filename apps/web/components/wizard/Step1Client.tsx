@@ -18,6 +18,23 @@ export interface ClientData {
   companySize?: string
   score?: number
   isNew?: boolean
+  // v2 — contact persona
+  contact_name?: string
+  contact_role?: string
+  contact_phone?: string
+  // v2 — RRSS
+  website?: string
+  instagram?: string
+  facebook?: string
+  linkedin?: string
+  tiktok?: string
+  // v2 — AI analysis
+  ai_business_model?: string
+  ai_value_prop?: string
+  ai_opportunities?: string[]
+  ai_weaknesses?: string[]
+  ai_communication_tone?: string
+  ai_executive_summary?: string
 }
 
 interface Step1ClientProps {

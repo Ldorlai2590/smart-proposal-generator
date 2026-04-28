@@ -11,42 +11,62 @@ import { Progress } from '@/components/ui/progress'
 import type { ClientData } from './Step1Client'
 import type { ContextData } from './Step2Context'
 
+// 14 sections per the v2 spec
 export interface ProposalSections {
-  resumenEjecutivo: string
-  problema: string
-  serviciosPropuestos: string
-  alcancePorServicio: string
-  timeline: string
+  portada: string
+  contextoCliente: string
+  diagnostico: string
+  oportunidad: string
+  solucion: string
+  alcance: string
+  incluyeNoIncluye: string
+  metodologia: string
+  cronograma: string
+  casosExito: string
+  diferenciadores: string
   inversion: string
-  casoDeExito?: string
   proximosPasos: string
+  ctaFinal: string
 }
 
 const ProposalSectionSchema = z.object({
-  resumenEjecutivo: z.string(),
-  problema: z.string(),
-  serviciosPropuestos: z.string(),
-  alcancePorServicio: z.string(),
-  timeline: z.string(),
-  inversion: z.string(),
-  casoDeExito: z.string().optional(),
-  proximosPasos: z.string(),
+  portada: z.string().describe('Portada con título atractivo y nombre del cliente'),
+  contextoCliente: z.string().describe('Contexto del cliente: industria, tamaño, situación actual'),
+  diagnostico: z.string().describe('Diagnóstico del problema con datos específicos'),
+  oportunidad: z.string().describe('Oportunidad detectada con métricas proyectadas'),
+  solucion: z.string().describe('Solución propuesta concreta'),
+  alcance: z.string().describe('Alcance detallado por servicio'),
+  incluyeNoIncluye: z.string().describe('Lista clara de qué incluye y qué no'),
+  metodologia: z.string().describe('Metodología de trabajo, sprints, comunicación'),
+  cronograma: z.string().describe('Cronograma con hitos por mes/semana'),
+  casosExito: z.string().describe('Caso de éxito relevante con resultados medibles'),
+  diferenciadores: z.string().describe('Por qué nosotros — diferenciadores únicos'),
+  inversion: z.string().describe('Inversión con tabla de servicios y total'),
+  proximosPasos: z.string().describe('Próximos pasos concretos'),
+  ctaFinal: z.string().describe('Call to action final motivador'),
 })
 
 const SECTION_LABELS: Record<keyof ProposalSections, string> = {
-  resumenEjecutivo: 'Resumen ejecutivo',
-  problema: 'Problema',
-  serviciosPropuestos: 'Servicios propuestos',
-  alcancePorServicio: 'Alcance por servicio',
-  timeline: 'Cronograma',
+  portada: 'Portada',
+  contextoCliente: 'Contexto del cliente',
+  diagnostico: 'Diagnóstico',
+  oportunidad: 'Oportunidad detectada',
+  solucion: 'Solución propuesta',
+  alcance: 'Alcance detallado',
+  incluyeNoIncluye: 'Qué incluye / no incluye',
+  metodologia: 'Metodología',
+  cronograma: 'Cronograma',
+  casosExito: 'Casos de éxito',
+  diferenciadores: 'Diferenciadores',
   inversion: 'Inversión',
-  casoDeExito: 'Caso de éxito',
   proximosPasos: 'Próximos pasos',
+  ctaFinal: 'CTA final',
 }
 
 const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'resumenEjecutivo', 'problema', 'serviciosPropuestos', 'alcancePorServicio',
-  'timeline', 'inversion', 'casoDeExito', 'proximosPasos',
+  'portada', 'contextoCliente', 'diagnostico', 'oportunidad', 'solucion',
+  'alcance', 'incluyeNoIncluye', 'metodologia', 'cronograma', 'casosExito',
+  'diferenciadores', 'inversion', 'proximosPasos', 'ctaFinal',
 ]
 
 interface Step3GenerateProps {
@@ -66,7 +86,6 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
 
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [proposalId, setProposalId] = useState<string | null>(null)
-  // Track whether we already fired the save to avoid duplicate POSTs
   const hasSavedRef = useRef(false)
 
   const partial = object as Partial<ProposalSections> | undefined
@@ -78,20 +97,29 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
       company: client.company,
       industry: client.industry ?? '',
       problema: context.problema,
+      objectives: context.objectives,
+      currentProblems: context.current_problems,
+      urgency: context.urgency,
       budget: context.budget,
-      timeline: context.timeline,
+      startDate: context.start_date,
+      services: context.services?.map((s) => ({
+        name: s.name,
+        price: s.adjusted_price,
+        quantity: s.quantity,
+        discount: s.discount_percent,
+        billing: s.billing_type,
+      })) ?? [],
+      formality: context.formality,
       tono: context.tono,
+      designTemplate: context.design_template,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // casoDeExito is optional, so we count required fields (all except casoDeExito)
-  const requiredSections = SECTION_ORDER.filter((k) => k !== 'casoDeExito')
-  const completedCount = requiredSections.filter((k) => !!partial?.[k]).length
-  const progressPct = Math.round((completedCount / requiredSections.length) * 100)
-  const isComplete = !isLoading && completedCount === requiredSections.length
+  const completedCount = SECTION_ORDER.filter((k) => !!partial?.[k]).length
+  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
+  const isComplete = !isLoading && completedCount === SECTION_ORDER.length
 
-  // Save to FastAPI once streaming finishes
   useEffect(() => {
     if (!isComplete || hasSavedRef.current || !partial) return
 
@@ -102,11 +130,15 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
     const body = {
       client_id: client.id,
       title,
-      template_id: context.template,
+      template_id: context.design_template,
       context: {
         problem: context.problema,
+        objectives: context.objectives,
+        urgency: context.urgency,
         budget: context.budget,
-        timeline: context.timeline,
+        formality: context.formality,
+        tono: context.tono,
+        services: context.services,
       },
       sections: partial as ProposalSections,
       tokens_used: 0,
@@ -120,7 +152,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
       body: JSON.stringify(body),
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error(`FastAPI ${res.status}`)
+        if (!res.ok) throw new Error(`API ${res.status}`)
         const data = (await res.json()) as { id: string; status: string; created_at: string }
         setProposalId(data.id)
         setSaveState('saved')
@@ -128,7 +160,6 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
       .catch((err: unknown) => {
         console.error('[Step3] save failed:', err)
         setSaveState('error')
-        // Allow advancing even on save error — user can retry from Step4
         setProposalId('')
       })
   }, [isComplete, partial, client, context])
@@ -145,48 +176,40 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
 
   return (
     <div className="space-y-6">
-      {/* Dark panel */}
       <div className="bg-[#0F172A] rounded-2xl p-6 border border-[#1E293B]">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-5">
           <div className="h-10 w-10 rounded-full bg-[#1D9E75]/20 flex items-center justify-center">
-            <Sparkles
-              className={`h-5 w-5 text-[#1D9E75] ${isLoading ? 'animate-pulse' : ''}`}
-            />
+            <Sparkles className={`h-5 w-5 text-[#1D9E75] ${isLoading ? 'animate-pulse' : ''}`} />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-white text-sm font-semibold">
                 {isComplete ? '¡Propuesta generada!' : isLoading ? 'Claude está generando...' : error ? 'Error al generar' : 'Listo para revisar'}
               </p>
               {saveState === 'saving' && (
                 <span className="flex items-center gap-1 text-[10px] text-[#94A3B8] animate-pulse">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Guardando...
+                  <Loader2 className="h-3 w-3 animate-spin" /> Guardando...
                 </span>
               )}
               {saveState === 'saved' && (
                 <span className="flex items-center gap-1 text-[10px] text-[#1D9E75]">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Guardado ✓
+                  <CheckCircle2 className="h-3 w-3" /> Guardado ✓
                 </span>
               )}
               {saveState === 'error' && (
                 <span className="text-[10px] text-red-400">No se pudo guardar</span>
               )}
             </div>
-            <p className="text-[#94A3B8] text-xs">{client.company} · {context.template}</p>
+            <p className="text-[#94A3B8] text-xs">{client.company} · {SECTION_ORDER.length} secciones · estilo {context.design_template}</p>
           </div>
           <div className="text-right">
             <span className="text-[#1D9E75] text-sm font-bold">{progressPct}%</span>
           </div>
         </div>
 
-        {/* Progress bar */}
         <Progress value={progressPct} className="h-1.5 mb-5 bg-[#1E293B]" />
 
-        {/* Sections */}
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {SECTION_ORDER.map((key, i) => {
             const status = getStatus(key)
             return (
@@ -194,10 +217,9 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
                 key={key}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#1E293B]/50"
+                transition={{ delay: i * 0.05 }}
+                className="flex items-center gap-3 p-2.5 rounded-lg bg-[#1E293B]/50"
               >
-                {/* Status icon */}
                 <div className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
                   {status === 'done' ? (
                     <CheckCircle2 className="h-5 w-5 text-[#1D9E75]" />
@@ -207,28 +229,14 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
                     <div className="h-4 w-4 rounded-full border border-[#334155]" />
                   )}
                 </div>
-
-                {/* Label + preview */}
                 <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-xs font-medium ${
-                      status === 'done'
-                        ? 'text-[#94A3B8]'
-                        : status === 'streaming'
-                          ? 'text-white'
-                          : 'text-[#475569]'
-                    }`}
-                  >
+                  <p className={`text-xs font-medium ${status === 'done' ? 'text-[#94A3B8]' : status === 'streaming' ? 'text-white' : 'text-[#475569]'}`}>
+                    <span className="text-[10px] text-[#475569] mr-1">{String(i + 1).padStart(2, '0')}</span>
                     {SECTION_LABELS[key]}
                   </p>
-                  {status === 'done' && partial?.[key] && (
-                    <p className="text-xs text-[#475569] mt-0.5 truncate">
-                      {partial[key]?.substring(0, 70)}...
-                    </p>
-                  )}
                   {status === 'streaming' && (
                     <div className="flex gap-1 mt-1">
-                      {[40, 70, 55, 85].map((w, j) => (
+                      {[40, 70, 55].map((w, j) => (
                         <motion.div
                           key={j}
                           className="h-1 bg-[#1D9E75]/40 rounded"
@@ -244,38 +252,25 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
             )
           })}
         </div>
-
-        {error && (
-          <p className="mt-4 text-sm text-red-400 text-center">{error.message}</p>
-        )}
-
-        <p className="text-center text-xs text-[#475569] mt-4">
-          Esta propuesta usa Claude Sonnet · estimado ~30 segundos
-        </p>
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} disabled={isLoading} size="lg">
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          Error al generar: {error.message}
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        <Button variant="outline" onClick={onBack} size="lg" disabled={isLoading}>
           Atrás
         </Button>
         <Button
-          onClick={() => {
-            if (isComplete && partial && proposalId !== null) {
-              onNext(partial as ProposalSections, proposalId)
-            }
-          }}
-          disabled={!isComplete || saveState === 'saving' || proposalId === null}
+          onClick={() => isComplete && partial && onNext(partial as ProposalSections, proposalId ?? '')}
+          disabled={!isComplete}
           size="lg"
-          className="flex-1 bg-[#1D9E75] hover:bg-[#158a63] text-white"
+          className="flex-1"
         >
-          {saveState === 'saving' ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Guardando...
-            </span>
-          ) : (
-            'Revisar propuesta →'
-          )}
+          {isComplete ? 'Revisar y exportar →' : isLoading ? `Generando... ${progressPct}%` : 'Esperando...'}
         </Button>
       </div>
     </div>
