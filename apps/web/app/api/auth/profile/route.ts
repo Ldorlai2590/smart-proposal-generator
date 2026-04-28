@@ -10,21 +10,7 @@ const PatchSchema = z.object({
  * Stored in Supabase auth.users.user_metadata.full_name.
  */
 export async function PATCH(req: Request) {
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return Response.json({ error: 'JSON inválido' }, { status: 400 })
-  }
-
-  const parsed = PatchSchema.safeParse(body)
-  if (!parsed.success) {
-    return Response.json(
-      { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
-      { status: 400 }
-    )
-  }
-
+  // 1. Auth FIRST
   const supabase = await createClient()
   const {
     data: { user },
@@ -33,6 +19,23 @@ export async function PATCH(req: Request) {
 
   if (getUserError || !user) {
     return Response.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
+  // 2. Body parse
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: 'JSON inválido' }, { status: 400 })
+  }
+
+  // 3. Schema validation
+  const parsed = PatchSchema.safeParse(body)
+  if (!parsed.success) {
+    return Response.json(
+      { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
+      { status: 400 }
+    )
   }
 
   const { data, error } = await supabase.auth.updateUser({

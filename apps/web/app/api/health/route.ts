@@ -27,28 +27,24 @@ export async function GET(req: Request) {
     NODE_ENV: process.env.NODE_ENV ?? 'NOT SET',
   }
 
+  // Health check usa Supabase REST (mismo camino que la app real).
+  // El postgres directo no se usa en runtime — Drizzle se migró a REST
+  // porque Vercel tenía problemas de conectividad TCP a Supabase pooler.
   let dbStatus: string
   if (DEMO_MODE) {
     dbStatus = 'skipped (demo mode)'
-  } else if (!process.env.DATABASE_URL) {
-    dbStatus = 'skipped (no DATABASE_URL)'
+  } else if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    dbStatus = 'skipped (no Supabase config)'
   } else {
     try {
-      const postgres = (await import('postgres')).default
-      const sql = postgres(process.env.DATABASE_URL, {
-        prepare: false,
-        ssl: 'require',
-        connect_timeout: 5,
-      })
-      try {
-        const result = await sql`SELECT count(*) as n FROM tenants`
-        dbStatus = `connected - ${result[0].n} tenants`
-      } finally {
-        // Always release the connection, even on query failure.
-        await sql.end({ timeout: 2 }).catch(() => {})
-      }
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = createAdminClient()
+      const { count, error } = await admin
+        .from('tenants')
+        .select('*', { count: 'exact', head: true })
+      if (error) throw new Error(error.message)
+      dbStatus = `connected - ${count ?? 0} tenants`
     } catch (e: unknown) {
-      // Log the real error server-side for ops, return a sanitized string.
       log.error('health_db_unreachable', {
         err: e instanceof Error ? e.message : String(e),
       })

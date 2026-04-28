@@ -34,15 +34,29 @@ type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected'
 
 // ─── Section config ──────────────────────────────────────────
 
+// 14 secciones del schema v2 (sincronizado con stream API y Step4Review)
 const SECTION_ORDER: { key: string; label: string; icon: string }[] = [
-  { key: 'resumenEjecutivo', label: 'Resumen Ejecutivo', icon: '1' },
-  { key: 'problema', label: 'El Problema', icon: '2' },
-  { key: 'serviciosPropuestos', label: 'Servicios Propuestos', icon: '3' },
-  { key: 'alcancePorServicio', label: 'Alcance por Servicio', icon: '4' },
-  { key: 'timeline', label: 'Cronograma', icon: '5' },
-  { key: 'inversion', label: 'Inversión', icon: '6' },
-  { key: 'casoDeExito', label: 'Caso de Éxito', icon: '7' },
-  { key: 'proximosPasos', label: 'Próximos Pasos', icon: '8' },
+  { key: 'portada', label: 'Portada', icon: '01' },
+  { key: 'contextoCliente', label: 'Contexto del cliente', icon: '02' },
+  { key: 'diagnostico', label: 'Diagnóstico', icon: '03' },
+  { key: 'oportunidad', label: 'Oportunidad detectada', icon: '04' },
+  { key: 'solucion', label: 'Solución propuesta', icon: '05' },
+  { key: 'alcance', label: 'Alcance detallado', icon: '06' },
+  { key: 'incluyeNoIncluye', label: 'Qué incluye / no incluye', icon: '07' },
+  { key: 'metodologia', label: 'Metodología', icon: '08' },
+  { key: 'cronograma', label: 'Cronograma', icon: '09' },
+  { key: 'casosExito', label: 'Casos de éxito', icon: '10' },
+  { key: 'diferenciadores', label: 'Diferenciadores', icon: '11' },
+  { key: 'inversion', label: 'Inversión', icon: '12' },
+  { key: 'proximosPasos', label: 'Próximos pasos', icon: '13' },
+  { key: 'ctaFinal', label: 'CTA final', icon: '14' },
+  // Backwards compat: si llega una propuesta vieja con schema 8 secciones
+  { key: 'resumenEjecutivo', label: 'Resumen Ejecutivo (legacy)', icon: '★' },
+  { key: 'problema', label: 'Problema (legacy)', icon: '★' },
+  { key: 'serviciosPropuestos', label: 'Servicios (legacy)', icon: '★' },
+  { key: 'alcancePorServicio', label: 'Alcance (legacy)', icon: '★' },
+  { key: 'timeline', label: 'Timeline (legacy)', icon: '★' },
+  { key: 'casoDeExito', label: 'Caso éxito (legacy)', icon: '★' },
 ]
 
 const STATUS_STYLES: Record<ProposalStatus, string> = {

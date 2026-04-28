@@ -209,39 +209,17 @@ IMPORTANTE:
       ],
     })
 
-    // Post-stream: persist usage + proposal record
-    const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+    // Post-stream: increment usage only.
+    // La persistencia de la propuesta la hace el cliente (Step3Generate.tsx)
+    // vía POST /api/proposals una vez completado el stream — fuente única de verdad.
     result.object
-      .then(async (sections) => {
+      .then(async () => {
         try {
           const { incrementProposalUsage } = await import('@/lib/trial')
           await incrementProposalUsage(tenantId).catch(() => {})
-          const createRes = await fetch(`${apiUrl}/proposals/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              client_id: input.clientId,
-              title: `Propuesta para ${input.company}`,
-              context: {
-                problema: input.problema,
-                services: input.services,
-                budget: input.budget,
-                timeline: input.timeline,
-                tono: input.tono,
-              },
-            }),
-          })
-          if (createRes.ok) {
-            const { id } = await createRes.json()
-            await fetch(`${apiUrl}/proposals/${id}/sections`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sections, model: 'claude-sonnet-4-5' }),
-            })
-          }
-          log.info('stream_persisted', { clientId: input.clientId, durationMs: Date.now() - start })
+          log.info('stream_completed', { clientId: input.clientId, durationMs: Date.now() - start })
         } catch (err) {
-          log.error('stream_persist_failed', { err: err instanceof Error ? err.message : String(err) })
+          log.error('stream_post_failed', { err: err instanceof Error ? err.message : String(err) })
         }
       })
       .catch((err) => {

@@ -52,6 +52,18 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  // 1. Auth FIRST — no leak schema details a unauthenticated callers
+  let userId: string
+  let tenantId: string
+  try {
+    const session = await requireAuth()
+    userId = session.userId
+    tenantId = session.tenantId
+  } catch {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // 2. Body parse
   let body: unknown
   try {
     body = await req.json()
@@ -59,13 +71,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
+  // 3. Schema validation
   const parsed = NewProposalSchema.safeParse(body)
   if (!parsed.success) {
     return Response.json({ error: 'Validation failed', issues: parsed.error.issues }, { status: 400 })
   }
 
   try {
-    const { userId, tenantId } = await requireAuth()
     const admin = createAdminClient()
     const data = parsed.data
 

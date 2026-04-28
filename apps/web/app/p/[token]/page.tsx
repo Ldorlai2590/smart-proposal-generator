@@ -29,8 +29,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
 
   useEffect(() => {
     if (!proposal) return
-    // Track view (no real backend yet — just log)
-    console.log('[track] view', { token, proposal: proposal.id })
+    // TODO Phase 3: enviar evento 'view' a /api/p/[token]/track con device + geo
 
     // IntersectionObserver to highlight current section
     const observer = new IntersectionObserver(

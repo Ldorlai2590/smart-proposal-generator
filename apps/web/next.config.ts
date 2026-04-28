@@ -29,7 +29,9 @@ const CSP_DIRECTIVES: Array<[string, string]> = [
       ? "'self' 'unsafe-inline'"
       : "'self' 'unsafe-eval' 'unsafe-inline'",
   ],
-  ['connect-src', "'self' https://api.anthropic.com"],
+  // Anthropic API se llama solo server-side vía AI SDK; no permitimos
+  // requests directos desde el cliente para prevenir leak de keys.
+  ['connect-src', "'self'"],
   ['worker-src', "'self' blob:"],
   ['manifest-src', "'self'"],
   ['upgrade-insecure-requests', ''],
@@ -55,6 +57,8 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['@repo/ui'],
+  // No exponer "Next.js" en X-Powered-By
+  poweredByHeader: false,
   async headers() {
     return [
       {
