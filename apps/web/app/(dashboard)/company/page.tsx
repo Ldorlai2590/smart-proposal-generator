@@ -1,0 +1,354 @@
+'use client'
+
+import { useState } from 'react'
+import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Upload, Plus, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { DEMO_COMPANY } from '@/lib/demo-v2'
+
+const COUNTRIES = ['Chile', 'México', 'Colombia', 'Argentina', 'Perú', 'Otro']
+const CURRENCIES = ['USD', 'CLP', 'MXN', 'COP', 'ARS', 'PEN'] as const
+const ALL_INDUSTRIES = ['Tecnología', 'SaaS', 'Salud', 'Retail', 'Finanzas', 'Educación', 'Inmobiliario', 'Manufactura', 'Servicios profesionales', 'Logística', 'Alimentación', 'Otros']
+const FONTS = ['Inter', 'Geist', 'Roboto', 'Poppins', 'Montserrat']
+
+type Section = 'identity' | 'business' | 'branding' | 'assets'
+
+export default function CompanyPage() {
+  const [active, setActive] = useState<Section>('identity')
+  const [data, setData] = useState(DEMO_COMPANY)
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [diffInput, setDiffInput] = useState('')
+
+  function update<K extends keyof typeof DEMO_COMPANY>(key: K, value: typeof DEMO_COMPANY[K]) {
+    setData((d) => ({ ...d, [key]: value }))
+  }
+
+  function toggleIndustry(ind: string) {
+    const current = data.focus_industries ?? []
+    update('focus_industries', current.includes(ind) ? current.filter((i) => i !== ind) : [...current, ind])
+  }
+
+  function addDifferentiator() {
+    if (!diffInput.trim()) return
+    update('differentiators', [...(data.differentiators ?? []), diffInput.trim()])
+    setDiffInput('')
+  }
+
+  function removeDifferentiator(idx: number) {
+    update('differentiators', (data.differentiators ?? []).filter((_, i) => i !== idx))
+  }
+
+  async function handleSave() {
+    setSaved('saving')
+    await new Promise((r) => setTimeout(r, 600))
+    setSaved('saved')
+    setTimeout(() => setSaved('idle'), 2000)
+  }
+
+  return (
+    <div className="max-w-5xl">
+      <header className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-[#1D9E75]" />
+            Mi Empresa
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Perfil maestro de tu empresa proveedora — la base que el sistema usará para generar propuestas inteligentes.</p>
+        </div>
+        <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
+          saved === 'saved' ? 'bg-green-50 text-green-700' :
+          saved === 'saving' ? 'bg-blue-50 text-blue-700' :
+          'bg-gray-100 text-gray-600'
+        }`}>
+          {saved === 'saved' ? '✓ Guardado' : saved === 'saving' ? 'Guardando…' : 'Auto-guardado activo'}
+        </span>
+      </header>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-gray-50 p-1 rounded-xl border border-gray-100 w-fit">
+        {[
+          { id: 'identity', label: 'Identidad' },
+          { id: 'business', label: 'Negocio' },
+          { id: 'branding', label: 'Branding' },
+          { id: 'assets', label: 'Activos comerciales' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActive(tab.id as Section)}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              active === tab.id
+                ? 'bg-white text-[#1D9E75] shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Identity Section */}
+      {active === 'identity' && (
+        <div className="space-y-6">
+          <Card title="Datos generales">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Nombre empresa" required>
+                <input value={data.name} onChange={(e) => update('name', e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Sitio web">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Globe className="h-4 w-4" /></span>
+                  <input value={data.website ?? ''} onChange={(e) => update('website', e.target.value)} className={`${inputCls} rounded-l-none`} placeholder="https://..." />
+                </div>
+              </Field>
+              <Field label="Email corporativo">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Mail className="h-4 w-4" /></span>
+                  <input value={data.email ?? ''} onChange={(e) => update('email', e.target.value)} className={`${inputCls} rounded-l-none`} />
+                </div>
+              </Field>
+              <Field label="Teléfono">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Phone className="h-4 w-4" /></span>
+                  <input value={data.phone ?? ''} onChange={(e) => update('phone', e.target.value)} className={`${inputCls} rounded-l-none`} />
+                </div>
+              </Field>
+              <Field label="País principal">
+                <select value={data.country} onChange={(e) => update('country', e.target.value)} className={inputCls}>
+                  {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Moneda base">
+                <select value={data.currency} onChange={(e) => update('currency', e.target.value as typeof CURRENCIES[number])} className={inputCls}>
+                  {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </Field>
+            </div>
+          </Card>
+
+          <Card title="Redes sociales">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Instagram">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Instagram className="h-4 w-4" /></span>
+                  <input value={data.instagram ?? ''} onChange={(e) => update('instagram', e.target.value)} placeholder="@usuario" className={`${inputCls} rounded-l-none`} />
+                </div>
+              </Field>
+              <Field label="Facebook">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Facebook className="h-4 w-4" /></span>
+                  <input value={data.facebook ?? ''} onChange={(e) => update('facebook', e.target.value)} className={`${inputCls} rounded-l-none`} />
+                </div>
+              </Field>
+              <Field label="LinkedIn">
+                <div className="flex"><span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500 text-sm"><Linkedin className="h-4 w-4" /></span>
+                  <input value={data.linkedin ?? ''} onChange={(e) => update('linkedin', e.target.value)} className={`${inputCls} rounded-l-none`} />
+                </div>
+              </Field>
+              <Field label="TikTok">
+                <input value={data.tiktok ?? ''} onChange={(e) => update('tiktok', e.target.value)} placeholder="@usuario" className={inputCls} />
+              </Field>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Business Section */}
+      {active === 'business' && (
+        <div className="space-y-6">
+          <Card title="¿Qué hace tu empresa?">
+            <Field label="Descripción">
+              <textarea value={data.what_we_do ?? ''} onChange={(e) => update('what_we_do', e.target.value)} rows={3} maxLength={500} className={inputCls} />
+              <p className="text-xs text-gray-400 mt-1">{(data.what_we_do?.length ?? 0)}/500 caracteres</p>
+            </Field>
+            <Field label="Propósito / Misión">
+              <textarea value={data.purpose ?? ''} onChange={(e) => update('purpose', e.target.value)} rows={2} className={inputCls} />
+            </Field>
+            <Field label="Tipo de cliente ideal">
+              <textarea value={data.ideal_clients ?? ''} onChange={(e) => update('ideal_clients', e.target.value)} rows={2} placeholder="Ej: Pymes B2B con $500K+ de facturación anual..." className={inputCls} />
+            </Field>
+          </Card>
+
+          <Card title="Diferenciadores">
+            <p className="text-xs text-gray-500 mb-3">¿Qué te hace único? Agrega hasta 5 diferenciadores que el sistema usará en cada propuesta.</p>
+            <div className="space-y-2 mb-3">
+              {(data.differentiators ?? []).map((d, idx) => (
+                <div key={idx} className="flex items-center gap-2 p-3 bg-[#e6f7f2] border border-[#1D9E75]/20 rounded-lg">
+                  <CheckCircle2 className="h-4 w-4 text-[#1D9E75] flex-shrink-0" />
+                  <span className="flex-1 text-sm text-gray-700">{d}</span>
+                  <button onClick={() => removeDifferentiator(idx)} className="text-gray-400 hover:text-red-500"><X className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+            {(data.differentiators?.length ?? 0) < 5 && (
+              <div className="flex gap-2">
+                <input value={diffInput} onChange={(e) => setDiffInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addDifferentiator()} placeholder="Ej: Equipo 100% LATAM" className={inputCls} />
+                <button onClick={addDifferentiator} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar</button>
+              </div>
+            )}
+          </Card>
+
+          <Card title="Industrias foco">
+            <p className="text-xs text-gray-500 mb-3">Selecciona las industrias donde te enfocas. El sistema optimizará propuestas según esto.</p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_INDUSTRIES.map((ind) => {
+                const active = (data.focus_industries ?? []).includes(ind)
+                return (
+                  <button
+                    key={ind}
+                    onClick={() => toggleIndustry(ind)}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      active
+                        ? 'bg-[#1D9E75] text-white border-[#1D9E75]'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {ind}
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Branding Section */}
+      {active === 'branding' && (
+        <div className="space-y-6">
+          <Card title="Logo">
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-[#1D9E75] transition-colors cursor-pointer">
+              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 font-medium">Arrastra tu logo aquí o haz click</p>
+              <p className="text-xs text-gray-400 mt-1">PNG, SVG · Mín 512x512 · Máx 2MB</p>
+            </div>
+          </Card>
+
+          <Card title="Colores corporativos">
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { key: 'primary_color' as const, label: 'Color primario' },
+                { key: 'secondary_color' as const, label: 'Color secundario' },
+                { key: 'accent_color' as const, label: 'Color acento' },
+              ].map(({ key, label }) => (
+                <Field key={key} label={label}>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={data[key] ?? '#1D9E75'} onChange={(e) => update(key, e.target.value)} className="h-10 w-14 rounded border border-gray-200 cursor-pointer" />
+                    <input type="text" value={data[key] ?? ''} onChange={(e) => update(key, e.target.value)} className={`${inputCls} font-mono text-sm`} />
+                  </div>
+                </Field>
+              ))}
+            </div>
+          </Card>
+
+          <Card title="Tipografías">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Tipografía títulos">
+                <select value={data.font_heading ?? 'Inter'} onChange={(e) => update('font_heading', e.target.value)} className={inputCls}>
+                  {FONTS.map((f) => <option key={f}>{f}</option>)}
+                </select>
+              </Field>
+              <Field label="Tipografía cuerpo">
+                <select value={data.font_body ?? 'Inter'} onChange={(e) => update('font_body', e.target.value)} className={inputCls}>
+                  {FONTS.map((f) => <option key={f}>{f}</option>)}
+                </select>
+              </Field>
+            </div>
+          </Card>
+
+          <Card title="Manual de marca y propuesta ejemplo">
+            <div className="space-y-3">
+              <ToggleRow label="Tengo manual de marca" enabled={data.has_brand_manual} onChange={(v) => update('has_brand_manual', v)} hint={!data.has_brand_manual ? 'Crearemos identidad visual base profesional automáticamente' : 'Sube tu manual PDF para mantener consistencia'} />
+              <ToggleRow label="Tengo propuesta ejemplo" enabled={data.has_example_proposal} onChange={(v) => update('has_example_proposal', v)} hint={!data.has_example_proposal ? 'Crearemos un template profesional automáticamente' : 'Sube tu propuesta ejemplo para clonar el estilo'} />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Assets Section */}
+      {active === 'assets' && (
+        <div className="space-y-6">
+          <Card title="Casos de éxito">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">Configura tus casos de éxito para usarlos automáticamente en propuestas</p>
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">0 casos</span>
+            </div>
+            <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
+              <Plus className="h-4 w-4" /> Agregar caso de éxito
+            </button>
+          </Card>
+
+          <Card title="Testimonios">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">Quotes de clientes para construir credibilidad</p>
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">0 testimonios</span>
+            </div>
+            <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
+              <Plus className="h-4 w-4" /> Agregar testimonio
+            </button>
+          </Card>
+
+          <Card title="Logos de clientes" subtitle="Logos para mostrar en social proof">
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-sm text-gray-500">
+              <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+              Subir logos de clientes (próximamente)
+            </div>
+          </Card>
+
+          <Card title="Certificaciones y FAQ comerciales">
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900">Sección disponible próximamente — la generación automática de propuestas ya considera placeholders.</p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Sticky save footer */}
+      <div className="sticky bottom-4 mt-8 flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saved === 'saving'}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-[#1D9E75] text-white font-semibold rounded-xl hover:bg-[#158a63] shadow-lg disabled:opacity-60 transition-colors"
+        >
+          <Save className="h-4 w-4" />
+          {saved === 'saving' ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const inputCls = 'w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40 focus:border-[#1D9E75] transition-colors'
+
+function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h2 className="font-semibold text-gray-900 mb-1">{title}</h2>
+      {subtitle && <p className="text-xs text-gray-500 mb-4">{subtitle}</p>}
+      <div className={subtitle ? '' : 'mt-4'}>{children}</div>
+    </div>
+  )
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="mb-4 last:mb-0">
+      <label className="block text-xs font-medium text-gray-600 mb-1.5">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function ToggleRow({ label, enabled, onChange, hint }: { label: string; enabled: boolean; onChange: (v: boolean) => void; hint?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 p-4 bg-gray-50 rounded-lg">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{label}</p>
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!enabled)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+          enabled ? 'bg-[#1D9E75]' : 'bg-gray-300'
+        }`}
+      >
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+      </button>
+    </div>
+  )
+}

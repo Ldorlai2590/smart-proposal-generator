@@ -14,15 +14,31 @@ import {
   Zap,
   User,
   LogOut,
+  Building2,
+  Package,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string
+  label: string
+  icon: typeof LayoutDashboard
+  isNew?: boolean
+}
+
+const MAIN_NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/proposals', label: 'Propuestas', icon: FileText },
+  { href: '/company', label: 'Mi Empresa', icon: Building2, isNew: true },
+  { href: '/services', label: 'Servicios', icon: Package, isNew: true },
   { href: '/clients', label: 'Clientes', icon: Users },
+  { href: '/proposals', label: 'Propuestas', icon: FileText },
+  { href: '/tracking', label: 'Seguimiento', icon: Activity, isNew: true },
   { href: '/analytics', label: 'Analítica', icon: BarChart3 },
+]
+
+const SECONDARY_NAV_ITEMS: NavItem[] = [
   { href: '/billing', label: 'Facturación', icon: CreditCard },
   { href: '/settings', label: 'Configuración', icon: Settings },
 ]
@@ -86,13 +102,54 @@ export function Sidebar() {
             <span className="font-bold text-white text-base tracking-tight">
               Smart<span className="text-[#1D9E75]">SPG</span>
             </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1D9E75]/20 text-[#1D9E75]">
+              v2
+            </span>
           </div>
         )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {MAIN_NAV_ITEMS.map((item) => {
+          const active = isActive(item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={collapsed ? item.label : undefined}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                active
+                  ? 'bg-[#1E293B] text-white border-l-[3px] border-[#1D9E75] pl-[9px]'
+                  : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-[#F8FAFC] border-l-[3px] border-transparent pl-[9px]',
+                collapsed && 'justify-center pl-0 border-l-0',
+              )}
+            >
+              <item.icon
+                className={cn(
+                  'h-4 w-4 flex-shrink-0',
+                  active ? 'text-[#1D9E75]' : 'text-[#94A3B8]',
+                )}
+              />
+              {!collapsed && (
+                <>
+                  <span>{item.label}</span>
+                  {item.isNew && (
+                    <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#1D9E75]/20 text-[#1D9E75]">
+                      Nuevo
+                    </span>
+                  )}
+                </>
+              )}
+            </Link>
+          )
+        })}
+
+        {/* Section divider */}
+        <div className="my-2 mx-2 border-t border-[#1E293B]" />
+
+        {SECONDARY_NAV_ITEMS.map((item) => {
           const active = isActive(item.href)
           return (
             <Link

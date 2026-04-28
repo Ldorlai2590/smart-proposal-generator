@@ -9,6 +9,9 @@ const PROTECTED_PATHS = [
   '/billing',
   '/onboarding',
   '/settings',
+  '/company',
+  '/services',
+  '/tracking',
 ]
 
 const AUTH_PATHS = ['/sign-in', '/sign-up', '/reset-password']
