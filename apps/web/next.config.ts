@@ -31,7 +31,7 @@ const CSP_DIRECTIVES: Array<[string, string]> = [
   ],
   // Anthropic API se llama solo server-side vía AI SDK; no permitimos
   // requests directos desde el cliente para prevenir leak de keys.
-  ['connect-src', "'self'"],
+  ['connect-src', "'self' https://*.supabase.co wss://*.supabase.co"],
   ['worker-src', "'self' blob:"],
   ['manifest-src', "'self'"],
   ['upgrade-insecure-requests', ''],

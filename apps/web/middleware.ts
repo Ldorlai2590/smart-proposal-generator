@@ -40,21 +40,16 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session — required by @supabase/ssr
-  // Wrapped in try/catch: if Supabase throws (e.g. invalid config, network error),
-  // we pass the request through rather than returning an unhandled HTML 500.
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
   try {
     const { data } = await supabase.auth.getUser()
     user = data.user
   } catch {
-    // Auth refresh failed — let route handlers deal with authentication
     return supabaseResponse
   }
 
   const pathname = request.nextUrl.pathname
 
-  // Skip auth checks for excluded paths (OAuth callbacks, public endpoints)
   if (EXCLUDED_PATHS.some((p) => pathname.startsWith(p))) {
     return supabaseResponse
   }
@@ -62,15 +57,12 @@ export async function middleware(request: NextRequest) {
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p))
   const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p))
 
-  // Redirect unauthenticated users from protected routes
   if (!user && isProtected) {
     const url = request.nextUrl.clone()
     url.pathname = '/sign-in'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages (sign-in, sign-up, reset-password)
-  // Covers both traditional and OAuth sessions
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
@@ -87,9 +79,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Exclude Next.js internals and static files
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Include API and tRPC routes, including OAuth callbacks (auth/callback)
     '/(api|trpc)(.*)',
   ],
 }

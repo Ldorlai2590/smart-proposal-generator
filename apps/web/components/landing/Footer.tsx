@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Zap } from 'lucide-react'
+import { Zap, Linkedin } from 'lucide-react'
 
 const LINKS = {
   Producto: [
@@ -64,9 +64,12 @@ export function Footer() {
           <p className="text-xs text-gray-400">
             © {new Date().getFullYear()} SmartSPG. Todos los derechos reservados.
           </p>
-          <p className="text-xs text-gray-400">
-            Hecho en LATAM · Chile · México · Colombia
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-gray-400">Hecho en LATAM · Chile · México · Colombia</p>
+            <a href="https://linkedin.com/company/smartspg" aria-label="LinkedIn" className="text-gray-400 hover:text-[#1D9E75] transition-colors">
+              <Linkedin className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
