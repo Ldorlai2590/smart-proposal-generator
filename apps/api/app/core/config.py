@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     email_from: str = "propuestas@smartproposal.ai"
     apitally_client_id: str = ""
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Used by the embeddings service when a real provider is wired in
+    # (e.g. OpenAI text-embedding-3-small or Cohere embed-multilingual-v3)
+    embedding_api_key: str = ""
 
 
 settings = Settings()  # type: ignore[call-arg]
