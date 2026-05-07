@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, AsyncSessionLocal
 from app.shared.tenant import require_tenant
 from app.modules.embeddings.schemas import (
     SemanticSearchRequest,
@@ -36,19 +36,20 @@ async def index_proposal_endpoint(
         GetProposalQuery(tenant_id=tenant_id, proposal_id=proposal_id), db
     )
 
-    async def _do_index() -> None:
-        async with db.get_bind().connect() as conn:  # type: ignore[attr-defined]
-            from app.core.database import AsyncSessionLocal
+    # Capture values for the background closure (don't hold the request session)
+    _title = proposal.title
+    _sections = dict(proposal.sections)
 
-            async with AsyncSessionLocal() as bg_db:
-                await index_proposal(
-                    tenant_id=tenant_id,
-                    proposal_id=proposal_id,
-                    title=proposal.title,
-                    sections=proposal.sections,
-                    db=bg_db,
-                )
-                await bg_db.commit()
+    async def _do_index() -> None:
+        async with AsyncSessionLocal() as bg_db:
+            await index_proposal(
+                tenant_id=tenant_id,
+                proposal_id=proposal_id,
+                title=_title,
+                sections=_sections,
+                db=bg_db,
+            )
+            await bg_db.commit()
 
     background_tasks.add_task(_do_index)
 
