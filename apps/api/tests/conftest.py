@@ -7,8 +7,23 @@ Strategy
   dependency-override mechanism, so no real PostgreSQL is required.
 - The ASGI app is exercised through httpx.AsyncClient with ASGITransport.
 - External services (DocuForge, Resend) are mocked at the httpx level.
+
+Bootstrap note
+--------------
+`app.core.config.Settings` requires DATABASE_URL at import time (Pydantic
+BaseSettings).  We inject a dummy DSN via the environment before any app
+module is imported so the test suite works without a live database.
 """
 from __future__ import annotations
+
+import os
+
+# Must be set before any app module is imported so pydantic-settings
+# doesn't raise a ValidationError for the required `database_url` field.
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db",
+)
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
