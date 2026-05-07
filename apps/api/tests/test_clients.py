@@ -101,19 +101,24 @@ async def test_create_client_minimal_fields(client_no_db):
     """POST /api/v1/clients/ with only required 'name' field returns 201."""
     http_client, mock_db = client_no_db
 
-    fake_client = make_fake_client(tenant_id=TENANT_A, company=None, email=None)
+    from uuid import uuid4 as _uuid4
+    from datetime import datetime, timezone as tz
+    _new_id = _uuid4()
+    _now = datetime.now(tz.utc)
 
     async def refresh_side_effect(obj):
-        obj.id = fake_client.id
-        obj.tenant_id = fake_client.tenant_id
-        obj.name = fake_client.name
+        # Populate only the fields the schema needs; do NOT overwrite obj.name
+        # so the handler-assigned name ("Solo Founder") is preserved.
+        obj.id = _new_id
+        obj.tenant_id = TENANT_A
+        # obj.name was set by handle_create_client from the command — leave it
         obj.company = None
         obj.email = None
         obj.industry = None
         obj.company_size = None
         obj.score = 0
-        obj.created_at = fake_client.created_at
-        obj.updated_at = fake_client.updated_at
+        obj.created_at = _now
+        obj.updated_at = _now
 
     mock_db.refresh.side_effect = refresh_side_effect
 
@@ -555,19 +560,23 @@ async def test_create_client_default_score_is_zero(client_no_db):
     """Clients created without a score default to 0."""
     http_client, mock_db = client_no_db
 
-    fake_client = make_fake_client(tenant_id=TENANT_A, score=0)
+    from uuid import uuid4 as _uuid4
+    from datetime import datetime, timezone as tz
+    _new_id = _uuid4()
+    _now = datetime.now(tz.utc)
 
     async def refresh_side_effect(obj):
-        obj.id = fake_client.id
-        obj.tenant_id = fake_client.tenant_id
-        obj.name = fake_client.name
-        obj.company = fake_client.company
-        obj.email = fake_client.email
-        obj.industry = fake_client.industry
-        obj.company_size = fake_client.company_size
+        # Populate schema-required fields without overwriting handler-assigned values
+        obj.id = _new_id
+        obj.tenant_id = TENANT_A
+        # obj.name preserved from handler (cmd.name = "New Client Without Score")
+        obj.company = None
+        obj.email = None
+        obj.industry = None
+        obj.company_size = None
         obj.score = 0
-        obj.created_at = fake_client.created_at
-        obj.updated_at = fake_client.updated_at
+        obj.created_at = _now
+        obj.updated_at = _now
 
     mock_db.refresh.side_effect = refresh_side_effect
 

@@ -120,11 +120,15 @@ async def test_create_proposal_with_sections_sets_generated_status(client_no_db)
         "tokens_used": 1500,
         "model": "claude-sonnet-4-5",
     }
-    resp = await http_client.post(
-        "/api/v1/proposals/",
-        headers=tenant_headers(TENANT_A, USER_ID),
-        json=payload,
-    )
+
+    # The router enqueues a background task that opens AsyncSessionLocal (real DB).
+    # We patch the indexing coroutine so it is a no-op during unit tests.
+    with patch("app.modules.proposals.router._index_proposal", new=AsyncMock(return_value=0)):
+        resp = await http_client.post(
+            "/api/v1/proposals/",
+            headers=tenant_headers(TENANT_A, USER_ID),
+            json=payload,
+        )
 
     assert resp.status_code == 201, resp.text
     assert resp.json()["status"] == "generated"
@@ -383,15 +387,18 @@ async def test_update_proposal_sections_success(client_no_db):
     mock_db.execute.return_value = _scalar_result(proposal)
     mock_db.refresh.side_effect = refresh_side_effect
 
-    resp = await http_client.patch(
-        f"/api/v1/proposals/{proposal.id}/sections",
-        headers=tenant_headers(TENANT_A),
-        json={
-            "sections": new_sections,
-            "tokens_used": 2000,
-            "model": "claude-sonnet-4-5",
-        },
-    )
+    # The router enqueues a background task that opens AsyncSessionLocal (real DB).
+    # Patch the indexing coroutine so it is a no-op during unit tests.
+    with patch("app.modules.proposals.router._index_proposal", new=AsyncMock(return_value=0)):
+        resp = await http_client.patch(
+            f"/api/v1/proposals/{proposal.id}/sections",
+            headers=tenant_headers(TENANT_A),
+            json={
+                "sections": new_sections,
+                "tokens_used": 2000,
+                "model": "claude-sonnet-4-5",
+            },
+        )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["status"] == "generated"
