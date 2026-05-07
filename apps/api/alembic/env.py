@@ -8,6 +8,7 @@ from app.core.database import Base
 # Importar todos los modelos para que Alembic los detecte
 from app.modules.clients.models import Client  # noqa
 from app.modules.proposals.models import Proposal  # noqa
+from app.modules.embeddings.models import ProposalEmbedding  # noqa
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
