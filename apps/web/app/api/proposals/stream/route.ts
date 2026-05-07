@@ -1,11 +1,10 @@
 import { streamObject } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 
-// Hard upper bound on the full generation. Anthropic streams can hang on
-// upstream errors; this guarantees a client-visible failure within 60s.
+// Hard upper bound on the full generation. Guarantees a client-visible failure within 60s.
 const STREAM_TIMEOUT_MS = 60_000
 
 // 14-section schema per Smart Proposal v2 spec
@@ -194,17 +193,11 @@ IMPORTANTE:
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   try {
     const result = streamObject({
-      model: anthropic('claude-sonnet-4-5'),
+      model: google('gemini-2.0-flash'),
       schema: ProposalSectionSchema,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       messages: [
-        {
-          role: 'system',
-          content: system,
-          experimental_providerMetadata: {
-            anthropic: { cacheControl: { type: 'ephemeral' } },
-          },
-        },
+        { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
     })

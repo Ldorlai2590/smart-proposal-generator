@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'NOT SET',
     DEMO_MODE: process.env.DEMO_MODE ?? 'NOT SET',
     NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE ?? 'NOT SET',
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? 'set' : 'NOT SET',
+    GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY ? 'set' : 'NOT SET',
     NODE_ENV: process.env.NODE_ENV ?? 'NOT SET',
   }
 

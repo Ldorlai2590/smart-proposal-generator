@@ -1,7 +1,5 @@
-import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
 
-export const claude = anthropic('claude-sonnet-4-5')
+export const gemini = google('gemini-2.0-flash')
 
-export const claudeWithCache = anthropic('claude-sonnet-4-5', {
-  cacheControl: true,
-})
+export const geminiPro = google('gemini-1.5-pro')
