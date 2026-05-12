@@ -106,9 +106,50 @@ export default function NewClientPage() {
       return
     }
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 600))
-    setSaving(false)
-    router.push('/clients')
+    try {
+      const payload = {
+        name: companyName,
+        company: companyName,
+        contact_name: contactName,
+        contact_role: contactRole || null,
+        email: contactEmail || null,
+        contact_phone: contactPhone || null,
+        industry: industry || null,
+        company_size: size || null,
+        website: website || null,
+        instagram: instagram || null,
+        facebook: facebook || null,
+        linkedin: linkedin || null,
+        tiktok: tiktok || null,
+        metadata: {
+          country: country || null,
+          employees: employees || null,
+          revenue: revenue || null,
+          ai_analysis: analysis ?? null,
+        },
+      }
+
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        const msg = json?.error ?? `Error ${res.status}`
+        alert(`No se pudo guardar el cliente: ${msg}`)
+        return
+      }
+
+      router.push('/clients')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Error inesperado: ${msg}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const canAnalyze = (website || instagram || linkedin || facebook || tiktok) && companyName

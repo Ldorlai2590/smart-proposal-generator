@@ -36,7 +36,9 @@ Thumbs.db
 
 # Python
 .venv/
+venv/
 apps/api/.venv/
+apps/api/venv/
 *.egg-info/
 .uv/
 

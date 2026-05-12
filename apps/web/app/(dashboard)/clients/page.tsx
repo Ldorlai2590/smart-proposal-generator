@@ -329,15 +329,34 @@ export default function ClientsPage() {
 
   const fetchClients = useCallback(
     async (query: string) => {
-          setLoading(true)
+      setLoading(true)
       try {
         const path = query
           ? `/api/clients?search=${encodeURIComponent(query)}&limit=50`
           : '/api/clients?limit=50'
-        const res = await fetch(path)
-        if (!res.ok) throw new Error(`API error ${res.status}`)
-        const json: ApiResponse = await res.json()
-        setClients(json.data.map(mapApiClient))
+        const [clientsRes, proposalsRes] = await Promise.all([
+          fetch(path),
+          fetch('/api/proposals'),
+        ])
+        if (!clientsRes.ok) throw new Error(`API error ${clientsRes.status}`)
+
+        const json: ApiResponse = await clientsRes.json()
+
+        // Build a proposal count map keyed by client_id
+        const proposalCountMap = new Map<string, number>()
+        if (proposalsRes.ok) {
+          const proposalsJson: { data: { client_id: string }[] } = await proposalsRes.json()
+          for (const p of proposalsJson.data ?? []) {
+            proposalCountMap.set(p.client_id, (proposalCountMap.get(p.client_id) ?? 0) + 1)
+          }
+        }
+
+        setClients(
+          json.data.map((apiClient) => ({
+            ...mapApiClient(apiClient),
+            proposals: proposalCountMap.get(apiClient.id) ?? 0,
+          })),
+        )
         setTotal(json.total)
       } catch (err) {
         console.error('Failed to fetch clients:', err)

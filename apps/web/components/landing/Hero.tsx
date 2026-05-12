@@ -16,6 +16,7 @@ const TRUST_ITEMS = [
   '30 días gratis · Sin tarjeta',
   '20 propuestas incluidas',
   'PDF y Word al instante',
+  '73% tasa de cierre promedio',
 ]
 
 export function Hero() {
@@ -44,17 +45,17 @@ export function Hero() {
             </div>
 
             <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-              Cierra más ventas B2B:{' '}
-              <span className="text-[#1D9E75]">propuestas profesionales en 3 minutos</span>
+              Propuestas que cierran:{' '}
+              <span className="text-[#1D9E75]">de 3 horas a 3 minutos con IA</span>
             </h1>
 
             <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-lg">
-              La única IA que genera propuestas multi-servicio con PDF y Word listos para enviar. Para agencias y consultoras en Chile, México y Colombia.
+              Claude analiza a tu cliente, genera 14 secciones personalizadas y exporta en PDF y Word listos para enviar. Para agencias y consultoras en Chile, México y Colombia.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <Link
-                href="/sign-in"
+                href="/sign-up"
                 className="inline-flex items-center justify-center gap-2 bg-[#1D9E75] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#158a63] transition-colors text-sm"
               >
                 Generar mi primera propuesta
@@ -64,7 +65,7 @@ export function Hero() {
                 href="#how-it-works"
                 className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-medium px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors text-sm"
               >
-                Ver demo
+                Ver cómo funciona
               </a>
             </div>
 

@@ -21,12 +21,15 @@ export async function GET(
     if (error) throw new Error(error.message)
     if (!row) return Response.json({ error: 'Proposal not found' }, { status: 404 })
 
+    const resolvedClientName = (row.clients as { name?: string } | null)?.name ?? null
+
     return Response.json({
       data: {
         id: row.id,
         title: row.title,
         status: row.status,
-        client_id: (row.clients as { name?: string } | null)?.name ?? row.client_id,
+        client_id: row.client_id,
+        client_name: resolvedClientName ?? row.client_id,
         created_at: row.created_at ?? new Date().toISOString(),
         updated_at: row.updated_at ?? new Date().toISOString(),
         context: (row.context as Record<string, unknown>) ?? {},

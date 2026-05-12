@@ -17,6 +17,7 @@ const NewClientSchema = z.object({
   facebook: z.string().max(200).nullable().optional(),
   linkedin: z.string().max(200).nullable().optional(),
   tiktok: z.string().max(200).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 })
 
 export async function GET(req: Request) {
@@ -95,6 +96,15 @@ export async function POST(req: Request) {
         email: data.email ?? null,
         industry: data.industry ?? null,
         company_size: data.company_size ?? null,
+        contact_name: data.contact_name ?? null,
+        contact_role: data.contact_role ?? null,
+        contact_phone: data.contact_phone ?? null,
+        website: data.website ?? null,
+        instagram: data.instagram ?? null,
+        facebook: data.facebook ?? null,
+        linkedin: data.linkedin ?? null,
+        tiktok: data.tiktok ?? null,
+        metadata: data.metadata ?? null,
       })
       .select()
       .single()
@@ -109,6 +119,15 @@ export async function POST(req: Request) {
       email: newClient.email,
       industry: newClient.industry,
       company_size: newClient.company_size,
+      contact_name: newClient.contact_name,
+      contact_role: newClient.contact_role,
+      contact_phone: newClient.contact_phone,
+      website: newClient.website,
+      instagram: newClient.instagram,
+      facebook: newClient.facebook,
+      linkedin: newClient.linkedin,
+      tiktok: newClient.tiktok,
+      metadata: newClient.metadata,
       score: newClient.score ?? 0,
     })
   } catch (err) {

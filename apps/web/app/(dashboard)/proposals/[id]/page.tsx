@@ -23,7 +23,9 @@ interface ProposalDetail {
   id: string
   title: string
   status: string
+  /** Resolved client name (API returns name via JOIN, falls back to UUID) */
   client_id: string
+  client_name: string
   created_at: string
   updated_at: string
   context: Record<string, unknown>
@@ -263,7 +265,7 @@ export default function ProposalDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="inline-flex items-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5" />
-                {proposal.client_id}
+                {proposal.client_name || proposal.client_id}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />

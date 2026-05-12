@@ -1,15 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Package, Clock, Edit2, Trash2, Eye, Tag } from 'lucide-react'
-import { DEMO_SERVICES } from '@/lib/demo-v2'
 import { formatCurrency } from '@/lib/format'
 import type { Service, BillingType } from '@/lib/types/service'
 import { DemoBanner } from '@/components/layout/DemoBanner'
-import { isEmptyState } from '@/lib/demo-mode'
 
-const CATEGORIES = ['Todas', ...Array.from(new Set(DEMO_SERVICES.map((s) => s.category)))]
 const BILLING_TYPES: { value: BillingType | 'all'; label: string }[] = [
   { value: 'all', label: 'Toda facturación' },
   { value: 'monthly', label: 'Mensual' },
@@ -35,25 +32,97 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 }
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>(DEMO_SERVICES)
+  const [services, setServices] = useState<Service[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Todas')
   const [billing, setBilling] = useState<BillingType | 'all'>('all')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const fetchServices = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/services')
+      if (res.status === 401) {
+        setError('No autenticado. Por favor recarga la página.')
+        return
+      }
+      const json = await res.json() as { data?: Service[]; error?: string }
+      setServices(json.data ?? [])
+    } catch {
+      setError('No se pudo cargar el catálogo de servicios.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    if (isEmptyState()) setServices([])
+    void fetchServices()
+  }, [fetchServices])
+
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return
+
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/services/${id}`, { method: 'DELETE' })
+      if (res.ok || res.status === 204) {
+        setServices((prev) => prev.filter((s) => s.id !== id))
+      } else {
+        const json = await res.json() as { error?: string }
+        alert(json.error ?? 'Error al eliminar el servicio.')
+      }
+    } catch {
+      alert('Error de red al eliminar el servicio.')
+    } finally {
+      setDeletingId(null)
+    }
   }, [])
+
+  const categories = useMemo(
+    () => ['Todas', ...Array.from(new Set(services.map((s) => s.category)))],
+    [services]
+  )
 
   const filtered = useMemo(() => {
     return services.filter((s) => {
-      if (query && !s.name.toLowerCase().includes(query.toLowerCase()) && !s.description.toLowerCase().includes(query.toLowerCase())) return false
+      if (
+        query &&
+        !s.name.toLowerCase().includes(query.toLowerCase()) &&
+        !s.description.toLowerCase().includes(query.toLowerCase())
+      )
+        return false
       if (category !== 'Todas' && s.category !== category) return false
       if (billing !== 'all' && s.billing_type !== billing) return false
       return true
     })
   }, [services, query, category, billing])
 
-  // Empty state — primer servicio
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1D9E75] border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-700 font-medium">{error}</p>
+        <button
+          onClick={() => void fetchServices()}
+          className="mt-3 px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors"
+        >
+          Reintentar
+        </button>
+      </div>
+    )
+  }
+
+  // Empty state — no services yet
   if (services.length === 0) {
     return (
       <div>
@@ -73,7 +142,10 @@ export default function ServicesPage() {
           <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
             Define los servicios que ofreces (precio, alcance, qué incluye/excluye) para que aparezcan automáticamente al crear propuestas.
           </p>
-          <Link href="/services/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D9E75] text-white text-sm font-semibold rounded-xl hover:bg-[#158a63]">
+          <Link
+            href="/services/new"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D9E75] text-white text-sm font-semibold rounded-xl hover:bg-[#158a63]"
+          >
             <Plus className="h-4 w-4" /> Crear mi primer servicio
           </Link>
         </div>
@@ -83,14 +155,15 @@ export default function ServicesPage() {
 
   return (
     <div>
-      <DemoBanner message="Estos son 8 servicios de ejemplo del estudio Andes Digital." />
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Package className="h-6 w-6 text-[#1D9E75]" />
             Catálogo de servicios
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Estos servicios aparecerán automáticamente como opciones al crear nuevas propuestas.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Estos servicios aparecerán automáticamente como opciones al crear nuevas propuestas.
+          </p>
         </div>
         <Link
           href="/services/new"
@@ -112,11 +185,25 @@ export default function ServicesPage() {
             className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40 focus:border-[#1D9E75]"
           />
         </div>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40">
-          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+        >
+          {categories.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
         </select>
-        <select value={billing} onChange={(e) => setBilling(e.target.value as BillingType | 'all')} className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40">
-          {BILLING_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+        <select
+          value={billing}
+          onChange={(e) => setBilling(e.target.value as BillingType | 'all')}
+          className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40"
+        >
+          {BILLING_TYPES.map((b) => (
+            <option key={b.value} value={b.value}>
+              {b.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -124,7 +211,10 @@ export default function ServicesPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <StatPill label="Total servicios" value={services.length} />
         <StatPill label="Activos" value={services.filter((s) => s.active).length} />
-        <StatPill label="Recurrentes" value={services.filter((s) => s.billing_type === 'monthly' || s.billing_type === 'quarterly').length} />
+        <StatPill
+          label="Recurrentes"
+          value={services.filter((s) => s.billing_type === 'monthly' || s.billing_type === 'quarterly').length}
+        />
         <StatPill label="Categorías" value={new Set(services.map((s) => s.category)).size} />
       </div>
 
@@ -138,7 +228,12 @@ export default function ServicesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((s) => (
-            <ServiceCard key={s.id} service={s} />
+            <ServiceCard
+              key={s.id}
+              service={s}
+              deleting={deletingId === s.id}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
@@ -155,7 +250,15 @@ function StatPill({ label, value }: { label: string; value: number }) {
   )
 }
 
-function ServiceCard({ service }: { service: Service }) {
+function ServiceCard({
+  service,
+  deleting,
+  onDelete,
+}: {
+  service: Service
+  deleting: boolean
+  onDelete: (id: string, name: string) => void
+}) {
   const cat = CATEGORY_COLORS[service.category] ?? { bg: 'bg-gray-50', text: 'text-gray-700' }
 
   return (
@@ -187,14 +290,25 @@ function ServiceCard({ service }: { service: Service }) {
       </div>
 
       <div className="flex items-center gap-1 pt-3 border-t border-gray-100">
-        <Link href={`/services/${service.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-[#1D9E75] hover:bg-gray-50 rounded-lg transition-colors">
+        <Link
+          href={`/services/${service.id}`}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-[#1D9E75] hover:bg-gray-50 rounded-lg transition-colors"
+        >
           <Eye className="h-3.5 w-3.5" /> Ver
         </Link>
-        <Link href={`/services/${service.id}/edit`} className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-[#1D9E75] hover:bg-gray-50 rounded-lg transition-colors">
+        <Link
+          href={`/services/${service.id}/edit`}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-[#1D9E75] hover:bg-gray-50 rounded-lg transition-colors"
+        >
           <Edit2 className="h-3.5 w-3.5" /> Editar
         </Link>
-        <button className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-          <Trash2 className="h-3.5 w-3.5" /> Eliminar
+        <button
+          onClick={() => onDelete(service.id, service.name)}
+          disabled={deleting}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {deleting ? 'Eliminando…' : 'Eliminar'}
         </button>
       </div>
     </div>

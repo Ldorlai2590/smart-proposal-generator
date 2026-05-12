@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { CreditCard, Check, Sparkles, Shield, Zap, FileText, Users, BarChart3 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CreditCard, Check, Sparkles, Shield, Zap, FileText, Users, BarChart3, Loader2 } from 'lucide-react'
 
 
 interface TrialStatus {
@@ -49,6 +49,38 @@ export default function BillingPage() {
   
   const [trial, setTrial] = useState<TrialStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  const handleStartCheckout = useCallback(async () => {
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    try {
+      const res = await fetch('/api/billing/create-setup-intent', { method: 'POST' })
+      // Route returns 303 redirect to Stripe — follow it
+      if (res.redirected) {
+        window.location.href = res.url
+        return
+      }
+      if (res.status === 303) {
+        const location = res.headers.get('Location')
+        if (location) { window.location.href = location; return }
+      }
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({})) as { error?: string }
+        setCheckoutError(json.error ?? 'Error al iniciar pago. Intenta de nuevo.')
+        return
+      }
+      // Fallback: if body contains a URL
+      const json = await res.json().catch(() => ({})) as { url?: string }
+      if (json.url) { window.location.href = json.url; return }
+      setCheckoutError('Respuesta inesperada del servidor.')
+    } catch {
+      setCheckoutError('Error de red. Verifica tu conexión e intenta de nuevo.')
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     // Production: fetch trial status from API
@@ -185,6 +217,21 @@ export default function BillingPage() {
             ))}
           </ul>
 
+          {checkoutError && (
+            <p className="text-sm text-red-600 mb-3">{checkoutError}</p>
+          )}
+          <button
+            onClick={handleStartCheckout}
+            disabled={checkoutLoading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D9E75] text-white text-sm font-semibold rounded-xl hover:bg-[#158a63] disabled:opacity-60 transition-colors shadow-sm"
+          >
+            {checkoutLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CreditCard className="h-4 w-4" />
+            )}
+            {checkoutLoading ? 'Redirigiendo…' : 'Añadir tarjeta y extender gratis'}
+          </button>
         </div>
       )}
 
@@ -213,6 +260,21 @@ export default function BillingPage() {
             propuestas.
           </p>
 
+          {checkoutError && (
+            <p className="text-sm text-red-800 mb-3">{checkoutError}</p>
+          )}
+          <button
+            onClick={handleStartCheckout}
+            disabled={checkoutLoading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors shadow-sm"
+          >
+            {checkoutLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CreditCard className="h-4 w-4" />
+            )}
+            {checkoutLoading ? 'Redirigiendo…' : 'Activar plan Pro — $49/mes'}
+          </button>
         </div>
       )}
     </div>

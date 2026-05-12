@@ -29,13 +29,47 @@ const FAQS = [
     q: '¿Hay soporte en español?',
     a: 'Sí, todo nuestro soporte es en español. Puedes contactarnos por email o por el chat de la plataforma. El plan Pro tiene respuesta prioritaria en menos de 4 horas hábiles.',
   },
+  {
+    q: '¿La IA puede usar mi metodología propia de propuestas?',
+    a: 'Sí. En el wizard describes tu empresa, servicios y contexto. La IA adapta la propuesta a tu forma de trabajar, no a un molde genérico.',
+  },
+  {
+    q: '¿Las propuestas se ven genéricas o profesionales?',
+    a: 'Son 100% personalizadas: incluyen nombre del cliente, diagnóstico de su problema y la solución específica de tu empresa. Nada de templates copiados.',
+  },
+  {
+    q: '¿Funciona para mi industria? (marketing, TI, legal, consultoría...)',
+    a: 'Funciona para cualquier servicio B2B. La IA entiende el contexto que describes y genera secciones relevantes para tu industria específica.',
+  },
+  {
+    q: '¿Puedo probar antes de pagar?',
+    a: 'Sí: el plan Starter es gratis para siempre con 3 propuestas/mes. El plan Pro tiene 30 días de prueba completa sin tarjeta de crédito.',
+  },
+  {
+    q: '¿Qué pasa si la IA genera algo que no me gusta?',
+    a: 'Puedes editar cualquier sección antes de exportar. El editor integrado incluye herramientas de formato y puedes ajustar cada párrafo a tu gusto.',
+  },
 ]
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQS.map((faq) => ({
+    '@type': 'Question',
+    name: faq.q,
+    acceptedAnswer: { '@type': 'Answer', text: faq.a },
+  })),
+}
 
 export function FAQ() {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
     <section id="faq" className="py-20">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="max-w-3xl mx-auto px-4">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Preguntas frecuentes</h2>
@@ -44,7 +78,7 @@ export function FAQ() {
         <div className="space-y-3">
           {FAQS.map((faq, i) => (
             <div
-              key={i}
+              key={faq.q}
               className="border border-gray-100 rounded-xl overflow-hidden bg-white"
             >
               <button

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { FileText, CheckCircle2, TrendingUp, Users } from 'lucide-react'
+import { FileText, CheckCircle2, TrendingUp, Users, RefreshCw, AlertCircle } from 'lucide-react'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { formatCompact, formatCurrency } from '@/lib/format'
 
@@ -17,6 +17,7 @@ interface ApiProposal {
   client_id: string
   created_at: string
   updated_at: string
+  context: Record<string, unknown>
 }
 
 interface ApiClient {
@@ -157,39 +158,41 @@ function computeStatusData(proposals: ApiProposal[]): StatusData[] {
 }
 
 export default function AnalyticsPage() {
-  
+
   const [proposals, setProposals] = useState<ApiProposal[]>([])
   const [clients, setClients] = useState<ApiClient[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [proposalsRes, clientsRes] = await Promise.all([
+        fetch('/api/proposals'),
+        fetch('/api/clients?limit=200'),
+      ])
+
+      if (!proposalsRes.ok || !clientsRes.ok) {
+        throw new Error('Error al cargar los datos de analítica')
+      }
+
+      const proposalsJson: ProposalsResponse = await proposalsRes.json()
+      const clientsJson: ClientsResponse = await clientsRes.json()
+
+      setProposals(proposalsJson.data)
+      setClients(clientsJson.data)
+    } catch (err) {
+      console.error('Failed to fetch analytics data:', err)
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-  
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [proposalsRes, clientsRes] = await Promise.all([
-          fetch('/api/proposals'),
-          fetch('/api/clients?limit=200'),
-        ])
-
-        if (!proposalsRes.ok || !clientsRes.ok) {
-          throw new Error('Failed to fetch data')
-        }
-
-        const proposalsJson: ProposalsResponse = await proposalsRes.json()
-        const clientsJson: ClientsResponse = await clientsRes.json()
-
-        setProposals(proposalsJson.data)
-        setClients(clientsJson.data)
-      } catch (err) {
-        console.error('Failed to fetch analytics data:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // Compute analytics
   const totalProposals = proposals.length
@@ -205,8 +208,10 @@ export default function AnalyticsPage() {
   proposals.forEach((proposal) => {
     const client = clients.find((c) => c.name === proposal.client_id || c.id === proposal.client_id)
     if (client && client.industry) {
-      const amount = 5000 // placeholder: average per proposal
-      industryMap.set(client.industry, (industryMap.get(client.industry) || 0) + amount)
+      const amount = typeof proposal.context?.budget === 'number' ? proposal.context.budget : 0
+      if (amount > 0) {
+        industryMap.set(client.industry, (industryMap.get(client.industry) || 0) + amount)
+      }
     }
   })
 
@@ -244,6 +249,32 @@ export default function AnalyticsPage() {
     .slice(0, 5)
 
   const activeClientsCount = clientProposalMap.size
+
+  // Show error state if fetch failed
+  if (!loading && error) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Analítica</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Métricas de rendimiento de tus propuestas.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div className="h-16 w-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+            <AlertCircle className="h-8 w-8 text-red-400" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">No se pudieron cargar los datos</h3>
+          <p className="text-sm text-gray-500 max-w-xs mb-6">{error}</p>
+          <button
+            onClick={fetchData}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1D9E75] hover:text-[#158a63] transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Show empty state if no data
   if (!loading && totalProposals === 0) {

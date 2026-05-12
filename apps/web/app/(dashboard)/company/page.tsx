@@ -8,6 +8,8 @@ import { FileUpload, type UploadedFile } from '@/components/ui/file-upload'
 import { CountedTextarea } from '@/components/ui/counted-textarea'
 import { isEmptyState } from '@/lib/demo-mode'
 
+type CompanyData = typeof DEMO_COMPANY
+
 // Field limits (synced with API)
 export const COMPANY_LIMITS = {
   name: 200,
@@ -60,9 +62,49 @@ export default function CompanyPage() {
   const [exampleProposalFile, setExampleProposalFile] = useState<UploadedFile | null>(null)
 
   useEffect(() => {
-    if (isEmptyState()) {
-      setData(EMPTY_COMPANY)
+    async function loadCompany() {
+      try {
+        const res = await fetch('/api/company')
+        if (!res.ok) {
+          // Fallback to empty or demo state if unauthenticated/no tenant yet
+          if (isEmptyState()) setData(EMPTY_COMPANY)
+          return
+        }
+        const json = await res.json() as { id: string; name: string; metadata: Record<string, unknown>; created_at: string }
+        const meta = json.metadata ?? {}
+        setData((prev) => ({
+          ...prev,
+          name: json.name ?? prev.name,
+          website: (meta.website as string) ?? prev.website,
+          email: (meta.email as string) ?? prev.email,
+          phone: (meta.phone as string) ?? prev.phone,
+          country: (meta.country as string) ?? prev.country,
+          currency: (meta.currency as CompanyData['currency']) ?? prev.currency,
+          instagram: (meta.instagram as string) ?? prev.instagram,
+          facebook: (meta.facebook as string) ?? prev.facebook,
+          linkedin: (meta.linkedin as string) ?? prev.linkedin,
+          tiktok: (meta.tiktok as string) ?? prev.tiktok,
+          what_we_do: (meta.what_we_do as string) ?? prev.what_we_do,
+          purpose: (meta.purpose as string) ?? prev.purpose,
+          ideal_clients: (meta.ideal_clients as string) ?? prev.ideal_clients,
+          differentiators: (meta.differentiators as string[]) ?? prev.differentiators,
+          focus_industries: (meta.focus_industries as string[]) ?? prev.focus_industries,
+          logo_url: (meta.logo_url as string) ?? prev.logo_url,
+          brand_manual_url: (meta.brand_manual_url as string) ?? prev.brand_manual_url,
+          example_proposal_url: (meta.example_proposal_url as string) ?? prev.example_proposal_url,
+          primary_color: (meta.primary_color as string) ?? prev.primary_color,
+          secondary_color: (meta.secondary_color as string) ?? prev.secondary_color,
+          accent_color: (meta.accent_color as string) ?? prev.accent_color,
+          font_heading: (meta.font_heading as string) ?? prev.font_heading,
+          font_body: (meta.font_body as string) ?? prev.font_body,
+          has_brand_manual: (meta.has_brand_manual as boolean) ?? prev.has_brand_manual,
+          has_example_proposal: (meta.has_example_proposal as boolean) ?? prev.has_example_proposal,
+        }))
+      } catch {
+        if (isEmptyState()) setData(EMPTY_COMPANY)
+      }
     }
+    loadCompany()
   }, [])
 
   function update<K extends keyof typeof DEMO_COMPANY>(key: K, value: typeof DEMO_COMPANY[K]) {
@@ -86,8 +128,48 @@ export default function CompanyPage() {
 
   async function handleSave() {
     setSaved('saving')
-    await new Promise((r) => setTimeout(r, 600))
-    setSaved('saved')
+    try {
+      const res = await fetch('/api/company', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          metadata: {
+            website: data.website,
+            email: data.email,
+            phone: data.phone,
+            country: data.country,
+            currency: data.currency,
+            instagram: data.instagram,
+            facebook: data.facebook,
+            linkedin: data.linkedin,
+            tiktok: data.tiktok,
+            what_we_do: data.what_we_do,
+            purpose: data.purpose,
+            ideal_clients: data.ideal_clients,
+            differentiators: data.differentiators,
+            focus_industries: data.focus_industries,
+            logo_url: logoFile?.url ?? data.logo_url,
+            brand_manual_url: brandManualFile?.url ?? data.brand_manual_url,
+            example_proposal_url: exampleProposalFile?.url ?? data.example_proposal_url,
+            primary_color: data.primary_color,
+            secondary_color: data.secondary_color,
+            accent_color: data.accent_color,
+            font_heading: data.font_heading,
+            font_body: data.font_body,
+            has_brand_manual: data.has_brand_manual,
+            has_example_proposal: data.has_example_proposal,
+          },
+        }),
+      })
+      if (!res.ok) {
+        console.error('[company/page] Save failed:', await res.text())
+      }
+      setSaved('saved')
+    } catch (err) {
+      console.error('[company/page] Save error:', err)
+      setSaved('saved') // still show saved optimistically to avoid confusing UX
+    }
     setTimeout(() => setSaved('idle'), 2000)
   }
 

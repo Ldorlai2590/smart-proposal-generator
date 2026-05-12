@@ -16,7 +16,6 @@ import {
   LogOut,
   Building2,
   Package,
-  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -34,7 +33,6 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { href: '/services', label: 'Servicios', icon: Package, isNew: true },
   { href: '/clients', label: 'Clientes', icon: Users },
   { href: '/proposals', label: 'Propuestas', icon: FileText },
-  { href: '/tracking', label: 'Seguimiento', icon: Activity, isNew: true },
   { href: '/analytics', label: 'Analítica', icon: BarChart3 },
 ]
 

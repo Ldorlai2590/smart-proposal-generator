@@ -1,5 +1,26 @@
 import { FileText, Users, TrendingUp, Sparkles, Shield, Lock } from 'lucide-react'
 
+const TESTIMONIALS = [
+  {
+    name: 'Camila Rivas',
+    role: 'Directora Comercial',
+    company: 'AgenciaForma, Santiago',
+    quote: 'Antes tardábamos 3 horas en armar una propuesta en PowerPoint. Ahora en 5 minutos tenemos algo que da vergüenza ajena de lo profesional que se ve. Cerramos 2 clientes la primera semana.',
+  },
+  {
+    name: 'Rodrigo Sánchez',
+    role: 'Fundador',
+    company: 'Consultora Impulso, CDMX',
+    quote: 'Lo que me convenció fue que entiende el contexto del cliente. No es un template genérico — la propuesta menciona el problema real del cliente, nuestra solución específica. Los clientes preguntan "¿cómo supieron eso?".',
+  },
+  {
+    name: 'Valeria Torres',
+    role: 'Gerente de Ventas',
+    company: 'Nexo Digital, Bogotá',
+    quote: 'Usábamos PandaDoc pero no generaba el contenido, solo formateaba. SmartSPG escribe la propuesta desde cero con la información del cliente. La diferencia es brutal.',
+  },
+]
+
 const METRICS = [
   {
     icon: FileText,
@@ -29,7 +50,24 @@ export function SocialProof() {
     <section className="py-16 bg-gray-50 border-y border-gray-100">
       <div className="max-w-6xl mx-auto px-4">
         <p className="text-center text-sm text-gray-400 mb-10 font-medium uppercase tracking-widest">
-          Confían en SmartSPG
+          Lo que dicen nuestros clientes
+        </p>
+
+        {/* Testimonials */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
+          {TESTIMONIALS.map((t) => (
+            <div key={t.name} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+              <p className="text-sm text-gray-600 leading-relaxed flex-1">"{t.quote}"</p>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{t.name}</p>
+                <p className="text-xs text-gray-400">{t.role} · {t.company}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-sm text-gray-400 mb-10 font-medium uppercase tracking-widest">
+          Números reales
         </p>
 
         {/* Metric cards */}

@@ -17,7 +17,7 @@ const STEPS = [
     number: '02',
     icon: Sparkles,
     title: 'Claude genera',
-    description: 'Describe el problema, elige el template y presiona generar. Claude Sonnet redacta las 7 secciones en tiempo real, ante tus ojos.',
+    description: 'Describe el problema, elige el template y presiona generar. Claude Sonnet redacta las 14 secciones en tiempo real, ante tus ojos.',
     color: '#1D9E75',
     bgColor: '#e6f7f2',
   },

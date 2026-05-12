@@ -56,11 +56,13 @@ export const metadata: Metadata = {
     url: SITE_URL,
     locale: 'es_CL',
     alternateLocale: ['es_MX', 'es_CO', 'es_ES'],
+    images: [{ url: `${SITE_URL}/api/og`, width: 1200, height: 630, alt: 'SmartSPG — Genera propuestas comerciales con IA' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SmartSPG · Smart Proposal Generator',
     description: 'SmartSPG genera propuestas comerciales con IA para agencias y consultoras en LATAM. Prueba gratis 30 días.',
+    images: [`${SITE_URL}/api/og`],
   },
   robots: { index: true, follow: true },
 }

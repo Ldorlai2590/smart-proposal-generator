@@ -6,9 +6,9 @@ import { Zap, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { href: '#features', label: 'Características' },
+  { href: '#how-it-works', label: 'Cómo funciona' },
+  { href: '#features', label: 'Funcionalidades' },
   { href: '#pricing', label: 'Precios' },
-  { href: '#integrations', label: 'Integraciones' },
   { href: '#faq', label: 'FAQ' },
 ]
 
@@ -62,7 +62,7 @@ export function Navbar() {
             Iniciar sesión
           </Link>
           <Link
-            href="/sign-in"
+            href="/sign-up"
             className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg hover:bg-[#158a63] transition-colors"
           >
             Empezar gratis ahora
@@ -96,7 +96,7 @@ export function Navbar() {
               Iniciar sesión
             </Link>
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className="text-sm font-medium bg-[#1D9E75] text-white px-4 py-2 rounded-lg text-center"
             >
               Empezar gratis ahora

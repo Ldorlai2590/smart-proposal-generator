@@ -1,4 +1,10 @@
+import type { Metadata } from 'next'
 import { ProposalWizard } from '@/components/wizard/ProposalWizard'
+
+export const metadata: Metadata = {
+  title: 'Nueva propuesta',
+  robots: { index: false, follow: false },
+}
 
 export default function NewProposalPage() {
   return (

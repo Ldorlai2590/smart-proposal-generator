@@ -121,7 +121,7 @@ export function AboutUs() {
               Nuestra diferencia
             </p>
             <p className="text-gray-700 leading-relaxed text-center">
-              Somos un equipo latinoamericano enfocado en acelerar el ciclo de ventas B2B en Chile, México y Colombia. Construimos <strong>la única herramienta que agrupa múltiples servicios en UNA propuesta ganadora</strong>: Claude analiza el contexto de tu cliente, estructura cada alcance de forma independiente y exporta en PDF y Word listos para enviar. Menos horas formateando, más deals cerrados.
+              En Chile, México y Colombia, las agencias y consultoras pierden deals no por falta de talento, sino por llegar tarde con propuestas que se ven amateur. SmartSPG nació para cerrar esa brecha: Claude analiza el contexto de tu cliente, estructura 14 secciones —diagnóstico, solución, alcance, inversión, caso de éxito y más— y exporta en PDF y Word listos para enviar. <strong>Menos horas en Word, más contratos firmados.</strong>
             </p>
           </div>
         </motion.div>

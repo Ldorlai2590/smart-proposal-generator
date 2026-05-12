@@ -15,14 +15,20 @@ type ExportRequest = z.infer<typeof ExportRequestSchema>
 // ─── Section order & labels ───────────────────────────────────────────────────
 
 const SECTION_META: { key: string; label: string }[] = [
-  { key: 'resumenEjecutivo', label: 'Resumen Ejecutivo' },
-  { key: 'problema', label: 'El Problema' },
-  { key: 'serviciosPropuestos', label: 'Servicios Propuestos' },
-  { key: 'alcancePorServicio', label: 'Alcance por Servicio' },
-  { key: 'timeline', label: 'Cronograma' },
+  { key: 'portada', label: 'Portada' },
+  { key: 'contextoCliente', label: 'Contexto del Cliente' },
+  { key: 'diagnostico', label: 'Diagnóstico' },
+  { key: 'oportunidad', label: 'Oportunidad Detectada' },
+  { key: 'solucion', label: 'Solución Propuesta' },
+  { key: 'alcance', label: 'Alcance Detallado' },
+  { key: 'incluyeNoIncluye', label: 'Qué Incluye / No Incluye' },
+  { key: 'metodologia', label: 'Metodología' },
+  { key: 'cronograma', label: 'Cronograma' },
+  { key: 'casosExito', label: 'Casos de Éxito' },
+  { key: 'diferenciadores', label: 'Diferenciadores' },
   { key: 'inversion', label: 'Inversión' },
-  { key: 'casoDeExito', label: 'Caso de Éxito' },
   { key: 'proximosPasos', label: 'Próximos Pasos' },
+  { key: 'ctaFinal', label: 'Llamado a la Acción' },
 ]
 
 // ─── HTML builder ─────────────────────────────────────────────────────────────

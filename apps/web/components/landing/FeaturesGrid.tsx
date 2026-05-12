@@ -2,7 +2,7 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
-import { Zap, Shield, FileDown, Layers, BarChart3, Mail } from 'lucide-react'
+import { Zap, Shield, FileDown, Layers, BarChart3, Mail, PenLine } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -21,14 +21,19 @@ const FEATURES = [
     description: 'Descarga con un clic en formato profesional. PDF con diseño premium o Word editable para ajustes finales.',
   },
   {
+    icon: PenLine,
+    title: 'Editor integrado antes de exportar',
+    description: 'Revisa y ajusta cada sección con el editor antes de exportar. Sin copiar y pegar en Word — todo en un mismo lugar.',
+  },
+  {
     icon: BarChart3,
-    title: 'Analytics de cierre',
-    description: 'Mide tu tasa de cierre, el valor promedio por propuesta y los clientes más rentables. Decisiones con datos.',
+    title: 'Sabe qué propuestas convierten',
+    description: 'Mide tu tasa de cierre, el valor promedio por propuesta y los clientes más rentables. Decisiones con datos, no intuición.',
   },
   {
     icon: Mail,
     title: 'Envío desde la plataforma',
-    description: 'Manda la propuesta por email sin salir de SmartSPG. El cliente recibe un PDF con tu marca, no un enlace genérico.',
+    description: 'Manda la propuesta por email y el cliente recibe un PDF con tu marca. Sin adjuntos genéricos, sin perder el hilo.',
   },
   {
     icon: Shield,
