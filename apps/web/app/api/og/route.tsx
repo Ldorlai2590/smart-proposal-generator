@@ -30,7 +30,7 @@ export async function GET() {
         />
 
         {/* Logo + brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
           <div
             style={{
               width: '48px',
@@ -84,7 +84,7 @@ export async function GET() {
         </p>
 
         {/* Badges */}
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '16px' }}>
           {['30 días gratis', 'Sin tarjeta', 'PDF + Word al instante'].map((text) => (
             <div
               key={text}
