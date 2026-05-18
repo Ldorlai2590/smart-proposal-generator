@@ -1,6 +1,6 @@
 import { db } from './db'
 import { tenants } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 // ---------------------------------------------------------------------------
 // Trial híbrido 30 + 30 días
@@ -123,19 +123,22 @@ export async function markSubscriptionActive(
 }
 
 /**
- * Incrementa el contador de propuestas usadas. Llamar tras completar streaming.
+ * Incrementa el contador de propuestas usadas de forma atómica.
+ * Llamar tras completar streaming.
+ *
+ * El UPDATE sólo afecta filas cuando proposals_used < proposals_quota,
+ * garantizando que dos requests concurrentes no puedan ambos exceder la cuota.
+ * Si el tenant no existe o la cuota ya está agotada, el UPDATE no afecta
+ * ninguna fila — mismo contrato `Promise<void>` que la versión anterior.
  */
 export async function incrementProposalUsage(tenantId: string): Promise<void> {
-  const rows = await db
-    .select({ used: tenants.proposalsUsed })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1)
-
-  if (rows.length === 0) return
-
   await db
     .update(tenants)
-    .set({ proposalsUsed: rows[0].used + 1 })
-    .where(eq(tenants.id, tenantId))
+    .set({ proposalsUsed: sql`${tenants.proposalsUsed} + 1` })
+    .where(
+      and(
+        eq(tenants.id, tenantId),
+        sql`${tenants.proposalsUsed} < ${tenants.proposalsQuota}`
+      )
+    )
 }

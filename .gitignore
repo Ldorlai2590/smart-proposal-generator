@@ -21,6 +21,8 @@ __pycache__/
 .env*.local
 apps/web/.env.local
 apps/api/.env
+apps/*/.env
+apps/*/.env.local
 !.env.example
 
 # Turbo

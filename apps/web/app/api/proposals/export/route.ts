@@ -1,4 +1,6 @@
 import { z } from 'zod/v4'
+import { sanitizeHTML } from '@/lib/sanitize'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 
 // ─── Validation schema ────────────────────────────────────────────────────────
@@ -31,28 +33,107 @@ const SECTION_META: { key: string; label: string }[] = [
   { key: 'ctaFinal', label: 'Llamado a la Acción' },
 ]
 
+// ─── Branding ─────────────────────────────────────────────────────────────────
+//
+// Loaded per-export from `tenants.metadata` so each agency's PDF carries its
+// own logo and brand color. Falls back to neutral defaults so the export still
+// works for tenants that haven't completed the /company onboarding.
+
+interface BrandConfig {
+  companyName: string
+  primaryColor: string
+  logoUrl: string | null
+}
+
+const DEFAULT_BRAND: BrandConfig = {
+  companyName: 'Smart Proposal Generator',
+  primaryColor: '#1D9E75',
+  logoUrl: null,
+}
+
+/** Validate a CSS color so we don't inject arbitrary strings into the stylesheet. */
+function safeColor(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return trimmed
+  return null
+}
+
+/** Validate that a logo URL is http(s) — blocks `javascript:` and `data:` exotics. */
+function safeUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return null
+}
+
+async function loadBranding(tenantId: string): Promise<BrandConfig> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('tenants')
+      .select('name, metadata')
+      .eq('id', tenantId)
+      .maybeSingle()
+
+    if (error || !data) return DEFAULT_BRAND
+    const meta = (data.metadata as Record<string, unknown> | null) ?? {}
+
+    return {
+      companyName: (typeof data.name === 'string' && data.name) || DEFAULT_BRAND.companyName,
+      primaryColor: safeColor(meta.primary_color) ?? DEFAULT_BRAND.primaryColor,
+      logoUrl: safeUrl(meta.logo_url),
+    }
+  } catch (err) {
+    console.error('[export/branding] Failed to load branding:', err)
+    return DEFAULT_BRAND
+  }
+}
+
+/** Minimal HTML-escape for branding strings that land inside text nodes. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // ─── HTML builder ─────────────────────────────────────────────────────────────
 
-function buildProposalHTML(sections: Record<string, string>): string {
+function buildProposalHTML(sections: Record<string, string>, brand: BrandConfig): string {
   const sectionBlocks = SECTION_META
     .filter(({ key }) => sections[key])
     .map(
       ({ key, label }) => `
     <section class="proposal-section">
       <h2>${label}</h2>
-      <div class="section-body">${sections[key]}</div>
+      <div class="section-body">${sanitizeHTML(sections[key])}</div>
     </section>`,
     )
     .join('\n')
+
+  const color = brand.primaryColor
+  const safeCompany = escapeHtml(brand.companyName)
+  const safeLogo = brand.logoUrl ? escapeHtml(brand.logoUrl) : null
+
+  const logoBlock = safeLogo
+    ? `<img src="${safeLogo}" alt="${safeCompany} logo" class="brand-logo" />`
+    : ''
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Propuesta Comercial</title>
+  <title>Propuesta Comercial — ${safeCompany}</title>
   <style>
+    /* Force colors + images in PDF generators that respect this hint. */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @page { size: A4; margin: 0; }
 
     body {
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -70,15 +151,29 @@ function buildProposalHTML(sections: Record<string, string>): string {
 
     /* ── Header ── */
     .proposal-header {
-      border-bottom: 3px solid #1D9E75;
+      border-bottom: 3px solid ${color};
       padding-bottom: 24px;
       margin-bottom: 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      max-height: 56px;
+      max-width: 200px;
+      object-fit: contain;
+    }
+
+    .proposal-header .titles {
+      flex: 1;
+      min-width: 0;
     }
 
     .proposal-header h1 {
       font-size: 28px;
       font-weight: 700;
-      color: #1D9E75;
+      color: ${color};
       letter-spacing: -0.5px;
     }
 
@@ -99,10 +194,10 @@ function buildProposalHTML(sections: Record<string, string>): string {
     .proposal-section h2 {
       font-size: 16px;
       font-weight: 700;
-      color: #1D9E75;
+      color: ${color};
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      border-left: 4px solid #1D9E75;
+      border-left: 4px solid ${color};
       padding-left: 12px;
       margin-bottom: 12px;
     }
@@ -116,6 +211,31 @@ function buildProposalHTML(sections: Record<string, string>): string {
     .section-body ul, .section-body ol { padding-left: 20px; margin-bottom: 8px; }
     .section-body li { margin-bottom: 4px; }
     .section-body strong { color: #111827; }
+
+    /* Tables — LLM emits these for "inversion" section */
+    .section-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    .section-body table th,
+    .section-body table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    .section-body table th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #111827;
+      border-bottom: 2px solid ${color};
+    }
+    .section-body table tr:last-child td {
+      border-bottom: none;
+      font-weight: 700;
+      color: ${color};
+    }
 
     /* ── Footer ── */
     .proposal-footer {
@@ -137,8 +257,11 @@ function buildProposalHTML(sections: Record<string, string>): string {
 <body>
   <div class="page">
     <header class="proposal-header">
-      <h1>Propuesta Comercial</h1>
-      <p class="subtitle">Generada con Smart Proposal Generator</p>
+      ${logoBlock}
+      <div class="titles">
+        <h1>Propuesta Comercial</h1>
+        <p class="subtitle">Preparada por ${safeCompany}</p>
+      </div>
     </header>
 
     <main>
@@ -147,7 +270,7 @@ function buildProposalHTML(sections: Record<string, string>): string {
 
     <footer class="proposal-footer">
       <p>Este documento es confidencial y fue generado exclusivamente para el destinatario indicado.</p>
-      <p>Smart Proposal Generator &mdash; &copy; ${new Date().getFullYear()}</p>
+      <p>${safeCompany} &mdash; &copy; ${new Date().getFullYear()}</p>
     </footer>
   </div>
 </body>
@@ -167,9 +290,10 @@ function jsonResponse(body: unknown, status: number): Response {
 
 async function handlePDF(
   input: ExportRequest,
-  _orgId: string,
+  orgId: string,
 ): Promise<Response> {
-  const html = buildProposalHTML(input.sections)
+  const brand = await loadBranding(orgId)
+  const html = buildProposalHTML(input.sections, brand)
 
   // In DEMO_MODE or when DocuForge is not configured, return HTML as a
   // downloadable file. Users can open it in a browser and print to PDF.

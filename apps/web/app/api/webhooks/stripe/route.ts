@@ -4,6 +4,38 @@ import { db } from '@/lib/db'
 import { tenants } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { markSubscriptionActive } from '@/lib/trial'
+import { logger } from '@/lib/logger'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Mask Stripe ids (cus_*, sub_*, in_*) so logs don't carry the full token.
+ * Keeps the type prefix + last 4 for traceability.
+ */
+function maskId(id: string | null | undefined): string | null {
+  if (!id) return null
+  if (id.length <= 8) return '***'
+  return `${id.slice(0, 4)}***${id.slice(-4)}`
+}
+
+/**
+ * Derive plan from the first line item's price lookup_key.
+ * Supported conventions:
+ *   pro_*         → 'pro'
+ *   enterprise_*  → 'enterprise'
+ * Anything else returns null (caller must reject the event with 400).
+ */
+function planFromLookupKey(
+  lookupKey: string | null | undefined
+): 'pro' | 'enterprise' | null {
+  if (!lookupKey) return null
+  if (lookupKey === 'pro' || lookupKey.startsWith('pro_')) return 'pro'
+  if (lookupKey === 'enterprise' || lookupKey.startsWith('enterprise_'))
+    return 'enterprise'
+  return null
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/webhooks/stripe
@@ -27,7 +59,7 @@ async function getStripe(): Promise<Stripe> {
 export async function POST(req: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!secret) {
-    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set')
+    logger.error('stripe.webhook.misconfigured', { reason: 'missing_secret' })
     return new Response('Internal Server Error', { status: 500 })
   }
 
@@ -42,7 +74,7 @@ export async function POST(req: Request) {
     const stripe = await getStripe()
     event = stripe.webhooks.constructEvent(body, sig, secret)
   } catch (err) {
-    console.error('[stripe-webhook] Signature verification failed:', err)
+    logger.error('stripe.webhook.bad_signature', { err: String(err) })
     return new Response('Unauthorized', { status: 401 })
   }
 
@@ -67,9 +99,10 @@ export async function POST(req: Request) {
           })
           .where(eq(tenants.stripeCustomerId, customerId))
 
-        console.log(
-          `[stripe-webhook] Trial extended for customer ${customerId} → ${newEnd.toISOString()}`
-        )
+        logger.info('stripe.trial_extended', {
+          customerId: maskId(customerId),
+          trialEndsAt: newEnd.toISOString(),
+        })
         break
       }
 
@@ -86,13 +119,32 @@ export async function POST(req: Request) {
           (invoice as unknown as { subscription?: string }).subscription ?? null
         if (!customerId || !subscriptionId) break
 
-        // TODO: derivar `plan` a partir de invoice.lines[0].price.lookup_key
-        const plan: 'pro' | 'enterprise' = 'pro'
+        // Derivar `plan` desde lookup_key del primer line item.
+        // Stripe incluye lines.data en payloads de invoice.paid por defecto,
+        // pero `price` puede ser null en invoice items sin price asociado.
+        const firstLine = invoice.lines?.data?.[0]
+        const lookupKey = firstLine?.price?.lookup_key ?? null
+        const plan = planFromLookupKey(lookupKey)
+
+        if (!plan) {
+          logger.error('stripe.unknown_lookup_key', {
+            customerId: maskId(customerId),
+            subscriptionId: maskId(subscriptionId),
+            lookupKey,
+            invoiceId: maskId(invoice.id),
+          })
+          return new Response(
+            JSON.stringify({ error: 'Unknown plan lookup_key', lookup_key: lookupKey }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          )
+        }
 
         await markSubscriptionActive(customerId, subscriptionId, plan)
-        console.log(
-          `[stripe-webhook] Subscription ${subscriptionId} marked active for ${customerId} (${plan})`
-        )
+        logger.info('stripe.subscription_active', {
+          customerId: maskId(customerId),
+          subscriptionId: maskId(subscriptionId),
+          plan,
+        })
         break
       }
 
@@ -113,17 +165,19 @@ export async function POST(req: Request) {
           })
           .where(eq(tenants.stripeCustomerId, customerId))
 
-        console.log(`[stripe-webhook] Subscription canceled for ${customerId}`)
+        logger.info('stripe.subscription_canceled', {
+          customerId: maskId(customerId),
+        })
         break
       }
 
       default:
         // Ignorar eventos no manejados (retornar 200 evita reintentos)
-        console.log(`[stripe-webhook] Unhandled event type: ${event.type}`)
+        logger.info('stripe.event_ignored', { type: event.type })
         break
     }
   } catch (err) {
-    console.error('[stripe-webhook] Handler error:', err)
+    logger.error('stripe.handler_error', { err: String(err) })
     return new Response('Internal Server Error', { status: 500 })
   }
 

@@ -1,8 +1,19 @@
 /**
  * Tracking + intention scoring for shared proposals.
  */
+import type { PartialProposalSections } from '@/lib/schemas/proposal'
+
 export type IntentionScore = 'high' | 'medium' | 'low' | 'none'
 export type DeviceType = 'mobile' | 'desktop' | 'tablet'
+
+/**
+ * 14-section payload produced by the AI generator.
+ *
+ * Aliased to `PartialProposalSections` so the viewer can render legacy
+ * proposals (pre-v2 rows in the DB) and in-progress drafts without crashing
+ * on missing keys. The canonical schema lives in `@/lib/schemas/proposal`.
+ */
+export type ProposalSections = PartialProposalSections
 
 export interface ProposalView {
   id: string
@@ -55,4 +66,10 @@ export interface TrackedProposal {
     cases: boolean
     cta: boolean
   }
+  /**
+   * AI-generated HTML for the 14 proposal sections. Optional because
+   * tracked proposals can pre-exist generation (e.g. drafts) and legacy
+   * proposals never had this column.
+   */
+  sections?: ProposalSections
 }

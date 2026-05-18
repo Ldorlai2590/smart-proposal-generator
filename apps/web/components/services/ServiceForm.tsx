@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, X, Save } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, X, Save, AlertCircle } from 'lucide-react'
 import type { Service, BillingType } from '@/lib/types/service'
 import { CountedTextarea } from '@/components/ui/counted-textarea'
 
@@ -27,6 +28,9 @@ const BILLING_OPTIONS: { value: BillingType; label: string }[] = [
 const CURRENCIES = ['USD', 'CLP', 'MXN', 'COP', 'ARS', 'PEN']
 
 export function ServiceForm({ initial }: { initial?: Partial<Service> }) {
+  const router = useRouter()
+  const isEdit = Boolean(initial?.id)
+
   const [name, setName] = useState(initial?.name ?? '')
   const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0])
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -42,13 +46,60 @@ export function ServiceForm({ initial }: { initial?: Partial<Service> }) {
   const [billing, setBilling] = useState<BillingType>(initial?.billing_type ?? 'monthly')
   const [margin, setMargin] = useState(initial?.desired_margin ?? 35)
   const [saving, setSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 600))
-    setSaving(false)
-    alert('Servicio guardado (demo). En producción se persiste en Supabase.')
+    setErrorMsg(null)
+
+    const payload = {
+      name: name.trim(),
+      category,
+      description: description.trim(),
+      objective: objective.trim() || null,
+      scope: scope.trim() || null,
+      includes,
+      excludes,
+      duration_estimate: duration.trim() || null,
+      deliverables,
+      base_price: Number(basePrice) || 0,
+      currency,
+      customizable,
+      billing_type: billing,
+      desired_margin: Number(margin),
+      active: true,
+    }
+
+    try {
+      const url = isEdit ? `/api/services/${initial!.id}` : '/api/services'
+      const method = isEdit ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        // Try to surface validation issues from the API
+        let detail = `HTTP ${res.status}`
+        try {
+          const json = (await res.json()) as { error?: string; issues?: unknown }
+          if (json.error) detail = json.error
+          if (json.issues) detail += ` — ${JSON.stringify(json.issues)}`
+        } catch {
+          /* body wasn't JSON */
+        }
+        throw new Error(detail)
+      }
+
+      router.push('/services')
+      router.refresh()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setErrorMsg(msg)
+      setSaving(false)
+    }
   }
 
   return (
@@ -121,13 +172,24 @@ export function ServiceForm({ initial }: { initial?: Partial<Service> }) {
         </Field>
       </Card>
 
+      {/* Inline error */}
+      {errorMsg && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="font-medium">No se pudo guardar el servicio</p>
+            <p className="text-xs text-red-600 break-words">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
       {/* Sticky save bar */}
       <div className="fixed bottom-4 left-0 right-0 md:left-60 px-4 z-20">
         <div className="max-w-3xl mx-auto flex items-center justify-end gap-2 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
           <Link href="/services" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancelar</Link>
           <button type="submit" disabled={saving || !name} className="inline-flex items-center gap-2 px-5 py-2 bg-[#1D9E75] text-white text-sm font-semibold rounded-lg hover:bg-[#158a63] disabled:opacity-60 transition-colors">
             <Save className="h-4 w-4" />
-            {saving ? 'Guardando…' : 'Guardar servicio'}
+            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear servicio'}
           </button>
         </div>
       </div>

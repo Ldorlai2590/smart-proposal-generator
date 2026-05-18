@@ -3,28 +3,25 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
+import { ProposalSectionSchema } from '@/lib/schemas/proposal'
+
+// Vercel: bump function timeout so the full 60s streaming budget is respected.
+// Default nodejs runtime times out at 10s which kills streams mid-generation.
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 // Hard upper bound on the full generation. Anthropic streams can hang on
 // upstream errors; this guarantees a client-visible failure within 60s.
 const STREAM_TIMEOUT_MS = 60_000
 
-// 14-section schema per Smart Proposal v2 spec
-const ProposalSectionSchema = z.object({
-  portada: z.string().describe('Portada con título atractivo, nombre del cliente y tagline en HTML'),
-  contextoCliente: z.string().describe('Contexto del cliente: industria, tamaño, situación actual'),
-  diagnostico: z.string().describe('Diagnóstico del problema con datos específicos en HTML (use <ul>)'),
-  oportunidad: z.string().describe('Oportunidad detectada con métricas proyectadas'),
-  solucion: z.string().describe('Solución propuesta concreta'),
-  alcance: z.string().describe('Alcance detallado por servicio'),
-  incluyeNoIncluye: z.string().describe('Lista clara de qué incluye y qué no en HTML'),
-  metodologia: z.string().describe('Metodología de trabajo, sprints, comunicación'),
-  cronograma: z.string().describe('Cronograma con hitos por mes/semana'),
-  casosExito: z.string().describe('Caso de éxito relevante con resultados medibles'),
-  diferenciadores: z.string().describe('Por qué nosotros — diferenciadores únicos'),
-  inversion: z.string().describe('Inversión con tabla HTML de servicios y total'),
-  proximosPasos: z.string().describe('Próximos pasos concretos numerados'),
-  ctaFinal: z.string().describe('Call to action final motivador'),
-})
+// Rate limit: 3 proposal generations per minute per IP.
+// Anthropic stream costs $$, this caps blast radius if an attacker
+// (or buggy client retry loop) hammers the endpoint.
+const RATE_LIMIT_KEY = 'proposals:stream'
+const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_WINDOW_SEC = 60
+
+// 14-section schema lives in @/lib/schemas/proposal (single source of truth).
 
 const ServiceSchema = z.object({
   name: z.string(),
@@ -56,6 +53,31 @@ const RequestSchema = z.object({
 export async function POST(req: Request) {
   const log = logger.withRequestId(req)
   const start = Date.now()
+
+  // --- Rate limit (per IP, sliding window) ---------------------------------
+  // Applied BEFORE auth so unauthenticated probe traffic also counts.
+  const ip = getClientIp(req)
+  const rl = checkLimit(ip, RATE_LIMIT_KEY, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC)
+  if (!rl.allowed) {
+    log.warn('stream_rate_limited', { ip, retryAfter: rl.retryAfter })
+    return new Response(
+      JSON.stringify({
+        error: 'rate_limited',
+        message: 'Demasiadas solicitudes. Intenta de nuevo en unos segundos.',
+        retryAfter: rl.retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(rl.retryAfter),
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': rl.resetAt.toISOString(),
+        },
+      }
+    )
+  }
 
   // --- Auth & quota gate ---------------------------------------------------
   let tenantId: string

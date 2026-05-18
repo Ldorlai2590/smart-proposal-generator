@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { experimental_useObject as useObject } from 'ai/react'
-import { z } from 'zod/v4'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,64 +9,15 @@ import { Progress } from '@/components/ui/progress'
 
 import type { ClientData } from './Step1Client'
 import type { ContextData } from './Step2Context'
+import {
+  ProposalSectionSchema,
+  SECTION_LABELS,
+  SECTION_ORDER,
+  type ProposalSections,
+} from '@/lib/schemas/proposal'
 
-// 14 sections per the v2 spec
-export interface ProposalSections {
-  portada: string
-  contextoCliente: string
-  diagnostico: string
-  oportunidad: string
-  solucion: string
-  alcance: string
-  incluyeNoIncluye: string
-  metodologia: string
-  cronograma: string
-  casosExito: string
-  diferenciadores: string
-  inversion: string
-  proximosPasos: string
-  ctaFinal: string
-}
-
-const ProposalSectionSchema = z.object({
-  portada: z.string().describe('Portada con título atractivo y nombre del cliente'),
-  contextoCliente: z.string().describe('Contexto del cliente: industria, tamaño, situación actual'),
-  diagnostico: z.string().describe('Diagnóstico del problema con datos específicos'),
-  oportunidad: z.string().describe('Oportunidad detectada con métricas proyectadas'),
-  solucion: z.string().describe('Solución propuesta concreta'),
-  alcance: z.string().describe('Alcance detallado por servicio'),
-  incluyeNoIncluye: z.string().describe('Lista clara de qué incluye y qué no'),
-  metodologia: z.string().describe('Metodología de trabajo, sprints, comunicación'),
-  cronograma: z.string().describe('Cronograma con hitos por mes/semana'),
-  casosExito: z.string().describe('Caso de éxito relevante con resultados medibles'),
-  diferenciadores: z.string().describe('Por qué nosotros — diferenciadores únicos'),
-  inversion: z.string().describe('Inversión con tabla de servicios y total'),
-  proximosPasos: z.string().describe('Próximos pasos concretos'),
-  ctaFinal: z.string().describe('Call to action final motivador'),
-})
-
-const SECTION_LABELS: Record<keyof ProposalSections, string> = {
-  portada: 'Portada',
-  contextoCliente: 'Contexto del cliente',
-  diagnostico: 'Diagnóstico',
-  oportunidad: 'Oportunidad detectada',
-  solucion: 'Solución propuesta',
-  alcance: 'Alcance detallado',
-  incluyeNoIncluye: 'Qué incluye / no incluye',
-  metodologia: 'Metodología',
-  cronograma: 'Cronograma',
-  casosExito: 'Casos de éxito',
-  diferenciadores: 'Diferenciadores',
-  inversion: 'Inversión',
-  proximosPasos: 'Próximos pasos',
-  ctaFinal: 'CTA final',
-}
-
-const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'portada', 'contextoCliente', 'diagnostico', 'oportunidad', 'solucion',
-  'alcance', 'incluyeNoIncluye', 'metodologia', 'cronograma', 'casosExito',
-  'diferenciadores', 'inversion', 'proximosPasos', 'ctaFinal',
-]
+// Re-export for downstream consumers (Step4Review still imports the type from here).
+export type { ProposalSections }
 
 interface Step3GenerateProps {
   client: ClientData
