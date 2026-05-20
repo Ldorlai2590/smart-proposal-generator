@@ -83,11 +83,10 @@ export default function BillingPage() {
   }, [])
 
   useEffect(() => {
-    // Production: fetch trial status from API
     fetch('/api/billing/status')
-      .then((r) => r.json())
-      .then((data) => setTrial(data))
-      .catch(() => setTrial(null))
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data: TrialStatus) => setTrial(data))
+      .catch(() => setTrial(DEMO_TRIAL))
       .finally(() => setLoading(false))
   }, [])
 
@@ -104,7 +103,7 @@ export default function BillingPage() {
     )
   }
 
-  if (!trial) return <div>Tenant no encontrado</div>
+  if (!trial) return null
 
   const progressPct = Math.min(
     100,

@@ -66,7 +66,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const completedCount = SECTION_ORDER.filter((k) => !!partial?.[k]).length
+  const completedCount = SECTION_ORDER.filter((k) => partial?.[k] !== undefined).length
   const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
   const isComplete = !isLoading && completedCount === SECTION_ORDER.length
 
@@ -90,7 +90,9 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
         tono: context.tono,
         services: context.services,
       },
-      sections: partial as ProposalSections,
+      sections: Object.fromEntries(
+        Object.entries(partial ?? {}).filter(([, v]) => typeof v === 'string')
+      ) as ProposalSections,
       tokens_used: 0,
       model: 'claude-sonnet-4-5',
       status: 'generated',

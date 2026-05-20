@@ -27,8 +27,9 @@ export async function POST() {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return jsonResponse({ error: 'Stripe is not configured.' }, 503)
+  const stripeKey = process.env.STRIPE_SECRET_KEY ?? ''
+  if (!stripeKey || stripeKey.startsWith('sk_test_...') || stripeKey === 'sk_test_') {
+    return jsonResponse({ error: 'Función de pago disponible en producción.' }, 503)
   }
 
   const stripe = await getStripe()

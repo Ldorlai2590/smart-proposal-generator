@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { FileText, Download, Mail, Share2, Plus, Building2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,42 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { ProposalSectionEditor } from '@/components/editor/ProposalSectionEditor'
 import type { ClientData } from './Step1Client'
 import type { ProposalSections } from './Step3Generate'
-
-// ─── Section metadata ─────────────────────────────────────────────────────────
-
-const SECTION_LABELS: Record<keyof ProposalSections, string> = {
-  portada: 'Portada',
-  contextoCliente: 'Contexto del cliente',
-  diagnostico: 'Diagnóstico',
-  oportunidad: 'Oportunidad detectada',
-  solucion: 'Solución propuesta',
-  alcance: 'Alcance detallado',
-  incluyeNoIncluye: 'Qué incluye / no incluye',
-  metodologia: 'Metodología',
-  cronograma: 'Cronograma',
-  casosExito: 'Casos de éxito',
-  diferenciadores: 'Diferenciadores',
-  inversion: 'Inversión',
-  proximosPasos: 'Próximos pasos',
-  ctaFinal: 'CTA final',
-}
-
-const SECTION_ORDER: (keyof ProposalSections)[] = [
-  'portada',
-  'contextoCliente',
-  'diagnostico',
-  'oportunidad',
-  'solucion',
-  'alcance',
-  'incluyeNoIncluye',
-  'metodologia',
-  'cronograma',
-  'casosExito',
-  'diferenciadores',
-  'inversion',
-  'proximosPasos',
-  'ctaFinal',
-]
+import { SECTION_LABELS, SECTION_ORDER } from '@/lib/schemas/proposal'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -65,11 +31,14 @@ interface Step4ReviewProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Step4Review({ client, sections, proposalId, onBack }: Step4ReviewProps) {
+  const router = useRouter()
   // editedSections stores raw HTML from TipTap (richer than plain text)
   const [editedSections, setEditedSections] = useState<ProposalSections>(sections)
   const [exporting, setExporting] = useState<ExportFormat | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<ExportToast | null>(null)
+  const [emailRecipient, setEmailRecipient] = useState(client.email ?? '')
+  const [showEmailInput, setShowEmailInput] = useState(false)
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -92,17 +61,27 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
   }
 
   async function handleExport(format: ExportFormat) {
+    if (format === 'email') {
+      if (!emailRecipient || !emailRecipient.includes('@')) {
+        setShowEmailInput(true)
+        return
+      }
+    }
+
     setExporting(format)
     try {
+      const body: Record<string, unknown> = {
+        proposalId,
+        sections: editedSections,
+        client,
+        format,
+      }
+      if (format === 'email') body.recipientEmail = emailRecipient
+
       const res = await fetch('/api/proposals/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proposalId,
-          sections: editedSections,
-          client,
-          format,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -113,23 +92,38 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
         } catch {
           // ignore parse error
         }
-        showToast(format, 'error', errorMsg)
+        if (res.status === 503) {
+          showToast(format, 'error', 'Función disponible en producción.')
+        } else {
+          showToast(format, 'error', errorMsg)
+        }
         return
       }
 
       if (format === 'email') {
         showToast('email', 'success', 'Propuesta enviada por email correctamente.')
+        setShowEmailInput(false)
+        return
+      }
+
+      const contentType = res.headers.get('Content-Type') ?? ''
+      if (contentType.includes('application/json')) {
+        const json = (await res.json()) as { url?: string }
+        if (json.url) window.open(json.url, '_blank')
         return
       }
 
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+      const ext = contentType.includes('text/html') ? 'html' : format
       a.href = url
-      a.download = `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${format}`
+      a.download = filenameMatch?.[1] ?? `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${ext}`
       a.click()
       URL.revokeObjectURL(url)
-      showToast(format, 'success', `${format.toUpperCase()} descargado correctamente.`)
+      showToast(format, 'success', `Archivo descargado correctamente.`)
     } catch (err: unknown) {
       console.error('[Step4] export error:', err)
       showToast(format, 'error', 'Error de conexión. Intenta nuevamente.')
@@ -253,6 +247,26 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
             {exporting === 'email' ? 'Enviando...' : 'Enviar por email'}
           </Button>
 
+          {showEmailInput && (
+            <div className="space-y-2">
+              <input
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                placeholder="email@cliente.com"
+                className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#1D9E75]"
+              />
+              <Button
+                size="sm"
+                className="w-full bg-[#1D9E75] hover:bg-[#158a63] text-white"
+                onClick={() => handleExport('email')}
+                disabled={!emailRecipient.includes('@') || !!exporting}
+              >
+                {exporting === 'email' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Enviar'}
+              </Button>
+            </div>
+          )}
+
           <Button
             variant="ghost"
             className="w-full justify-start gap-2"
@@ -269,6 +283,16 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
             variant="outline"
             size="sm"
             className="w-full justify-start gap-2"
+            onClick={() => proposalId ? router.push(`/proposals/${proposalId}`) : router.push('/proposals')}
+          >
+            <FileText className="h-4 w-4" />
+            Ver mis propuestas
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-gray-400"
             onClick={onBack}
           >
             <Plus className="h-4 w-4" />
