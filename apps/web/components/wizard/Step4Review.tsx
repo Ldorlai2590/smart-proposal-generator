@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Download, Mail, Share2, Plus, Building2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { FileText, Download, ExternalLink, Mail, Share2, Plus, Building2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -39,6 +39,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
   const [toast, setToast] = useState<ExportToast | null>(null)
   const [emailRecipient, setEmailRecipient] = useState(client.email ?? '')
   const [showEmailInput, setShowEmailInput] = useState(false)
+  const [emailPreviewUrl, setEmailPreviewUrl] = useState<string | null>(null)
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -101,7 +102,21 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
       }
 
       if (format === 'email') {
-        showToast('email', 'success', 'Propuesta enviada por email correctamente.')
+        let successMsg = 'Propuesta enviada por email correctamente.'
+        try {
+          const emailJson = (await res.json()) as {
+            success?: boolean
+            previewUrl?: string
+            mode?: string
+          }
+          if (emailJson.previewUrl) {
+            setEmailPreviewUrl(emailJson.previewUrl)
+            successMsg = 'Email enviado (modo demo). Ver preview abajo.'
+          }
+        } catch {
+          // ignore parse error — success is already confirmed by res.ok
+        }
+        showToast('email', 'success', successMsg)
         setShowEmailInput(false)
         return
       }
@@ -265,6 +280,18 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
                 {exporting === 'email' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Enviar'}
               </Button>
             </div>
+          )}
+
+          {emailPreviewUrl && (
+            <a
+              href={emailPreviewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-xs text-[#1D9E75] hover:underline break-all"
+            >
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+              Ver email (Ethereal preview)
+            </a>
           )}
 
           <Button

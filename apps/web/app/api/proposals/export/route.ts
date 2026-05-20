@@ -1,3 +1,6 @@
+import chromium from '@sparticuz/chromium'
+import nodemailer from 'nodemailer'
+import puppeteer from 'puppeteer-core'
 import { z } from 'zod/v4'
 import { sanitizeHTML } from '@/lib/sanitize'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -295,65 +298,40 @@ async function handlePDF(
   const brand = await loadBranding(orgId)
   const html = buildProposalHTML(input.sections, brand)
 
-  // In DEMO_MODE or when DocuForge is not configured, return HTML as a
-  // downloadable file. Users can open it in a browser and print to PDF.
-  const docuforgeKey = process.env.DOCUFORGE_API_KEY
-  if (!docuforgeKey || docuforgeKey === 'df_...') {
-    const encoder = new TextEncoder()
-    const bytes = encoder.encode(html)
-    return new Response(bytes, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId}.html"`,
-      },
-    })
-  }
-
-  let upstream: Response
+  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined
   try {
-    upstream = await fetch('https://api.getdocuforge.dev/v1/pdf', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${docuforgeKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html,
-        filename: `propuesta-${input.proposalId}.pdf`,
-      }),
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
     })
-  } catch (err) {
-    console.error('[export/pdf] DocuForge unreachable:', err)
-    return jsonResponse({ error: 'PDF service unavailable.' }, 503)
-  }
 
-  if (!upstream.ok) {
-    const errorText = await upstream.text().catch(() => 'Unknown error')
-    console.error(`[export/pdf] DocuForge error ${upstream.status}:`, errorText)
-    return jsonResponse({ error: 'PDF generation failed.' }, 502)
-  }
+    const page = await browser.newPage()
+    // 'networkidle0' is excluded from setContent's waitUntil in puppeteer-core v25;
+    // 'load' is sufficient since buildProposalHTML produces fully-inlined HTML.
+    await page.setContent(html, { waitUntil: 'load' })
 
-  // DocuForge can return either the PDF bytes directly or a JSON { url: string }
-  const contentType = upstream.headers.get('Content-Type') ?? ''
+    const pdfUint8 = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
+    })
 
-  if (contentType.includes('application/pdf')) {
-    const bytes = await upstream.arrayBuffer()
-    return new Response(bytes, {
+    // page.pdf() returns Uint8Array in puppeteer-core v25; convert to ArrayBuffer
+    // so the Response constructor (BodyInit) accepts it.
+    return new Response(pdfUint8.buffer as ArrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="propuesta-${input.proposalId}.pdf"`,
       },
     })
+  } catch (err) {
+    console.error('[export/pdf] Chromium PDF generation failed:', err)
+    return jsonResponse({ error: 'PDF generation failed.' }, 500)
+  } finally {
+    await browser?.close()
   }
-
-  // JSON response with a URL
-  const json = (await upstream.json()) as { url?: string }
-  if (!json.url) {
-    return jsonResponse({ error: 'PDF generation failed: no URL returned.' }, 502)
-  }
-  return jsonResponse({ url: json.url }, 200)
 }
 
 async function handleDOCX(
@@ -404,6 +382,79 @@ async function handleDOCX(
   })
 }
 
+// ─── Email: placeholder detection ────────────────────────────────────────────
+//
+// A RESEND_API_KEY is considered a placeholder when:
+//   • it's absent / undefined
+//   • it ends with "..." (e.g. "re_...")
+//   • there are 5 or fewer characters after the "re_" prefix
+//
+// In that case we fall back to Ethereal Email (Nodemailer test accounts),
+// which require zero registration and work without any API key.
+
+function isResendPlaceholder(key: string | undefined): boolean {
+  if (!key) return true
+  if (key.endsWith('...')) return true
+  // Strip the "re_" prefix and check remaining length
+  const suffix = key.startsWith('re_') ? key.slice(3) : key
+  return suffix.length <= 5
+}
+
+async function sendViaEthereal(
+  recipientEmail: string,
+  subject: string,
+  htmlContent: string,
+): Promise<{ previewUrl: string }> {
+  const testAccount = await nodemailer.createTestAccount()
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  })
+
+  const info = await transporter.sendMail({
+    from: '"Smart Proposal" <demo@smartproposal.app>',
+    to: recipientEmail,
+    subject,
+    html: htmlContent,
+  })
+
+  const previewUrl = nodemailer.getTestMessageUrl(info) || ''
+  console.log('[export/email] Ethereal preview URL:', previewUrl)
+  return { previewUrl }
+}
+
+async function sendViaResend(
+  resendKey: string,
+  recipientEmail: string,
+  subject: string,
+  htmlContent: string,
+): Promise<void> {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Smart Proposal <demo@smartproposal.app>',
+      to: [recipientEmail],
+      subject,
+      html: htmlContent,
+    }),
+  })
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => 'Unknown error')
+    console.error(`[export/email] Resend error ${res.status}:`, errorText)
+    throw new Error(`Resend delivery failed: ${res.status}`)
+  }
+}
+
 async function handleEmail(
   input: ExportRequest,
   orgId: string,
@@ -415,36 +466,39 @@ async function handleEmail(
     )
   }
 
-  const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+  const brand = await loadBranding(orgId)
+  const htmlContent = buildProposalHTML(input.sections, brand)
+  const subject = `Propuesta Comercial — ${brand.companyName}`
+  const resendKey = process.env.RESEND_API_KEY
 
-  let upstream: Response
-  try {
-    upstream = await fetch(
-      `${apiUrl}/proposals/${input.proposalId}/export/email`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant-ID': orgId,
-        },
-        body: JSON.stringify({
-          recipientEmail: input.recipientEmail,
-          sections: input.sections,
-        }),
-      },
-    )
-  } catch (err) {
-    console.error('[export/email] FastAPI unreachable:', err)
-    return jsonResponse({ error: 'Email service unavailable.' }, 503)
+  if (isResendPlaceholder(resendKey)) {
+    // ── Fallback: Ethereal (test SMTP, no signup needed) ──
+    try {
+      const { previewUrl } = await sendViaEthereal(
+        input.recipientEmail,
+        subject,
+        htmlContent,
+      )
+      return jsonResponse({
+        success: true,
+        recipient: input.recipientEmail,
+        previewUrl,
+        mode: 'ethereal',
+      }, 200)
+    } catch (err) {
+      console.error('[export/email] Ethereal send failed:', err)
+      return jsonResponse({ error: 'Email delivery failed (test mode).' }, 502)
+    }
   }
 
-  if (!upstream.ok) {
-    const errorText = await upstream.text().catch(() => 'Unknown error')
-    console.error(`[export/email] FastAPI error ${upstream.status}:`, errorText)
+  // ── Production path: Resend ──
+  try {
+    await sendViaResend(resendKey!, input.recipientEmail, subject, htmlContent)
+    return jsonResponse({ success: true, recipient: input.recipientEmail }, 200)
+  } catch (err) {
+    console.error('[export/email] Resend send failed:', err)
     return jsonResponse({ error: 'Email delivery failed.' }, 502)
   }
-
-  return jsonResponse({ success: true, recipient: input.recipientEmail }, 200)
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
