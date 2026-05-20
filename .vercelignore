@@ -1,0 +1,39 @@
+# Python backend — not deployed to Vercel
+apps/api/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Version control
+.git/
+
+# Local env files (set these as Vercel environment variables instead)
+.env
+.env.local
+.env*.local
+apps/web/.env.local
+apps/api/.env
+
+# Turborepo cache
+.turbo/
+
+# Test artifacts
+coverage/
+**/coverage/
+playwright-report/
+test-results/
+
+# Python artifacts
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+apps/api/.venv/
+apps/api/venv/
+
+# Docker / infra
+infra/
+
+# Misc
+*.log
+.DS_Store

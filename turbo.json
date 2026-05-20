@@ -12,11 +12,19 @@
         "NEXT_PUBLIC_DEMO_MODE",
         "NEXT_PUBLIC_SUPABASE_URL",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_URL",
         "SUPABASE_SERVICE_ROLE_KEY",
         "NEXT_PUBLIC_APP_URL",
         "DATABASE_URL",
+        "DIRECT_URL",
         "API_URL",
-        "NODE_ENV"
+        "NODE_ENV",
+        "ENVIRONMENT",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "RESEND_API_KEY",
+        "EMAIL_FROM",
+        "DOCUFORGE_API_KEY"
       ]
     },
     "dev": {
