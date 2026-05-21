@@ -66,9 +66,15 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const completedCount = SECTION_ORDER.filter((k) => partial?.[k] !== undefined).length
-  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
-  const isComplete = !isLoading && completedCount === SECTION_ORDER.length
+  const completedCount = SECTION_ORDER.filter((k) => {
+    const v = partial?.[k]
+    return v !== undefined && v !== null && v !== ''
+  }).length
+  const progressPct = isLoading
+    ? Math.round((completedCount / SECTION_ORDER.length) * 100)
+    : completedCount > 0 ? 100 : 0
+  // Fail-open: if stream ends with partial data, let the user proceed
+  const isComplete = !isLoading && !error && (completedCount === SECTION_ORDER.length || (completedCount > 0 && !isLoading))
 
   useEffect(() => {
     if (!isComplete || hasSavedRef.current || !partial) return
@@ -117,7 +123,8 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
   }, [isComplete, partial, client, context])
 
   function getStatus(key: keyof ProposalSections): 'done' | 'streaming' | 'pending' {
-    if (partial?.[key]) return 'done'
+    const v = partial?.[key]
+    if (v !== undefined && v !== null && v !== '') return 'done'
     if (isLoading) {
       const idx = SECTION_ORDER.indexOf(key)
       const prevKey = SECTION_ORDER[idx - 1]
