@@ -89,19 +89,27 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const { getTrialStatus } = await import('@/lib/trial')
-  const trial = await getTrialStatus(tenantId)
-  if (!trial || !trial.canGenerateProposals) {
-    return new Response(
-      JSON.stringify({
-        error: 'trial_expired_or_quota_exceeded',
-        stage: trial?.stage ?? 'unknown',
-        daysLeft: trial?.daysLeft ?? 0,
-        proposalsUsed: trial?.proposalsUsed ?? 0,
-        proposalsQuota: trial?.proposalsQuota ?? 0,
-      }),
-      { status: 402, headers: { 'Content-Type': 'application/json' } }
-    )
+  try {
+    const { getTrialStatus } = await import('@/lib/trial')
+    const trial = await getTrialStatus(tenantId)
+    if (trial && !trial.canGenerateProposals) {
+      return new Response(
+        JSON.stringify({
+          error: 'trial_expired_or_quota_exceeded',
+          stage: trial.stage,
+          daysLeft: trial.daysLeft,
+          proposalsUsed: trial.proposalsUsed,
+          proposalsQuota: trial.proposalsQuota,
+        }),
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+  } catch (dbErr) {
+    // DB unreachable (e.g. Vercel serverless → Supabase direct connection).
+    // Fail open so the demo always generates; usage tracking is best-effort.
+    log.warn('stream_trial_check_failed', {
+      err: dbErr instanceof Error ? dbErr.message : String(dbErr),
+    })
   }
 
   // --- Body parsing + validation -------------------------------------------
