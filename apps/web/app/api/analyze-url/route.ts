@@ -1,4 +1,4 @@
-import { generateObject } from 'ai'
+import { generateObject, jsonSchema } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth'
@@ -169,9 +169,20 @@ export async function POST(req: Request) {
 
   // AI analysis with Haiku (fast + cheap for extraction)
   try {
-    const { object } = await generateObject({
+    // Use jsonSchema() + z.toJSONSchema() to bypass zod-to-json-schema@3.x incompatibility with Zod v4.
+    // Without this, generateObject sends an empty {} schema to Anthropic, which returns unstructured data.
+    const { object } = await generateObject<WebsiteAnalysis>({
       model: anthropic('claude-haiku-4-5'),
-      schema: AnalysisSchema,
+      schema: jsonSchema<WebsiteAnalysis>(
+        z.toJSONSchema(AnalysisSchema) as Parameters<typeof jsonSchema>[0],
+        {
+          validate: (value) => {
+            const result = AnalysisSchema.safeParse(value)
+            if (result.success) return { success: true as const, value: result.data }
+            return { success: false as const, error: result.error as Error }
+          },
+        },
+      ),
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 
 Contenido del sitio:

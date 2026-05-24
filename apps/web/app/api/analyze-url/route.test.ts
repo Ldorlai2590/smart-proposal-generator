@@ -19,6 +19,7 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('ai', () => ({
   generateObject: vi.fn(),
+  jsonSchema: vi.fn((schema: unknown) => schema),
 }))
 
 vi.mock('@ai-sdk/anthropic', () => ({
