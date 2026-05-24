@@ -170,7 +170,7 @@ export async function POST(req: Request) {
   // AI analysis with Haiku (fast + cheap for extraction)
   try {
     const { object } = await generateObject({
-      model: anthropic('claude-haiku-4-5-20251001'),
+      model: anthropic('claude-haiku-4-5'),
       schema: AnalysisSchema,
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 
