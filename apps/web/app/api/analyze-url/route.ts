@@ -30,21 +30,39 @@ const BLOCKED_HOSTNAMES = new Set(['metadata.google.internal', 'metadata.interna
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024 // 5 MB guard before buffering
 
 const AnalysisSchema = z.object({
-  business_model: z.string().describe('Modelo de negocio principal en 1 frase'),
-  value_proposition: z.string().describe('Propuesta de valor principal en 1-2 frases'),
-  target_audience: z.string().describe('Público objetivo principal'),
-  key_differentiators: z.array(z.string()).describe('3-5 diferenciadores clave'),
-  pain_points: z.array(z.string()).describe('2-3 problemas que el negocio resuelve'),
-  opportunities: z.array(z.string()).describe('2-3 oportunidades de mejora o crecimiento detectadas'),
-  communication_tone: z
-    .enum(['formal', 'casual', 'tecnico', 'aspiracional', 'directo'])
-    .describe('Tono de comunicación predominante de la marca'),
-  executive_summary: z
-    .string()
-    .describe('Resumen ejecutivo en 2-3 frases para personalizar una propuesta B2B'),
+  business_model: z.string(),
+  value_proposition: z.string(),
+  target_audience: z.string(),
+  key_differentiators: z.array(z.string()),
+  pain_points: z.array(z.string()),
+  opportunities: z.array(z.string()),
+  communication_tone: z.enum(['formal', 'casual', 'tecnico', 'aspiracional', 'directo']),
+  executive_summary: z.string(),
 })
 
 export type WebsiteAnalysis = z.infer<typeof AnalysisSchema>
+
+// Plain JSON Schema — avoids zod-to-json-schema@3.x incompatibility with Zod v4 at build time.
+// Descriptions are passed directly here so Anthropic receives them without any conversion layer.
+const ANALYSIS_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    business_model: { type: 'string', description: 'Modelo de negocio principal en 1 frase' },
+    value_proposition: { type: 'string', description: 'Propuesta de valor principal en 1-2 frases' },
+    target_audience: { type: 'string', description: 'Público objetivo principal' },
+    key_differentiators: { type: 'array', items: { type: 'string' }, description: '3-5 diferenciadores clave' },
+    pain_points: { type: 'array', items: { type: 'string' }, description: '2-3 problemas que el negocio resuelve' },
+    opportunities: { type: 'array', items: { type: 'string' }, description: '2-3 oportunidades de mejora o crecimiento detectadas' },
+    communication_tone: {
+      type: 'string',
+      enum: ['formal', 'casual', 'tecnico', 'aspiracional', 'directo'],
+      description: 'Tono de comunicación predominante de la marca',
+    },
+    executive_summary: { type: 'string', description: 'Resumen ejecutivo en 2-3 frases para personalizar una propuesta B2B' },
+  },
+  required: ['business_model', 'value_proposition', 'target_audience', 'key_differentiators', 'pain_points', 'opportunities', 'communication_tone', 'executive_summary'],
+  additionalProperties: false,
+}
 
 export async function POST(req: Request) {
   const log = logger.withRequestId(req)
@@ -175,20 +193,16 @@ export async function POST(req: Request) {
 
   // AI analysis with Haiku (fast + cheap for extraction)
   try {
-    // Use jsonSchema() + z.toJSONSchema() to bypass zod-to-json-schema@3.x incompatibility with Zod v4.
-    // Without this, generateObject sends an empty {} schema to Anthropic, which returns unstructured data.
     const { object } = await generateObject<WebsiteAnalysis>({
-      model: anthropic('claude-haiku-4-5'),
-      schema: jsonSchema<WebsiteAnalysis>(
-        z.toJSONSchema(AnalysisSchema) as Parameters<typeof jsonSchema>[0],
-        {
-          validate: (value) => {
-            const result = AnalysisSchema.safeParse(value)
-            if (result.success) return { success: true as const, value: result.data }
-            return { success: false as const, error: result.error as Error }
-          },
+      model: anthropic('claude-haiku-4-5-20251001'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      schema: jsonSchema<WebsiteAnalysis>(ANALYSIS_JSON_SCHEMA as any, {
+        validate: (value) => {
+          const result = AnalysisSchema.safeParse(value)
+          if (result.success) return { success: true as const, value: result.data }
+          return { success: false as const, error: new Error(JSON.stringify(result.error.issues)) }
         },
-      ),
+      }),
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 
 Contenido del sitio:
