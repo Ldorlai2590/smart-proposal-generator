@@ -20,6 +20,11 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('ai', () => ({
   generateObject: vi.fn(),
   jsonSchema: vi.fn((schema: unknown) => schema),
+  // Error subclasses used in the route's catch block — must be present so
+  // .isInstance() calls don't throw "no export defined" at runtime.
+  APICallError: { isInstance: vi.fn(() => false) },
+  NoObjectGeneratedError: { isInstance: vi.fn(() => false) },
+  TypeValidationError: { isInstance: vi.fn(() => false) },
 }))
 
 vi.mock('@ai-sdk/anthropic', () => ({

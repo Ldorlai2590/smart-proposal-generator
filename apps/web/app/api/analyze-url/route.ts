@@ -1,4 +1,10 @@
-import { generateObject, jsonSchema } from 'ai'
+import {
+  generateObject,
+  jsonSchema,
+  APICallError,
+  NoObjectGeneratedError,
+  TypeValidationError,
+} from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth'
@@ -196,9 +202,27 @@ Extrae información precisa. Si algo no está en el contenido, indícalo breveme
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    log.error('analyze_url_ai_failed', {
-      err: err instanceof Error ? err.message : String(err),
-    })
+    // Build a rich error context so Vercel logs contain enough to diagnose without
+    // a local repro. Each AI SDK error subclass carries fields beyond .message.
+    const errCtx: Record<string, unknown> = {
+      errName: err instanceof Error ? err.name : typeof err,
+      errMsg: err instanceof Error ? err.message : String(err),
+    }
+
+    if (APICallError.isInstance(err)) {
+      errCtx.statusCode = err.statusCode
+      errCtx.responseBody = err.responseBody?.slice(0, 500) // truncate to stay log-friendly
+      errCtx.isRetryable = err.isRetryable
+    } else if (NoObjectGeneratedError.isInstance(err)) {
+      errCtx.finishReason = err.finishReason
+      errCtx.rawText = err.text?.slice(0, 500) // first 500 chars of raw model output
+      errCtx.responseId = err.response?.id
+    } else if (TypeValidationError.isInstance(err)) {
+      errCtx.validationCause = err.cause instanceof Error ? err.cause.message : String(err.cause)
+      errCtx.badValue = JSON.stringify(err.value)?.slice(0, 500)
+    }
+
+    log.error('analyze_url_ai_failed', errCtx)
     return new Response(
       JSON.stringify({ error: 'analysis_failed', message: 'No se pudo analizar el sitio.' }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
