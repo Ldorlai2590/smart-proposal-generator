@@ -195,7 +195,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         body: JSON.stringify({ url, company, industry }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`)
+      if (!res.ok) throw new Error(data?.debug?.msg || data?.message || `Error ${res.status}`)
       setWebsiteAnalysis(data as WebsiteAnalysis)
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : 'No se pudo analizar el sitio')

@@ -1,9 +1,6 @@
 import {
-  generateObject,
-  jsonSchema,
+  generateText,
   APICallError,
-  NoObjectGeneratedError,
-  TypeValidationError,
 } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
@@ -191,33 +188,68 @@ export async function POST(req: Request) {
     )
   }
 
-  // AI analysis with Haiku (fast + cheap for extraction)
+  // AI analysis — generateText + manual JSON.parse avoids generateObject/jsonSchema
+  // incompatibilities (zod-to-json-schema@3 vs Zod v4, NoObjectGeneratedError on Vercel).
   try {
-    const { object } = await generateObject<WebsiteAnalysis>({
-      model: anthropic('claude-haiku-4-5-20251001'),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      schema: jsonSchema<WebsiteAnalysis>(ANALYSIS_JSON_SCHEMA as any, {
-        validate: (value) => {
-          const result = AnalysisSchema.safeParse(value)
-          if (result.success) return { success: true as const, value: result.data }
-          return { success: false as const, error: new Error(JSON.stringify(result.error.issues)) }
-        },
-      }),
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-5'),
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 
 Contenido del sitio:
 ${pageContent}
 
+Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin bloques de código, sin texto adicional):
+${JSON.stringify(ANALYSIS_JSON_SCHEMA, null, 2)}
+
 Extrae información precisa. Si algo no está en el contenido, indícalo brevemente en lugar de inventar.`,
     })
 
+    // Strip optional markdown code fences the model may add despite the instruction
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .trim()
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch (parseErr) {
+      log.error('analyze_url_json_parse_failed', {
+        rawText: cleaned.slice(0, 500),
+        parseErr: parseErr instanceof Error ? parseErr.message : String(parseErr),
+      })
+      return new Response(
+        JSON.stringify({
+          error: 'analysis_failed',
+          message: 'El modelo devolvió una respuesta no estructurada. Intenta de nuevo.',
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate shape with Zod before returning to client
+    const validated = AnalysisSchema.safeParse(parsed)
+    if (!validated.success) {
+      log.error('analyze_url_schema_validation_failed', {
+        issues: JSON.stringify(validated.error.issues).slice(0, 500),
+        parsed: JSON.stringify(parsed).slice(0, 500),
+      })
+      return new Response(
+        JSON.stringify({
+          error: 'analysis_failed',
+          message: 'La respuesta del modelo no tiene el formato esperado. Intenta de nuevo.',
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     log.info('analyze_url_success', { company, host: parsedUrl.hostname })
-    return new Response(JSON.stringify(object), {
+    return new Response(JSON.stringify(validated.data), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    // Build a rich error context so Vercel logs contain enough to diagnose without
-    // a local repro. Each AI SDK error subclass carries fields beyond .message.
+    // Build a rich error context so Vercel logs contain enough to diagnose without a local repro.
     const errCtx: Record<string, unknown> = {
       errName: err instanceof Error ? err.name : typeof err,
       errMsg: err instanceof Error ? err.message : String(err),
@@ -225,20 +257,17 @@ Extrae información precisa. Si algo no está en el contenido, indícalo breveme
 
     if (APICallError.isInstance(err)) {
       errCtx.statusCode = err.statusCode
-      errCtx.responseBody = err.responseBody?.slice(0, 500) // truncate to stay log-friendly
+      errCtx.responseBody = err.responseBody?.slice(0, 500)
       errCtx.isRetryable = err.isRetryable
-    } else if (NoObjectGeneratedError.isInstance(err)) {
-      errCtx.finishReason = err.finishReason
-      errCtx.rawText = err.text?.slice(0, 500) // first 500 chars of raw model output
-      errCtx.responseId = err.response?.id
-    } else if (TypeValidationError.isInstance(err)) {
-      errCtx.validationCause = err.cause instanceof Error ? err.cause.message : String(err.cause)
-      errCtx.badValue = JSON.stringify(err.value)?.slice(0, 500)
     }
 
     log.error('analyze_url_ai_failed', errCtx)
     return new Response(
-      JSON.stringify({ error: 'analysis_failed', message: 'No se pudo analizar el sitio.' }),
+      JSON.stringify({
+        error: 'analysis_failed',
+        message: 'No se pudo analizar el sitio.',
+        debug: { name: errCtx.errName, msg: errCtx.errMsg, status: errCtx.statusCode },
+      }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
     )
   }
