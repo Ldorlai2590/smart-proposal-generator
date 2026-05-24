@@ -66,6 +66,14 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  let tenantId: string
+  try {
+    const session = await requireAuth()
+    tenantId = session.tenantId
+  } catch {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()
@@ -79,7 +87,6 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    const { tenantId } = await requireAuth()
     const admin = createAdminClient()
 
     const { data: current, error: fetchErr } = await admin

@@ -1,12 +1,23 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Plus, Building2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Search, Plus, Building2, CheckCircle2, AlertCircle, Globe, Loader2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+
+interface WebsiteAnalysis {
+  business_model: string
+  value_proposition: string
+  target_audience: string
+  key_differentiators: string[]
+  pain_points: string[]
+  opportunities: string[]
+  communication_tone: string
+  executive_summary: string
+}
 
 
 export interface ClientData {
@@ -74,6 +85,80 @@ function mapApiClient(c: ApiClient): ClientData {
   }
 }
 
+function AnalysisCard({
+  analysis,
+  expanded,
+  onToggle,
+}: {
+  analysis: WebsiteAnalysis
+  expanded: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left"
+      >
+        <CheckCircle2 className="h-4 w-4 text-[var(--color-brand)] flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-[var(--color-brand)]">Sitio analizado con IA ✓</p>
+          <p className="text-xs text-gray-600 truncate">{analysis.executive_summary}</p>
+        </div>
+        {expanded ? (
+          <ChevronUp className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+        )}
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2 border-t border-[var(--color-brand)]/20 pt-2">
+          <Detail label="Modelo de negocio" value={analysis.business_model} />
+          <Detail label="Propuesta de valor" value={analysis.value_proposition} />
+          <Detail label="Público objetivo" value={analysis.target_audience} />
+          {analysis.key_differentiators.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">Diferenciadores</p>
+              <ul className="space-y-0.5">
+                {analysis.key_differentiators.map((d, i) => (
+                  <li key={i} className="text-xs text-gray-700 flex items-start gap-1">
+                    <span className="text-[var(--color-brand)] mt-0.5">·</span> {d}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {analysis.opportunities.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">Oportunidades detectadas</p>
+              <ul className="space-y-0.5">
+                {analysis.opportunities.map((o, i) => (
+                  <li key={i} className="text-xs text-gray-700 flex items-start gap-1">
+                    <span className="text-amber-500 mt-0.5">→</span> {o}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="text-[10px] text-gray-400">
+            Tono detectado: <span className="font-medium text-gray-600">{analysis.communication_tone}</span>
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-gray-500 uppercase">{label}</p>
+      <p className="text-xs text-gray-700 mt-0.5">{value}</p>
+    </div>
+  )
+}
+
 export function Step1Client({ onNext }: Step1ClientProps) {
   const [query, setQuery] = useState('')
   const [clients, setClients] = useState<ClientData[]>([])
@@ -89,7 +174,35 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     email: '',
     industry: '',
     companySize: '',
+    website: '',
   })
+
+  // Website analysis state (shared between create + select flows)
+  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [websiteAnalysis, setWebsiteAnalysis] = useState<WebsiteAnalysis | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [showAnalysisDetail, setShowAnalysisDetail] = useState(false)
+
+  async function analyzeWebsite(url: string, company: string, industry?: string) {
+    setIsAnalyzing(true)
+    setAnalyzeError(null)
+    setWebsiteAnalysis(null)
+    try {
+      const res = await fetch('/api/analyze-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, company, industry }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`)
+      setWebsiteAnalysis(data as WebsiteAnalysis)
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : 'No se pudo analizar el sitio')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -108,6 +221,12 @@ export function Step1Client({ onNext }: Step1ClientProps) {
       setClients([])
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [])
 
@@ -147,7 +266,17 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         throw new Error(detail?.error ?? detail?.detail ?? `Error ${res.status}`)
       }
       const created: ApiClient = await res.json()
-      const clientData: ClientData = { ...mapApiClient(created), isNew: true }
+      const clientData: ClientData = {
+        ...mapApiClient(created),
+        isNew: true,
+        website: newClient.website || undefined,
+        ai_business_model: websiteAnalysis?.business_model,
+        ai_value_prop: websiteAnalysis?.value_proposition,
+        ai_opportunities: websiteAnalysis?.opportunities,
+        ai_weaknesses: websiteAnalysis?.pain_points,
+        ai_communication_tone: websiteAnalysis?.communication_tone,
+        ai_executive_summary: websiteAnalysis?.executive_summary,
+      }
       onNext(clientData)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'No se pudo crear el cliente.')
@@ -215,6 +344,46 @@ export function Step1Client({ onNext }: Step1ClientProps) {
               <option value="1000+">+1000 empleados</option>
             </select>
           </div>
+        </div>
+
+        {/* Website URL + AI analysis */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+            <Globe className="h-3.5 w-3.5" /> Sitio web de la empresa
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              placeholder="https://empresa.com"
+              value={newClient.website}
+              onChange={(e) => {
+                setNewClient((p) => ({ ...p, website: e.target.value }))
+                setWebsiteAnalysis(null)
+                setAnalyzeError(null)
+              }}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!newClient.website || isAnalyzing}
+              onClick={() => analyzeWebsite(newClient.website, newClient.company, newClient.industry)}
+              className="whitespace-nowrap gap-1.5"
+            >
+              {isAnalyzing ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Analizando...</>
+              ) : (
+                <><Sparkles className="h-3.5 w-3.5 text-[var(--color-brand)]" /> Analizar con IA</>
+              )}
+            </Button>
+          </div>
+          {analyzeError && (
+            <p className="text-xs text-red-600 flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5" /> {analyzeError}
+            </p>
+          )}
+          {websiteAnalysis && <AnalysisCard analysis={websiteAnalysis} expanded={showAnalysisDetail} onToggle={() => setShowAnalysisDetail(!showAnalysisDetail)} />}
         </div>
 
         <div className="space-y-1.5">
@@ -351,6 +520,48 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         ) : null}
       </div>
 
+      {/* URL analysis panel for existing client selection */}
+      {selected && (
+        <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+            <Globe className="h-3.5 w-3.5" /> Sitio web (opcional · mejora la propuesta con IA)
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              placeholder="https://empresa.com"
+              value={websiteUrl}
+              onChange={(e) => {
+                setWebsiteUrl(e.target.value)
+                setWebsiteAnalysis(null)
+                setAnalyzeError(null)
+              }}
+              className="flex-1 h-8 text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!websiteUrl || isAnalyzing}
+              onClick={() => analyzeWebsite(websiteUrl, selected.company, selected.industry)}
+              className="h-8 whitespace-nowrap gap-1 text-xs"
+            >
+              {isAnalyzing ? (
+                <><Loader2 className="h-3 w-3 animate-spin" /> Analizando...</>
+              ) : (
+                <><Sparkles className="h-3 w-3 text-[var(--color-brand)]" /> Analizar</>
+              )}
+            </Button>
+          </div>
+          {analyzeError && (
+            <p className="text-xs text-red-600 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {analyzeError}
+            </p>
+          )}
+          {websiteAnalysis && <AnalysisCard analysis={websiteAnalysis} expanded={showAnalysisDetail} onToggle={() => setShowAnalysisDetail(!showAnalysisDetail)} />}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 pt-2">
         <button
           onClick={() => setShowCreate(true)}
@@ -360,8 +571,25 @@ export function Step1Client({ onNext }: Step1ClientProps) {
           Crear nuevo cliente
         </button>
         <div className="flex-1" />
-        <Button onClick={() => selected && onNext(selected)} disabled={!selected} size="lg">
-          Continuar
+        <Button
+          onClick={() => {
+            if (!selected) return
+            const enriched: ClientData = {
+              ...selected,
+              website: websiteUrl || selected.website,
+              ai_business_model: websiteAnalysis?.business_model ?? selected.ai_business_model,
+              ai_value_prop: websiteAnalysis?.value_proposition ?? selected.ai_value_prop,
+              ai_opportunities: websiteAnalysis?.opportunities ?? selected.ai_opportunities,
+              ai_weaknesses: websiteAnalysis?.pain_points ?? selected.ai_weaknesses,
+              ai_communication_tone: websiteAnalysis?.communication_tone ?? selected.ai_communication_tone,
+              ai_executive_summary: websiteAnalysis?.executive_summary ?? selected.ai_executive_summary,
+            }
+            onNext(enriched)
+          }}
+          disabled={!selected}
+          size="lg"
+        >
+          {websiteAnalysis ? 'Continuar con análisis →' : 'Continuar'}
         </Button>
       </div>
     </div>

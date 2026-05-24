@@ -31,6 +31,17 @@ const ServiceSchema = z.object({
   billing: z.string(),
 })
 
+const WebsiteAnalysisSchema = z.object({
+  business_model: z.string().optional(),
+  value_proposition: z.string().optional(),
+  target_audience: z.string().optional(),
+  key_differentiators: z.array(z.string()).optional(),
+  opportunities: z.array(z.string()).optional(),
+  pain_points: z.array(z.string()).optional(),
+  communication_tone: z.string().optional(),
+  executive_summary: z.string().optional(),
+})
+
 const RequestSchema = z.object({
   clientId: z.string().max(200),
   clientName: z.string().max(200),
@@ -48,6 +59,7 @@ const RequestSchema = z.object({
   formality: z.enum(['ejecutivo', 'cercano', 'premium', 'tecnico']).optional(),
   designTemplate: z.enum(['minimalista', 'premium', 'corporativo', 'creativo']).optional(),
   tono: z.enum(['formal', 'consultivo', 'directo']).default('consultivo'),
+  websiteAnalysis: WebsiteAnalysisSchema.optional(),
 })
 
 export async function POST(req: Request) {
@@ -159,6 +171,27 @@ export async function POST(req: Request) {
     creativo: 'Diseño creativo con énfasis visual, iconos, color, modernidad.',
   }
 
+  // Build website analysis context block (only emitted when there's actual data)
+  const websiteContext = (() => {
+    const wa = input.websiteAnalysis
+    if (!wa) return ''
+    const lines: string[] = []
+    if (wa.executive_summary) lines.push(`Resumen: ${wa.executive_summary}`)
+    if (wa.business_model) lines.push(`Modelo de negocio: ${wa.business_model}`)
+    if (wa.value_proposition) lines.push(`Propuesta de valor: ${wa.value_proposition}`)
+    if (wa.target_audience) lines.push(`Público objetivo: ${wa.target_audience}`)
+    if (wa.key_differentiators?.length) lines.push(`Diferenciadores: ${wa.key_differentiators.join(', ')}`)
+    if (wa.opportunities?.length) lines.push(`Oportunidades detectadas: ${wa.opportunities.join('; ')}`)
+    if (wa.pain_points?.length) lines.push(`Problemas que resuelven: ${wa.pain_points.join('; ')}`)
+    if (wa.communication_tone) lines.push(`Tono de marca: ${wa.communication_tone}`)
+    if (lines.length === 0) return ''
+    return (
+      '\n\nCONTEXTO DEL SITIO WEB DEL CLIENTE (analizado por IA):\n' +
+      lines.join('\n') +
+      '\nUsa este contexto para personalizar PROFUNDAMENTE cada sección de la propuesta.'
+    )
+  })()
+
   const system = `Eres un experto consultor de negocios especializado en propuestas B2B multi-servicio para el mercado LATAM (Chile, México, Colombia).
 
 REGLAS:
@@ -187,7 +220,7 @@ ESTRUCTURA DE 14 SECCIONES (genera todas, en orden):
 
 ESPECIALIDAD: Propuestas multi-servicio. Cada servicio con descripción + alcance + entregables + precio.
 
-Empresa: ${input.company} | Industria: ${input.industry}`
+Empresa: ${input.company} | Industria: ${input.industry}${websiteContext}`
 
   // Build services text
   const servicesText = (() => {
@@ -229,12 +262,18 @@ IMPORTANTE:
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       messages: [
         {
-          role: 'system',
-          content: system,
-          experimental_providerMetadata: {
-            anthropic: { cacheControl: { type: 'ephemeral' } },
-          },
-        },
+          role: 'system' as const,
+          content: [
+            {
+              type: 'text' as const,
+              text: system,
+              experimental_providerMetadata: {
+                anthropic: { cacheControl: { type: 'ephemeral' as const } },
+              },
+            },
+          ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
         { role: 'user', content: prompt },
       ],
     })

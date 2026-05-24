@@ -17,7 +17,6 @@ interface Client {
   industry: string
   email: string
   score: number
-  proposals: number
 }
 
 interface ApiClient {
@@ -66,7 +65,6 @@ function mapApiClient(apiClient: ApiClient): Client {
     industry: apiClient.industry ?? 'Sin industria',
     email: apiClient.email ?? '',
     score: apiClient.score,
-    proposals: 0,
   }
 }
 
@@ -334,29 +332,12 @@ export default function ClientsPage() {
         const path = query
           ? `/api/clients?search=${encodeURIComponent(query)}&limit=50`
           : '/api/clients?limit=50'
-        const [clientsRes, proposalsRes] = await Promise.all([
-          fetch(path),
-          fetch('/api/proposals'),
-        ])
+        const clientsRes = await fetch(path)
         if (!clientsRes.ok) throw new Error(`API error ${clientsRes.status}`)
 
         const json: ApiResponse = await clientsRes.json()
 
-        // Build a proposal count map keyed by client_id
-        const proposalCountMap = new Map<string, number>()
-        if (proposalsRes.ok) {
-          const proposalsJson: { data: { client_id: string }[] } = await proposalsRes.json()
-          for (const p of proposalsJson.data ?? []) {
-            proposalCountMap.set(p.client_id, (proposalCountMap.get(p.client_id) ?? 0) + 1)
-          }
-        }
-
-        setClients(
-          json.data.map((apiClient) => ({
-            ...mapApiClient(apiClient),
-            proposals: proposalCountMap.get(apiClient.id) ?? 0,
-          })),
-        )
+        setClients(json.data.map(mapApiClient))
         setTotal(json.total)
       } catch (err) {
         console.error('Failed to fetch clients:', err)
@@ -524,9 +505,7 @@ export default function ClientsPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">
-                  {client.proposals} propuesta{client.proposals !== 1 ? 's' : ''}
-                </span>
+                <span className="text-xs text-gray-400">—</span>
                 <span className="text-xs text-[#1D9E75] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                   Ver detalle →
                 </span>

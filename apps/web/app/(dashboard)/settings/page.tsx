@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [savingName, setSavingName] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [currency, setCurrency] = useState<Currency>('CLP')
   const [saved, setSaved] = useState(false)
   const [emptyMode, setEmptyModeState] = useState(false)
@@ -59,6 +60,7 @@ export default function SettingsPage() {
     if (!editedName.trim() || editedName === userName) return
     setSavingName(true)
     setNameSaved(false)
+    setSaveError(null)
     try {
       const res = await fetch('/api/auth/profile', {
         method: 'PATCH',
@@ -71,7 +73,7 @@ export default function SettingsPage() {
       window.setTimeout(() => setNameSaved(false), 2000)
     } catch (err) {
       console.error(err)
-      alert('No se pudo guardar el nombre. Intenta de nuevo.')
+      setSaveError('No se pudo guardar el nombre. Intenta de nuevo.')
     } finally {
       setSavingName(false)
     }
@@ -88,7 +90,7 @@ export default function SettingsPage() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
     } catch {}
-    window.location.href = '/'
+    window.location.href = '/sign-in'
   }
 
   return (
@@ -151,6 +153,9 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400 mt-1.5">
               Este nombre aparecerá en el sidebar y en las propuestas que generes.
             </p>
+            {saveError && (
+              <p className="text-xs text-red-500 mt-1.5" role="alert">{saveError}</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">

@@ -68,7 +68,7 @@ export default function NewClientPage() {
 
   async function handleAnalyze() {
     if (!website && !instagram && !linkedin) {
-      alert('Agrega al menos web o una red social para analizar')
+      console.warn('Agrega al menos web o una red social para analizar')
       return
     }
     setAnalyzing(true)
@@ -102,7 +102,7 @@ export default function NewClientPage() {
 
   async function handleSave() {
     if (!companyName || !contactName) {
-      alert('Nombre del contacto y empresa son requeridos')
+      console.warn('Nombre del contacto y empresa son requeridos')
       return
     }
     setSaving(true)
@@ -125,7 +125,7 @@ export default function NewClientPage() {
           country: country || null,
           employees: employees || null,
           revenue: revenue || null,
-          ai_analysis: analysis ?? null,
+          ai_analysis: null,
         },
       }
 
@@ -139,14 +139,14 @@ export default function NewClientPage() {
 
       if (!res.ok) {
         const msg = json?.error ?? `Error ${res.status}`
-        alert(`No se pudo guardar el cliente: ${msg}`)
+        console.error(`No se pudo guardar el cliente: ${msg}`)
         return
       }
 
       router.push('/clients')
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      alert(`Error inesperado: ${msg}`)
+      console.error(`Error inesperado: ${msg}`)
     } finally {
       setSaving(false)
     }

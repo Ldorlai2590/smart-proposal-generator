@@ -98,7 +98,7 @@ export function ProposalWizard() {
                 client={client}
                 sections={sections}
                 proposalId={proposalId}
-                onBack={() => setStep(3)}
+                onBack={() => setStep(2)}
               />
             )}
           </div>

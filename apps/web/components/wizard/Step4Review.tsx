@@ -35,7 +35,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
   // editedSections stores raw HTML from TipTap (richer than plain text)
   const [editedSections, setEditedSections] = useState<ProposalSections>(sections)
   const [exporting, setExporting] = useState<ExportFormat | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [_isSaving] = useState(false)
   const [toast, setToast] = useState<ExportToast | null>(null)
   const [emailRecipient, setEmailRecipient] = useState(client.email ?? '')
   const [showEmailInput, setShowEmailInput] = useState(false)
@@ -50,11 +50,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
     [],
   )
 
-  const handleSaveStart = useCallback(() => {
-    setIsSaving(true)
-    // Auto-reset after 1.5 s (section editors clear themselves at 1.2 s)
-    setTimeout(() => setIsSaving(false), 1500)
-  }, [])
+  const handleSaveStart = useCallback(() => {}, [])
 
   function showToast(format: ExportFormat, status: 'success' | 'error', message: string) {
     setToast({ format, status, message })
@@ -137,7 +133,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
       a.href = url
       a.download = filenameMatch?.[1] ?? `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${ext}`
       a.click()
-      URL.revokeObjectURL(url)
+      setTimeout(() => URL.revokeObjectURL(url), 100)
       showToast(format, 'success', `Archivo descargado correctamente.`)
     } catch (err: unknown) {
       console.error('[Step4] export error:', err)
@@ -213,9 +209,6 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Exportar
             </p>
-            {isSaving && (
-              <span className="text-[10px] text-gray-400 animate-pulse">Guardando...</span>
-            )}
           </div>
 
           <Button

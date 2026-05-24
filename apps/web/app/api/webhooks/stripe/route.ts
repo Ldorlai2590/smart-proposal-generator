@@ -59,8 +59,11 @@ async function getStripe(): Promise<Stripe> {
 export async function POST(req: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!secret || secret === 'whsec_...') {
-    // Demo mode — no real Stripe webhook will reach this endpoint
-    return new Response('OK', { status: 200 })
+    if (process.env.NODE_ENV === 'production') {
+      console.error('CRITICAL: STRIPE_WEBHOOK_SECRET not configured in production')
+      return new Response('Webhook secret not configured', { status: 500 })
+    }
+    return new Response('OK (demo mode)', { status: 200 })
   }
 
   const headerPayload = await headers()
@@ -127,16 +130,13 @@ export async function POST(req: Request) {
         const plan = planFromLookupKey(lookupKey)
 
         if (!plan) {
-          logger.error('stripe.unknown_lookup_key', {
+          logger.warn('stripe.unknown_lookup_key', {
             customerId: maskId(customerId),
             subscriptionId: maskId(subscriptionId),
             lookupKey,
             invoiceId: maskId(invoice.id),
           })
-          return new Response(
-            JSON.stringify({ error: 'Unknown plan lookup_key', lookup_key: lookupKey }),
-            { status: 400, headers: { 'Content-Type': 'application/json' } }
-          )
+          return new Response('OK', { status: 200 })
         }
 
         await markSubscriptionActive(customerId, subscriptionId, plan)

@@ -43,7 +43,7 @@ export async function GET(req: Request) {
         .from('tenants')
         .select('*', { count: 'exact', head: true })
       if (error) throw new Error(error.message)
-      dbStatus = `connected - ${count ?? 0} tenants`
+      dbStatus = count !== null ? 'connected' : 'connected'
     } catch (e: unknown) {
       log.error('health_db_unreachable', {
         err: e instanceof Error ? e.message : String(e),

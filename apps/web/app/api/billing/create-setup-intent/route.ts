@@ -59,5 +59,8 @@ export async function POST() {
     metadata: { tenant_id: tenantId, purpose: 'trial_extension' },
   })
 
-  return new Response(null, { status: 303, headers: { Location: session.url! } })
+  if (!session.url) {
+    return jsonResponse({ error: 'Stripe session URL unavailable' }, 502)
+  }
+  return new Response(null, { status: 303, headers: { Location: session.url } })
 }

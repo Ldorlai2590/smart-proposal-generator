@@ -62,12 +62,23 @@ function safeColor(raw: unknown): string | null {
   return null
 }
 
-/** Validate that a logo URL is http(s) — blocks `javascript:` and `data:` exotics. */
+/** Validate that a logo URL is http(s) and not a private/internal address. */
 function safeUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const trimmed = raw.trim()
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-  return null
+  if (!/^https?:\/\//i.test(trimmed)) return null
+  try {
+    const { hostname } = new URL(trimmed)
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return null
+    if (/^169\.254\./.test(hostname)) return null
+    if (/^10\./.test(hostname)) return null
+    if (/^192\.168\./.test(hostname)) return null
+    if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)) return null
+    if (hostname === 'metadata.google.internal') return null
+  } catch {
+    return null
+  }
+  return trimmed
 }
 
 async function loadBranding(tenantId: string): Promise<BrandConfig> {
@@ -319,7 +330,7 @@ async function handlePDF(
 
     // page.pdf() returns Uint8Array in puppeteer-core v25; convert to ArrayBuffer
     // so the Response constructor (BodyInit) accepts it.
-    return new Response(pdfUint8.buffer as ArrayBuffer, {
+    return new Response(Buffer.from(pdfUint8), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -364,19 +375,16 @@ async function handleDOCX(
     return jsonResponse({ error: 'DOCX generation failed.' }, 502)
   }
 
-  const upstreamContentType =
-    upstream.headers.get('Content-Type') ??
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-
-  const contentDisposition =
+  const rawDisposition =
     upstream.headers.get('Content-Disposition') ??
     `attachment; filename="propuesta-${input.proposalId}.docx"`
+  const contentDisposition = rawDisposition.replace(/[\r\n]/g, '')
 
   const bytes = await upstream.arrayBuffer()
   return new Response(bytes, {
     status: 200,
     headers: {
-      'Content-Type': upstreamContentType,
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': contentDisposition,
     },
   })
@@ -472,6 +480,9 @@ async function handleEmail(
   const resendKey = process.env.RESEND_API_KEY
 
   if (isResendPlaceholder(resendKey)) {
+    if (process.env.NODE_ENV === 'production') {
+      return jsonResponse({ error: 'Email service not configured' }, 503)
+    }
     // ── Fallback: Ethereal (test SMTP, no signup needed) ──
     try {
       const { previewUrl } = await sendViaEthereal(
@@ -532,6 +543,21 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const input = parsed.data
+
+  // Verify proposalId belongs to this tenant
+  if (input.proposalId) {
+    const { createAdminClient: adminCheck } = await import('@/lib/supabase/admin')
+    const adminDb = adminCheck()
+    const { data: proposalCheck } = await adminDb
+      .from('proposals')
+      .select('id')
+      .eq('id', input.proposalId)
+      .eq('tenant_id', tenantId)
+      .single()
+    if (!proposalCheck) {
+      return jsonResponse({ error: 'Proposal not found' }, 404)
+    }
+  }
 
   switch (input.format) {
     case 'pdf':

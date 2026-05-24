@@ -48,6 +48,7 @@ function labelForStage(stage: string): string {
 export default function BillingPage() {
   
   const [trial, setTrial] = useState<TrialStatus | null>(null)
+  const [billingError, setBillingError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -86,7 +87,7 @@ export default function BillingPage() {
     fetch('/api/billing/status')
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: TrialStatus) => setTrial(data))
-      .catch(() => setTrial(DEMO_TRIAL))
+      .catch(() => setBillingError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -99,6 +100,19 @@ export default function BillingPage() {
         </div>
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm animate-pulse h-48" />
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm animate-pulse h-64" />
+      </div>
+    )
+  }
+
+  if (billingError) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
+        </div>
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-sm text-red-600">
+          Error al cargar información de suscripción. Intenta recargar la página.
+        </div>
       </div>
     )
   }

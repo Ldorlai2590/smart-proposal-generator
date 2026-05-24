@@ -16,8 +16,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/sign-in?error=${error}${encodedDescription}`)
   }
 
-  // Handle password reset flow
+  // Handle password reset flow — must exchange code first to establish session
   if (type === 'recovery') {
+    if (code) {
+      const supabase = await createClient()
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+      if (exchangeError) {
+        return NextResponse.redirect(`${origin}/sign-in?error=invalid_token`)
+      }
+    }
     return NextResponse.redirect(`${origin}/reset-password`)
   }
 

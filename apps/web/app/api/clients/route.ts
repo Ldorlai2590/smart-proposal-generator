@@ -39,7 +39,8 @@ export async function GET(req: Request) {
       .range(offset, offset + limit - 1)
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,company.ilike.%${search}%`)
+      const esc = search.replace(/%/g, '\\%').replace(/_/g, '\\_')
+      query = query.or(`name.ilike.%${esc}%,company.ilike.%${esc}%`)
     }
 
     const { data: rows, error } = await query
@@ -70,6 +71,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let tenantId: string
+  try {
+    const session = await requireAuth()
+    tenantId = session.tenantId
+  } catch {
+    return Response.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()
@@ -83,7 +92,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { tenantId } = await requireAuth()
     const admin = createAdminClient()
     const data = parsed.data
 
