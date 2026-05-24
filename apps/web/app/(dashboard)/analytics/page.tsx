@@ -206,7 +206,7 @@ export default function AnalyticsPage() {
   const industryMap = new Map<string, number>()
 
   proposals.forEach((proposal) => {
-    const client = clients.find((c) => c.name === proposal.client_id || c.id === proposal.client_id)
+    const client = clients.find((c) => c.id === proposal.client_id)
     if (client && client.industry) {
       const amount = typeof proposal.context?.budget === 'number' ? proposal.context.budget : 0
       if (amount > 0) {
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
   // Compute top clients by proposal count
   const clientProposalMap = new Map<string, { name: string; industry: string; proposals: number; accepted: number }>()
   proposals.forEach((proposal) => {
-    const client = clients.find((c) => c.name === proposal.client_id || c.id === proposal.client_id)
+    const client = clients.find((c) => c.id === proposal.client_id)
     if (client) {
       const existing = clientProposalMap.get(client.id) || {
         name: client.name,

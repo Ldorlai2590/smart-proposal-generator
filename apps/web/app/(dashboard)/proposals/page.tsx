@@ -27,7 +27,7 @@ interface Proposal {
   id: string
   title: string
   client: string
-  status: 'draft' | 'sent' | 'accepted' | 'rejected'
+  status: 'draft' | 'generated' | 'sent' | 'accepted' | 'rejected'
   value: string
   date: string
 }
@@ -61,7 +61,7 @@ function formatDate(iso: string): string {
 }
 
 function mapApiProposal(p: ApiProposal): Proposal {
-  const validStatuses = new Set<Proposal['status']>(['draft', 'sent', 'accepted', 'rejected'])
+  const validStatuses = new Set<Proposal['status']>(['draft', 'generated', 'sent', 'accepted', 'rejected'])
   const status: Proposal['status'] = validStatuses.has(p.status as Proposal['status'])
     ? (p.status as Proposal['status'])
     : 'draft'
@@ -76,22 +76,25 @@ function mapApiProposal(p: ApiProposal): Proposal {
 }
 
 const STATUS_STYLES: Record<Proposal['status'], string> = {
-  accepted: 'bg-green-50 text-green-700',
-  sent: 'bg-blue-50 text-blue-700',
   draft: 'bg-gray-100 text-gray-600',
+  generated: 'bg-blue-50 text-blue-700',
+  sent: 'bg-green-50 text-green-700',
+  accepted: 'bg-green-100 text-green-800',
   rejected: 'bg-red-50 text-red-500',
 }
 
 const STATUS_LABELS: Record<Proposal['status'], string> = {
-  accepted: 'Aceptada',
-  sent: 'Enviada',
   draft: 'Borrador',
+  generated: 'Generada',
+  sent: 'Enviada',
+  accepted: 'Aceptada',
   rejected: 'Rechazada',
 }
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos los estados' },
   { value: 'draft', label: 'Borradores' },
+  { value: 'generated', label: 'Generadas' },
   { value: 'sent', label: 'Enviadas' },
   { value: 'accepted', label: 'Aceptadas' },
   { value: 'rejected', label: 'Rechazadas' },

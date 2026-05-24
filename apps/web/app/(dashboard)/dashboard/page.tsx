@@ -78,6 +78,16 @@ function SkeletonStatCard() {
   )
 }
 
+// Skeleton loader for charts
+function SkeletonChart({ className }: { className?: string }) {
+  return (
+    <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse ${className ?? ''}`}>
+      <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+      <div className="h-40 bg-gray-100 rounded-xl" />
+    </div>
+  )
+}
+
 // Skeleton loader for recent proposals
 function SkeletonRecentProposals() {
   return (
@@ -288,11 +298,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Donut */}
-        {!loading && proposals.length > 0 && <ClosingRateDonut />}
+        {loading ? (
+          <SkeletonChart />
+        ) : proposals.length > 0 ? (
+          <ClosingRateDonut />
+        ) : null}
       </div>
 
       {/* Bar chart */}
-      {!loading && proposals.length > 0 && <ProposalsBarChart />}
+      {loading ? (
+        <SkeletonChart className="mb-6" />
+      ) : proposals.length > 0 ? (
+        <ProposalsBarChart />
+      ) : null}
 
       {/* Empty analytics state */}
       {!loading && proposals.length === 0 && (
