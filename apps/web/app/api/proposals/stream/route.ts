@@ -285,7 +285,7 @@ IMPORTANTE:
         })
       })
 
-    return result.toDataStreamResponse()
+    return result.toTextStreamResponse()
   } catch (err) {
     // Synchronous errors from streamObject (bad config, provider init, etc).
     // Timeout/abort errors surface via the abortSignal as AbortError.
