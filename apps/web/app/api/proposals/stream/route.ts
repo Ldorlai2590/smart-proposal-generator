@@ -1,5 +1,5 @@
 import { streamObject, jsonSchema } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { openrouter } from '@/lib/openrouter'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
@@ -286,7 +286,7 @@ IMPORTANTE:
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   try {
     const result = streamObject({
-      model: anthropic('claude-sonnet-4-5'),
+      model: openrouter('anthropic/claude-3-5-sonnet'),
       schema: PROPOSAL_JSON_SCHEMA,
       maxTokens: 8000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),

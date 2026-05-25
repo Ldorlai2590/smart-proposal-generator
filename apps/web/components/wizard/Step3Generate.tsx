@@ -117,7 +117,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
         Object.entries(partial ?? {}).filter(([, v]) => typeof v === 'string')
       ) as ProposalSections,
       tokens_used: 0,
-      model: 'claude-sonnet-4-5',
+      model: 'claude-3-5-sonnet',
       status: 'generated',
     }
 
