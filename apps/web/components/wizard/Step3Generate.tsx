@@ -259,7 +259,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
         </Button>
         <Button
           onClick={() => isComplete && partial && onNext(partial as ProposalSections, proposalId ?? '')}
-          disabled={!isComplete || saveState === 'error'}
+          disabled={!isComplete || saveState === 'saving'}
           size="lg"
           className="flex-1"
         >

@@ -5,11 +5,16 @@ import { z } from 'zod/v4'
 import { sanitizeHTML } from '@/lib/sanitize'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// Puppeteer, Chromium, and Nodemailer require Node.js APIs — must be nodejs runtime.
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
 const ExportRequestSchema = z.object({
-  proposalId: z.string().min(1),
+  // Allow empty string: Step3 sets proposalId='' when DB save failed but user
+  // still wants to export from the in-memory sections.
+  proposalId: z.string(),
   format: z.enum(['pdf', 'docx', 'email']),
   sections: z.record(z.string(), z.string()),
   recipientEmail: z.string().email().optional(),
@@ -350,11 +355,14 @@ async function handleDOCX(
   orgId: string,
 ): Promise<Response> {
   const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
+  // Use a placeholder segment when proposalId is empty (save failed) so the
+  // FastAPI path is valid; the backend will treat unknown IDs as 404 gracefully.
+  const proposalSegment = input.proposalId || 'unsaved'
 
   let upstream: Response
   try {
     upstream = await fetch(
-      `${apiUrl}/proposals/${input.proposalId}/export/docx`,
+      `${apiUrl}/proposals/${proposalSegment}/export/docx`,
       {
         method: 'POST',
         headers: {
@@ -544,7 +552,8 @@ export async function POST(req: Request): Promise<Response> {
 
   const input = parsed.data
 
-  // Verify proposalId belongs to this tenant
+  // Verify proposalId belongs to this tenant (skip if empty — happens when DB save failed
+  // in Step3 but user still wants to export from in-memory sections).
   if (input.proposalId) {
     const { createAdminClient: adminCheck } = await import('@/lib/supabase/admin')
     const adminDb = adminCheck()
@@ -553,7 +562,7 @@ export async function POST(req: Request): Promise<Response> {
       .select('id')
       .eq('id', input.proposalId)
       .eq('tenant_id', tenantId)
-      .single()
+      .maybeSingle()
     if (!proposalCheck) {
       return jsonResponse({ error: 'Proposal not found' }, 404)
     }

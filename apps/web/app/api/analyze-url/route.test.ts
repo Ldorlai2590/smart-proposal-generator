@@ -3,7 +3,7 @@
  *
  * Mocks:
  *  - @/lib/auth       → requireAuth
- *  - ai               → generateObject
+ *  - ai               → generateText
  *  - global fetch     → page content retrieval
  *  - @/lib/logger     → silences log output
  */
@@ -18,17 +18,14 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 vi.mock('ai', () => ({
-  generateObject: vi.fn(),
-  jsonSchema: vi.fn((schema: unknown) => schema),
+  generateText: vi.fn(),
   // Error subclasses used in the route's catch block — must be present so
   // .isInstance() calls don't throw "no export defined" at runtime.
   APICallError: { isInstance: vi.fn(() => false) },
-  NoObjectGeneratedError: { isInstance: vi.fn(() => false) },
-  TypeValidationError: { isInstance: vi.fn(() => false) },
 }))
 
-vi.mock('@ai-sdk/anthropic', () => ({
-  anthropic: vi.fn(() => 'mock-anthropic-model'),
+vi.mock('@/lib/openrouter', () => ({
+  openrouter: vi.fn(() => 'mock-openrouter-model'),
 }))
 
 vi.mock('@/lib/rate-limit', () => ({
@@ -58,7 +55,7 @@ vi.mock('@/lib/logger', () => ({
 // ---------------------------------------------------------------------------
 import { POST } from './route'
 import { requireAuth } from '@/lib/auth'
-import { generateObject } from 'ai'
+import { generateText } from 'ai'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -228,7 +225,7 @@ describe('POST /api/analyze-url', () => {
 
   it('returns 200 with analysis object on success', async () => {
     mockFetchSuccess('<html><body><h1>Acme Corp</h1><p>We build software.</p></body></html>')
-    vi.mocked(generateObject).mockResolvedValueOnce({ object: FAKE_ANALYSIS } as never)
+    vi.mocked(generateText).mockResolvedValueOnce({ text: JSON.stringify(FAKE_ANALYSIS) } as never)
 
     const res = await POST(makeRequest({
       url: 'https://acme.com',
@@ -244,7 +241,7 @@ describe('POST /api/analyze-url', () => {
     expect(Array.isArray(body.opportunities)).toBe(true)
   })
 
-  it('calls generateObject with the page content stripped of HTML tags', async () => {
+  it('calls generateText with the page content stripped of HTML tags', async () => {
     const htmlWithScript = `
       <html>
         <head><script>alert('xss')</script><style>body{color:red}</style></head>
@@ -252,11 +249,11 @@ describe('POST /api/analyze-url', () => {
       </html>
     `
     mockFetchSuccess(htmlWithScript)
-    vi.mocked(generateObject).mockResolvedValueOnce({ object: FAKE_ANALYSIS } as never)
+    vi.mocked(generateText).mockResolvedValueOnce({ text: JSON.stringify(FAKE_ANALYSIS) } as never)
 
     await POST(makeRequest({ url: 'https://example.com' }))
 
-    const callArg = vi.mocked(generateObject).mock.calls[0][0] as { prompt: string }
+    const callArg = vi.mocked(generateText).mock.calls[0][0] as { prompt: string }
     // script and style content should not appear in the prompt
     expect(callArg.prompt).not.toContain("alert('xss')")
     expect(callArg.prompt).not.toContain('body{color:red}')
@@ -266,7 +263,7 @@ describe('POST /api/analyze-url', () => {
 
   it('works when optional company and industry are omitted', async () => {
     mockFetchSuccess('<html><body>Hello world</body></html>')
-    vi.mocked(generateObject).mockResolvedValueOnce({ object: FAKE_ANALYSIS } as never)
+    vi.mocked(generateText).mockResolvedValueOnce({ text: JSON.stringify(FAKE_ANALYSIS) } as never)
 
     const res = await POST(makeRequest({ url: 'https://minimal.example.com' }))
 
@@ -279,7 +276,7 @@ describe('POST /api/analyze-url', () => {
 
   it('returns 502 when AI analysis throws', async () => {
     mockFetchSuccess()
-    vi.mocked(generateObject).mockRejectedValueOnce(new Error('Anthropic overloaded'))
+    vi.mocked(generateText).mockRejectedValueOnce(new Error('Anthropic overloaded'))
 
     const res = await POST(makeRequest({ url: 'https://example.com' }))
 
