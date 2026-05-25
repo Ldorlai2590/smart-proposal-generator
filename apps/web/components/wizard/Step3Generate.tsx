@@ -37,6 +37,9 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [proposalId, setProposalId] = useState<string | null>(null)
   const hasSavedRef = useRef(false)
+  // Track whether the stream has ever started so we can distinguish
+  // "not yet begun" from "stream ended with no content".
+  const hasStartedRef = useRef(false)
 
   const partial = object as Partial<ProposalSections> | undefined
 
@@ -53,6 +56,7 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
           }
         : undefined
 
+    hasStartedRef.current = true
     submit({
       clientId: client.id,
       clientName: client.name,
@@ -83,11 +87,10 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
     const v = partial?.[k]
     return v !== undefined && v !== null && v !== ''
   }).length
-  const progressPct = isLoading
-    ? Math.round((completedCount / SECTION_ORDER.length) * 100)
-    : completedCount > 0 ? 100 : 0
-  // Fail-open: if stream ends with partial data, let the user proceed
-  const isComplete = !isLoading && !error && (completedCount === SECTION_ORDER.length || (completedCount > 0 && !isLoading))
+  // Always use the real ratio — never snap to 100 just because loading stopped.
+  const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
+  // Fail-open: stream ended (not loading, no error) AND at least 1 section has content.
+  const isComplete = !isLoading && !error && completedCount > 0
 
   useEffect(() => {
     if (!isComplete || hasSavedRef.current || !partial) return
@@ -156,7 +159,17 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-white text-sm font-semibold">
-                {isComplete ? '¡Propuesta generada!' : isLoading ? 'Claude está generando...' : error ? 'Error al generar' : 'Listo para revisar'}
+                {isComplete
+                  ? '¡Propuesta generada!'
+                  : isLoading
+                  ? 'Claude está generando...'
+                  : error
+                  ? 'Error al generar'
+                  : !hasStartedRef.current
+                  ? 'Iniciando...'
+                  : completedCount > 0
+                  ? `${completedCount} de ${SECTION_ORDER.length} secciones recibidas`
+                  : 'Sin respuesta — reintenta'}
               </p>
               {saveState === 'saving' && (
                 <span className="flex items-center gap-1 text-[10px] text-[#94A3B8] animate-pulse">

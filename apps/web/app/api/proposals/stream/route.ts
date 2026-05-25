@@ -1,5 +1,5 @@
 import { streamObject } from 'ai'
-import { openrouter } from '@/lib/openrouter'
+import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
@@ -257,9 +257,9 @@ IMPORTANTE:
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   try {
     const result = streamObject({
-      model: openrouter('anthropic/claude-3-5-sonnet'),
+      model: anthropic('claude-sonnet-4-5'),
       schema: ProposalSectionSchema,
-      maxTokens: 7000,
+      maxTokens: 8000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       system,
       prompt,
@@ -285,7 +285,7 @@ IMPORTANTE:
         })
       })
 
-    return result.toTextStreamResponse()
+    return result.toDataStreamResponse()
   } catch (err) {
     // Synchronous errors from streamObject (bad config, provider init, etc).
     // Timeout/abort errors surface via the abortSignal as AbortError.
