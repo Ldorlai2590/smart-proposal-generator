@@ -1,9 +1,9 @@
-import { streamObject } from 'ai'
+import { streamObject, jsonSchema } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { ProposalSectionSchema } from '@/lib/schemas/proposal'
+import type { ProposalSections } from '@/lib/schemas/proposal'
 
 // Vercel: bump function timeout so the full 60s streaming budget is respected.
 // Default nodejs runtime times out at 10s which kills streams mid-generation.
@@ -21,7 +21,34 @@ const RATE_LIMIT_KEY = 'proposals:stream'
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SEC = 60
 
-// 14-section schema lives in @/lib/schemas/proposal (single source of truth).
+// Plain JSON schema for streamObject — AI SDK 4.3.x cannot convert Zod v4 schemas
+// (zodSchema(zodV4Schema).jsonSchema produces an empty {"$schema":"..."} shell).
+// Using jsonSchema() with an explicit object bypasses the broken conversion layer.
+const PROPOSAL_JSON_SCHEMA = jsonSchema<ProposalSections>({
+  type: 'object',
+  properties: {
+    portada:            { type: 'string', description: 'Portada con título atractivo, nombre del cliente y tagline en HTML' },
+    contextoCliente:    { type: 'string', description: 'Contexto del cliente: industria, tamaño, situación actual' },
+    diagnostico:        { type: 'string', description: 'Diagnóstico del problema con datos específicos en HTML (use <ul>)' },
+    oportunidad:        { type: 'string', description: 'Oportunidad detectada con métricas proyectadas' },
+    solucion:           { type: 'string', description: 'Solución propuesta concreta' },
+    alcance:            { type: 'string', description: 'Alcance detallado por servicio' },
+    incluyeNoIncluye:   { type: 'string', description: 'Lista clara de qué incluye y qué no en HTML' },
+    metodologia:        { type: 'string', description: 'Metodología de trabajo, sprints, comunicación' },
+    cronograma:         { type: 'string', description: 'Cronograma con hitos por mes/semana' },
+    casosExito:         { type: 'string', description: 'Caso de éxito relevante con resultados medibles' },
+    diferenciadores:    { type: 'string', description: 'Por qué nosotros — diferenciadores únicos' },
+    inversion:          { type: 'string', description: 'Inversión con tabla HTML de servicios y total' },
+    proximosPasos:      { type: 'string', description: 'Próximos pasos concretos numerados' },
+    ctaFinal:           { type: 'string', description: 'Call to action final motivador' },
+  },
+  required: [
+    'portada', 'contextoCliente', 'diagnostico', 'oportunidad', 'solucion',
+    'alcance', 'incluyeNoIncluye', 'metodologia', 'cronograma', 'casosExito',
+    'diferenciadores', 'inversion', 'proximosPasos', 'ctaFinal',
+  ],
+  additionalProperties: false,
+})
 
 const ServiceSchema = z.object({
   name: z.string(),
@@ -258,7 +285,7 @@ IMPORTANTE:
   try {
     const result = streamObject({
       model: anthropic('claude-sonnet-4-5'),
-      schema: ProposalSectionSchema,
+      schema: PROPOSAL_JSON_SCHEMA,
       maxTokens: 8000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       system,
