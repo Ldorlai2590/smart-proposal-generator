@@ -1,4 +1,4 @@
-import { streamObject, jsonSchema } from 'ai'
+import { streamText } from 'ai'
 import { openrouter } from '@/lib/openrouter'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
@@ -23,34 +23,9 @@ const RATE_LIMIT_KEY = 'proposals:stream'
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SEC = 60
 
-// Plain JSON schema for streamObject — AI SDK 4.3.x cannot convert Zod v4 schemas
-// (zodSchema(zodV4Schema).jsonSchema produces an empty {"$schema":"..."} shell).
-// Using jsonSchema() with an explicit object bypasses the broken conversion layer.
-const PROPOSAL_JSON_SCHEMA = jsonSchema<ProposalSections>({
-  type: 'object',
-  properties: {
-    portada:            { type: 'string', description: 'Portada con título atractivo, nombre del cliente y tagline en HTML' },
-    contextoCliente:    { type: 'string', description: 'Contexto del cliente: industria, tamaño, situación actual' },
-    diagnostico:        { type: 'string', description: 'Diagnóstico del problema con datos específicos en HTML (use <ul>)' },
-    oportunidad:        { type: 'string', description: 'Oportunidad detectada con métricas proyectadas' },
-    solucion:           { type: 'string', description: 'Solución propuesta concreta' },
-    alcance:            { type: 'string', description: 'Alcance detallado por servicio' },
-    incluyeNoIncluye:   { type: 'string', description: 'Lista clara de qué incluye y qué no en HTML' },
-    metodologia:        { type: 'string', description: 'Metodología de trabajo, sprints, comunicación' },
-    cronograma:         { type: 'string', description: 'Cronograma con hitos por mes/semana' },
-    casosExito:         { type: 'string', description: 'Caso de éxito relevante con resultados medibles' },
-    diferenciadores:    { type: 'string', description: 'Por qué nosotros — diferenciadores únicos' },
-    inversion:          { type: 'string', description: 'Inversión con tabla HTML de servicios y total' },
-    proximosPasos:      { type: 'string', description: 'Próximos pasos concretos numerados' },
-    ctaFinal:           { type: 'string', description: 'Call to action final motivador' },
-  },
-  required: [
-    'portada', 'contextoCliente', 'diagnostico', 'oportunidad', 'solucion',
-    'alcance', 'incluyeNoIncluye', 'metodologia', 'cronograma', 'casosExito',
-    'diferenciadores', 'inversion', 'proximosPasos', 'ctaFinal',
-  ],
-  additionalProperties: false,
-})
+// streamText replaces streamObject — OpenRouter's OpenAI-compatible tool-calling
+// mode silently produces 0 bytes for Anthropic models. streamText + explicit JSON
+// prompt is simpler and works with any OpenRouter model.
 
 const ServiceSchema = z.object({
   name: z.string(),
@@ -285,12 +260,11 @@ IMPORTANTE:
 
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   try {
-    const result = streamObject({
+    const result = streamText({
       model: openrouter('anthropic/claude-3-5-haiku'),
-      schema: PROPOSAL_JSON_SCHEMA,
       maxTokens: 8000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
-      system,
+      system: system + '\n\nFORMATO DE RESPUESTA: Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin bloques de código, sin texto adicional) con exactamente estas 14 claves: portada, contextoCliente, diagnostico, oportunidad, solucion, alcance, incluyeNoIncluye, metodologia, cronograma, casosExito, diferenciadores, inversion, proximosPasos, ctaFinal.',
       prompt,
     })
 
@@ -303,7 +277,7 @@ IMPORTANTE:
 
     ;(async () => {
       try {
-        for await (const chunk of result.textStream) {
+        for await (const chunk of result.textStream as AsyncIterable<string>) {
           await writer.write(encoder.encode(chunk))
         }
         // Stream completed — increment usage
