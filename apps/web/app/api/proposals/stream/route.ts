@@ -286,7 +286,7 @@ IMPORTANTE:
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   try {
     const result = streamObject({
-      model: openrouter('anthropic/claude-3-5-sonnet'),
+      model: openrouter('anthropic/claude-3-5-haiku'),
       schema: PROPOSAL_JSON_SCHEMA,
       maxTokens: 8000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
@@ -294,27 +294,41 @@ IMPORTANTE:
       prompt,
     })
 
-    // Post-stream: increment usage only.
-    // La persistencia de la propuesta la hace el cliente (Step3Generate.tsx)
-    // vía POST /api/proposals una vez completado el stream — fuente única de verdad.
-    result.object
-      .then(async () => {
+    // Pipe textStream manually so errors are logged before the writer closes.
+    // result.object.catch() fires too late (after response body ends) — Vercel
+    // may freeze the function before that promise settles.
+    const encoder = new TextEncoder()
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>()
+    const writer = writable.getWriter()
+
+    ;(async () => {
+      try {
+        for await (const chunk of result.textStream) {
+          await writer.write(encoder.encode(chunk))
+        }
+        // Stream completed — increment usage
         try {
           const { incrementProposalUsage } = await import('@/lib/trial')
           await incrementProposalUsage(tenantId).catch(() => {})
           log.info('stream_completed', { clientId: input.clientId, durationMs: Date.now() - start })
-        } catch (err) {
-          log.error('stream_post_failed', { err: err instanceof Error ? err.message : String(err) })
+        } catch (usageErr) {
+          log.error('stream_usage_failed', { err: usageErr instanceof Error ? usageErr.message : String(usageErr) })
         }
-      })
-      .catch((err) => {
-        log.error('stream_failed_post', {
-          err: err instanceof Error ? err.message : String(err),
+      } catch (pipeErr) {
+        log.error('stream_pipe_error', {
+          err: pipeErr instanceof Error ? pipeErr.message : String(pipeErr),
+          name: pipeErr instanceof Error ? pipeErr.name : 'unknown',
           durationMs: Date.now() - start,
         })
-      })
+      } finally {
+        writer.close().catch(() => {})
+      }
+    })()
 
-    return result.toTextStreamResponse()
+    return new Response(readable, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
   } catch (err) {
     // Synchronous errors from streamObject (bad config, provider init, etc).
     // Timeout/abort errors surface via the abortSignal as AbortError.
