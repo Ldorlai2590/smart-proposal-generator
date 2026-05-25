@@ -5,14 +5,16 @@ import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 import type { ProposalSections } from '@/lib/schemas/proposal'
 
-// Vercel: bump function timeout so the full 60s streaming budget is respected.
+// Vercel: bump function timeout so the full streaming budget is respected.
 // Default nodejs runtime times out at 10s which kills streams mid-generation.
+// 120s requires Vercel Pro; on Hobby the hard cap is 60s — see word-count limits below.
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 120
 
 // Hard upper bound on the full generation. Anthropic streams can hang on
-// upstream errors; this guarantees a client-visible failure within 60s.
-const STREAM_TIMEOUT_MS = 60_000
+// upstream errors; this guarantees a client-visible failure within the timeout.
+// Set 10s below maxDuration so the function can still return a clean error response.
+const STREAM_TIMEOUT_MS = 110_000
 
 // Rate limit: 3 proposal generations per minute per IP.
 // Anthropic stream costs $$, this caps blast radius if an attacker
@@ -227,7 +229,7 @@ REGLAS:
 - Estilo de diseño ${input.designTemplate ?? 'minimalista'}. ${input.designTemplate ? designGuide[input.designTemplate] : ''}
 - Personaliza con datos REALES del cliente (no inventes números o casos).
 - Output en HTML válido y semántico (<p>, <ul>, <li>, <strong>, <table>, <h3>).
-- Cada sección debe ser concisa pero completa (150-300 palabras máximo).
+- Cada sección: MÁXIMO 150 palabras. Sin excepción. Prioriza claridad sobre extensión.
 
 ESTRUCTURA DE 14 SECCIONES (genera todas, en orden):
 1. portada — Título atractivo + nombre cliente + tagline (corto)

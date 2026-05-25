@@ -89,8 +89,9 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
   }).length
   // Always use the real ratio — never snap to 100 just because loading stopped.
   const progressPct = Math.round((completedCount / SECTION_ORDER.length) * 100)
-  // Fail-open: stream ended (not loading, no error) AND at least 1 section has content.
-  const isComplete = !isLoading && !error && completedCount > 0
+  // Complete only when ALL sections are present — completedCount > 0 would fire after
+  // just portada and mark the proposal as done with 13 empty sections.
+  const isComplete = !isLoading && !error && completedCount >= SECTION_ORDER.length
 
   useEffect(() => {
     if (!isComplete || hasSavedRef.current || !partial) return
@@ -242,19 +243,22 @@ export function Step3Generate({ client, context, onNext, onBack }: Step3Generate
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between gap-3">
           <span>Error al generar: {error.message}</span>
-          <Button variant="outline" size="sm" onClick={() => submit({
-            clientId: client.id, clientName: client.name, company: client.company,
-            industry: client.industry ?? '', problema: context.problema,
-            objectives: context.objectives, currentProblems: context.current_problems,
-            urgency: context.urgency, budget: context.budget, startDate: context.start_date,
-            services: context.services?.map((s) => ({ name: s.name, price: s.adjusted_price, quantity: s.quantity, discount: s.discount_percent, billing: s.billing_type })) ?? [],
-            formality: context.formality, tono: context.tono, designTemplate: context.design_template,
-            websiteAnalysis: (client.ai_business_model || client.ai_value_prop) ? {
-              business_model: client.ai_business_model, value_proposition: client.ai_value_prop,
-              opportunities: client.ai_opportunities, pain_points: client.ai_weaknesses,
-              communication_tone: client.ai_communication_tone, executive_summary: client.ai_executive_summary,
-            } : undefined,
-          })}>
+          <Button variant="outline" size="sm" onClick={() => {
+            hasSavedRef.current = false
+            submit({
+              clientId: client.id, clientName: client.name, company: client.company,
+              industry: client.industry ?? '', problema: context.problema,
+              objectives: context.objectives, currentProblems: context.current_problems,
+              urgency: context.urgency, budget: context.budget, startDate: context.start_date,
+              services: context.services?.map((s) => ({ name: s.name, price: s.adjusted_price, quantity: s.quantity, discount: s.discount_percent, billing: s.billing_type })) ?? [],
+              formality: context.formality, tono: context.tono, designTemplate: context.design_template,
+              websiteAnalysis: (client.ai_business_model || client.ai_value_prop) ? {
+                business_model: client.ai_business_model, value_proposition: client.ai_value_prop,
+                opportunities: client.ai_opportunities, pain_points: client.ai_weaknesses,
+                communication_tone: client.ai_communication_tone, executive_summary: client.ai_executive_summary,
+              } : undefined,
+            })
+          }}>
             Reintentar
           </Button>
         </div>

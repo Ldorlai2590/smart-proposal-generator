@@ -72,10 +72,8 @@ export function ProposalSectionEditor({
   const [saving, setSaving] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Convert plain text → basic HTML on first load
-  const initialHtml = initialContent
-    ? `<p>${initialContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`
-    : ''
+  // Claude already outputs semantic HTML — pass through directly without re-wrapping.
+  const initialHtml = initialContent || ''
 
   const editor = useEditor({
     extensions: [
