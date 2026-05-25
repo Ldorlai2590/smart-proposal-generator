@@ -67,7 +67,7 @@ export default function NewClientPage() {
   const [saving, setSaving] = useState(false)
 
   async function handleAnalyze() {
-    if (!website && !instagram && !linkedin) {
+    if (!website && !instagram && !facebook && !tiktok) {
       console.warn('Agrega al menos web o una red social para analizar')
       return
     }
@@ -210,7 +210,7 @@ export default function NewClientPage() {
                 <input value={facebook} onChange={(e) => setFacebook(e.target.value)} maxLength={CLIENT_LIMITS.social} className={`${inputCls} rounded-l-none`} />
               </div>
             </Field>
-            <Field label="LinkedIn">
+            <Field label="LinkedIn (opcional)">
               <div className="flex">
                 <span className="inline-flex items-center px-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg text-gray-500"><Linkedin className="h-4 w-4" /></span>
                 <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} maxLength={CLIENT_LIMITS.social} className={`${inputCls} rounded-l-none`} />

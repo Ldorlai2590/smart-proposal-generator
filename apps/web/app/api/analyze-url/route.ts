@@ -190,6 +190,7 @@ export async function POST(req: Request) {
   try {
     const { text } = await generateText({
       model: openrouter('anthropic/claude-3-5-haiku'),
+      maxTokens: 1024,
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 
 Contenido del sitio:

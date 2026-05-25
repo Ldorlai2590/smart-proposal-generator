@@ -259,6 +259,7 @@ IMPORTANTE:
     const result = streamObject({
       model: openrouter('anthropic/claude-3-5-sonnet'),
       schema: ProposalSectionSchema,
+      maxTokens: 7000,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       system,
       prompt,
