@@ -7,7 +7,7 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": [
-        "ANTHROPIC_API_KEY",
+        "OPENROUTER_API_KEY",
         "DEMO_MODE",
         "NEXT_PUBLIC_DEMO_MODE",
         "NEXT_PUBLIC_SUPABASE_URL",
@@ -24,7 +24,8 @@
         "STRIPE_WEBHOOK_SECRET",
         "RESEND_API_KEY",
         "EMAIL_FROM",
-        "DOCUFORGE_API_KEY"
+        "DOCUFORGE_API_KEY",
+        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
       ]
     },
     "dev": {
