@@ -175,6 +175,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
     industry: '',
     companySize: '',
     website: '',
+    linkedin: '',
   })
 
   // Website analysis state (shared between create + select flows)
@@ -255,6 +256,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         email: newClient.email || null,
         industry: newClient.industry || null,
         company_size: newClient.companySize || null,
+        linkedin: newClient.linkedin || null,
       }
       const res = await fetch('/api/clients', {
         method: 'POST',
@@ -270,6 +272,7 @@ export function Step1Client({ onNext }: Step1ClientProps) {
         ...mapApiClient(created),
         isNew: true,
         website: newClient.website || undefined,
+        linkedin: newClient.linkedin || undefined,
         ai_business_model: websiteAnalysis?.business_model,
         ai_value_prop: websiteAnalysis?.value_proposition,
         ai_opportunities: websiteAnalysis?.opportunities,
@@ -384,6 +387,18 @@ export function Step1Client({ onNext }: Step1ClientProps) {
             </p>
           )}
           {websiteAnalysis && <AnalysisCard analysis={websiteAnalysis} expanded={showAnalysisDetail} onToggle={() => setShowAnalysisDetail(!showAnalysisDetail)} />}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+            LinkedIn <span className="text-gray-400 font-normal normal-case">(opcional)</span>
+          </label>
+          <Input
+            type="url"
+            placeholder="https://linkedin.com/company/empresa"
+            value={newClient.linkedin}
+            onChange={(e) => setNewClient((p) => ({ ...p, linkedin: e.target.value }))}
+          />
         </div>
 
         <div className="space-y-1.5">
@@ -559,6 +574,18 @@ export function Step1Client({ onNext }: Step1ClientProps) {
             </p>
           )}
           {websiteAnalysis && <AnalysisCard analysis={websiteAnalysis} expanded={showAnalysisDetail} onToggle={() => setShowAnalysisDetail(!showAnalysisDetail)} />}
+          <div className="mt-2 space-y-1">
+            <label className="text-xs text-gray-500 flex items-center gap-1">
+              LinkedIn <span className="text-gray-400">(opcional)</span>
+            </label>
+            <Input
+              type="url"
+              placeholder="https://linkedin.com/company/empresa"
+              value={selected.linkedin ?? ''}
+              onChange={(e) => setSelected((s) => s ? { ...s, linkedin: e.target.value } : s)}
+              className="h-8 text-sm"
+            />
+          </div>
         </div>
       )}
 
