@@ -1,4 +1,4 @@
-import { streamText } from 'ai'
+import { generateText } from 'ai'
 import { openrouter } from '@/lib/openrouter'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
   // --- Rate limit (per IP, sliding window) ---------------------------------
   // Applied BEFORE auth so unauthenticated probe traffic also counts.
   const ip = getClientIp(req)
-  const rl = checkLimit(ip, RATE_LIMIT_KEY, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC)
+  const rl = await checkLimit(ip, RATE_LIMIT_KEY, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC)
   if (!rl.allowed) {
     log.warn('stream_rate_limited', { ip, retryAfter: rl.retryAfter })
     return new Response(
@@ -259,47 +259,30 @@ IMPORTANTE:
 - En "ctaFinal", invita a coordinar reunión de 15 min con sentido de urgencia sutil.`
 
   // --- LLM call wrapped in try/catch + timeout -----------------------------
+  // generateText (blocking) instead of streamText: Vercel freezes the function
+  // as soon as a streaming Response is returned, killing the OpenRouter round-trip
+  // before any chunks arrive. Blocking here keeps the function alive until we have
+  // the full JSON, then we return it as a plain-text response that useObject can parse.
   try {
-    const result = streamText({
+    const { text } = await generateText({
       model: openrouter('anthropic/claude-3-5-haiku'),
-      maxTokens: 8000,
+      maxTokens: 4500,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       system: system + '\n\nFORMATO DE RESPUESTA: Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin bloques de código, sin texto adicional) con exactamente estas 14 claves: portada, contextoCliente, diagnostico, oportunidad, solucion, alcance, incluyeNoIncluye, metodologia, cronograma, casosExito, diferenciadores, inversion, proximosPasos, ctaFinal.',
       prompt,
     })
 
-    // Pipe textStream manually so errors are logged before the writer closes.
-    // result.object.catch() fires too late (after response body ends) — Vercel
-    // may freeze the function before that promise settles.
-    const encoder = new TextEncoder()
-    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>()
-    const writer = writable.getWriter()
+    // Strip markdown code fences if model wraps JSON despite instructions
+    const jsonText = text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
 
-    ;(async () => {
-      try {
-        for await (const chunk of result.textStream as AsyncIterable<string>) {
-          await writer.write(encoder.encode(chunk))
-        }
-        // Stream completed — increment usage
-        try {
-          const { incrementProposalUsage } = await import('@/lib/trial')
-          await incrementProposalUsage(tenantId).catch(() => {})
-          log.info('stream_completed', { clientId: input.clientId, durationMs: Date.now() - start })
-        } catch (usageErr) {
-          log.error('stream_usage_failed', { err: usageErr instanceof Error ? usageErr.message : String(usageErr) })
-        }
-      } catch (pipeErr) {
-        log.error('stream_pipe_error', {
-          err: pipeErr instanceof Error ? pipeErr.message : String(pipeErr),
-          name: pipeErr instanceof Error ? pipeErr.name : 'unknown',
-          durationMs: Date.now() - start,
-        })
-      } finally {
-        writer.close().catch(() => {})
-      }
-    })()
+    log.info('stream_completed', { clientId: input.clientId, durationMs: Date.now() - start, chars: jsonText.length })
 
-    return new Response(readable, {
+    try {
+      const { incrementProposalUsage } = await import('@/lib/trial')
+      await incrementProposalUsage(tenantId).catch(() => {})
+    } catch { /* non-critical */ }
+
+    return new Response(jsonText, {
       status: 200,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })

@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
   // Rate limit first — before auth so probes also count
   const ip = getClientIp(req)
-  const rl = checkLimit(ip, RATE_LIMIT_KEY, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC)
+  const rl = await checkLimit(ip, RATE_LIMIT_KEY, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SEC)
   if (!rl.allowed) {
     return new Response(
       JSON.stringify({ error: 'rate_limited', message: 'Demasiadas solicitudes. Intenta en unos segundos.' }),
