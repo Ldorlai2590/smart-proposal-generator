@@ -1,6 +1,4 @@
-import chromium from '@sparticuz/chromium'
 import nodemailer from 'nodemailer'
-import puppeteer from 'puppeteer-core'
 import { z } from 'zod/v4'
 import { sanitizeHTML } from '@/lib/sanitize'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -314,39 +312,21 @@ async function handlePDF(
   const brand = await loadBranding(orgId)
   const html = buildProposalHTML(input.sections, brand)
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    })
+    const { generatePDFFromHTML } = await import('@/lib/pdf-docuforge')
+    const pdfBytes = await generatePDFFromHTML(html)
 
-    const page = await browser.newPage()
-    // 'networkidle0' is excluded from setContent's waitUntil in puppeteer-core v25;
-    // 'load' is sufficient since buildProposalHTML produces fully-inlined HTML.
-    await page.setContent(html, { waitUntil: 'load' })
-
-    const pdfUint8 = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
-    })
-
-    // page.pdf() returns Uint8Array in puppeteer-core v25; convert to ArrayBuffer
-    // so the Response constructor (BodyInit) accepts it.
-    return new Response(Buffer.from(pdfUint8), {
+    return new Response(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId}.pdf"`,
+        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId || 'draft'}.pdf"`,
       },
     })
   } catch (err) {
-    console.error('[export/pdf] Chromium PDF generation failed:', err)
-    return jsonResponse({ error: 'PDF generation failed.' }, 500)
-  } finally {
-    await browser?.close()
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[export/pdf] DocuForge failed:', msg)
+    return jsonResponse({ error: 'PDF generation failed. Please try again.' }, 500)
   }
 }
 
