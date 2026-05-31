@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
+import { useAutoSave } from '@/lib/autosave'
 import { useRouter } from 'next/navigation'
 import { FileText, Download, ExternalLink, Mail, Share2, Plus, Building2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,10 +34,21 @@ interface Step4ReviewProps {
 export function Step4Review({ client, sections, proposalId, onBack }: Step4ReviewProps) {
   const router = useRouter()
   // editedSections stores raw HTML from TipTap (richer than plain text)
-  const [editedSections, setEditedSections] = useState<ProposalSections>(sections)
+  // Normalize: AI may return non-string values for some sections despite instructions.
+  // Coerce everything to string so TipTap and the export API never receive objects.
+  const [editedSections, setEditedSections] = useState<ProposalSections>(() =>
+    Object.fromEntries(
+      Object.entries(sections).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
+    ) as ProposalSections
+  )
   const [exporting, setExporting] = useState<ExportFormat | null>(null)
-  const [_isSaving] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<ExportToast | null>(null)
+
+  const onSaveStart = useRef(() => setIsSaving(true)).current
+  const onSaveEnd = useRef(() => setIsSaving(false)).current
+
+  useAutoSave({ proposalId, sections: editedSections, onSaveStart, onSaveEnd })
   const [emailRecipient, setEmailRecipient] = useState(client.email ?? '')
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [emailPreviewUrl, setEmailPreviewUrl] = useState<string | null>(null)
@@ -69,7 +81,9 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
     try {
       const body: Record<string, unknown> = {
         proposalId,
-        sections: editedSections,
+        sections: Object.fromEntries(
+          Object.entries(editedSections).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])
+        ),
         client,
         format,
       }
@@ -166,6 +180,11 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-1">Propuesta Comercial</h1>
                 <p className="text-[#94A3B8] text-sm">{today}</p>
+                {isSaving && (
+                  <p className="text-[#94A3B8] text-xs mt-1 flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Guardando...
+                  </p>
+                )}
               </div>
               <div className="h-12 w-12 rounded-xl bg-[#1D9E75] flex items-center justify-center">
                 <span className="text-white font-bold text-lg">
