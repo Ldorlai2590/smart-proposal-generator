@@ -334,48 +334,26 @@ async function handleDOCX(
   input: ExportRequest,
   orgId: string,
 ): Promise<Response> {
-  const apiUrl = process.env.API_URL ?? 'http://localhost:8000'
-  // Use a placeholder segment when proposalId is empty (save failed) so the
-  // FastAPI path is valid; the backend will treat unknown IDs as 404 gracefully.
-  const proposalSegment = input.proposalId || 'unsaved'
-
-  let upstream: Response
+  const brand = await loadBranding(orgId)
   try {
-    upstream = await fetch(
-      `${apiUrl}/proposals/${proposalSegment}/export/docx`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant-ID': orgId,
-        },
-        body: JSON.stringify({ sections: input.sections }),
-      },
+    const { generateDOCXFromSections } = await import('@/lib/docx-generator')
+    const docxBytes = await generateDOCXFromSections(
+      input.sections,
+      brand.companyName,
+      brand.primaryColor,
     )
+    return new Response(Buffer.from(docxBytes), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId || 'draft'}.docx"`,
+      },
+    })
   } catch (err) {
-    console.error('[export/docx] FastAPI unreachable:', err)
-    return jsonResponse({ error: 'DOCX export service unavailable.' }, 503)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[export/docx] Generation failed:', msg)
+    return jsonResponse({ error: 'DOCX generation failed. Please try again.' }, 500)
   }
-
-  if (!upstream.ok) {
-    const errorText = await upstream.text().catch(() => 'Unknown error')
-    console.error(`[export/docx] FastAPI error ${upstream.status}:`, errorText)
-    return jsonResponse({ error: 'DOCX generation failed.' }, 502)
-  }
-
-  const rawDisposition =
-    upstream.headers.get('Content-Disposition') ??
-    `attachment; filename="propuesta-${input.proposalId}.docx"`
-  const contentDisposition = rawDisposition.replace(/[\r\n]/g, '')
-
-  const bytes = await upstream.arrayBuffer()
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': contentDisposition,
-    },
-  })
 }
 
 // ─── Email: placeholder detection ────────────────────────────────────────────
