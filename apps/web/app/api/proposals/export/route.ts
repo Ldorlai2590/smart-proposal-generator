@@ -305,12 +305,29 @@ function jsonResponse(body: unknown, status: number): Response {
 
 // ─── Export handlers ──────────────────────────────────────────────────────────
 
+function htmlFallbackResponse(html: string, slug: string): Response {
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Disposition': `attachment; filename="propuesta-${slug}.html"`,
+      'X-Export-Fallback': 'html',
+    },
+  })
+}
+
 async function handlePDF(
   input: ExportRequest,
   orgId: string,
 ): Promise<Response> {
   const brand = await loadBranding(orgId)
   const html = buildProposalHTML(input.sections, brand)
+  const slug = input.proposalId || 'draft'
+
+  if (!process.env.DOCUFORGE_API_KEY) {
+    console.warn('[export/pdf] DOCUFORGE_API_KEY not set — returning HTML fallback')
+    return htmlFallbackResponse(html, slug)
+  }
 
   try {
     const { generatePDFFromHTML } = await import('@/lib/pdf-docuforge')
@@ -320,13 +337,13 @@ async function handlePDF(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="propuesta-${input.proposalId || 'draft'}.pdf"`,
+        'Content-Disposition': `attachment; filename="propuesta-${slug}.pdf"`,
       },
     })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[export/pdf] DocuForge failed:', msg)
-    return jsonResponse({ error: 'PDF generation failed. Please try again.' }, 500)
+    console.error('[export/pdf] DocuForge failed, falling back to HTML:', msg)
+    return htmlFallbackResponse(html, slug)
   }
 }
 

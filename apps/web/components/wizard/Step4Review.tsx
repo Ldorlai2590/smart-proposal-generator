@@ -104,7 +104,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
           // ignore parse error
         }
         if (res.status === 503) {
-          showToast(format, 'error', 'Función disponible en producción.')
+          showToast(format, 'error', 'Servicio no configurado. Contacta al administrador.')
         } else {
           showToast(format, 'error', errorMsg)
         }
@@ -138,6 +138,7 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
         return
       }
 
+      const isHtmlFallback = res.headers.get('X-Export-Fallback') === 'html'
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -148,7 +149,10 @@ export function Step4Review({ client, sections, proposalId, onBack }: Step4Revie
       a.download = filenameMatch?.[1] ?? `propuesta-${client.company.toLowerCase().replace(/\s+/g, '-')}.${ext}`
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 100)
-      showToast(format, 'success', `Archivo descargado correctamente.`)
+      const successMsg = isHtmlFallback
+        ? 'Descargado como HTML. Ábrelo en el navegador e imprime → PDF.'
+        : 'Archivo descargado correctamente.'
+      showToast(format, 'success', successMsg)
     } catch (err: unknown) {
       console.error('[Step4] export error:', err)
       showToast(format, 'error', 'Error de conexión. Intenta nuevamente.')
