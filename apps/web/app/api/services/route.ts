@@ -96,7 +96,7 @@ export async function GET(req: Request) {
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
     if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
 
-    return Response.json({ data: [], total: 0, items: [], pages: 0, page: 1, per_page: 100 })
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -172,6 +172,6 @@ export async function POST(req: Request) {
     if (msg === 'Tenant not found')
       return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.', detail: msg }, { status: 401 })
 
-    return Response.json({ error: `Error al crear servicio: ${msg}`, detail: msg }, { status: 500 })
+    return Response.json({ error: 'Error al crear servicio. Intenta de nuevo.' }, { status: 500 })
   }
 }

@@ -5,16 +5,14 @@ import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 import type { ProposalSections } from '@/lib/schemas/proposal'
 
-// Vercel: bump function timeout so the full streaming budget is respected.
-// Default nodejs runtime times out at 10s which kills streams mid-generation.
-// 120s requires Vercel Pro; on Hobby the hard cap is 60s — see word-count limits below.
+// Vercel Hobby hard cap is 60s. Pro allows up to 800s.
+// Keep maxDuration at 60 to stay within Hobby limits; upgrade plan to raise it.
 export const runtime = 'nodejs'
-export const maxDuration = 120
+export const maxDuration = 60
 
-// Hard upper bound on the full generation. Anthropic streams can hang on
-// upstream errors; this guarantees a client-visible failure within the timeout.
-// Set 10s below maxDuration so the function can still return a clean error response.
-const STREAM_TIMEOUT_MS = 110_000
+// Abort the LLM call 5s before the function timeout so we can return a
+// clean error response instead of a silent Vercel 504.
+const STREAM_TIMEOUT_MS = 55_000
 
 // Rate limit: 3 proposal generations per minute per IP.
 // Anthropic stream costs $$, this caps blast radius if an attacker
@@ -121,10 +119,12 @@ export async function POST(req: Request) {
       )
     }
   } catch (dbErr) {
-    // DB unreachable (e.g. Vercel serverless → Supabase direct connection).
-    // Fail open so the demo always generates; usage tracking is best-effort.
-    log.warn('stream_trial_check_failed', {
+    // DB unreachable — fail open so transient Supabase outages don't block generation.
+    // WARNING: in production this bypasses quota; monitor for sustained failures.
+    log.warn('stream_trial_check_failed_fail_open', {
       err: dbErr instanceof Error ? dbErr.message : String(dbErr),
+      tenantId,
+      production: process.env.NODE_ENV === 'production',
     })
   }
 

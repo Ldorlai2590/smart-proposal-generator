@@ -19,13 +19,14 @@ const DEMO_MODE = process.env.DEMO_MODE === 'true'
 export async function GET(req: Request) {
   const log = logger.withRequestId(req)
 
-  const envCheck = {
+  // Internal-only diagnostics — never expose to public callers.
+  // We log them server-side for on-call visibility but strip them from the response.
+  log.info('health_env_check', {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'NOT SET',
-    DEMO_MODE: process.env.DEMO_MODE ?? 'NOT SET',
-    NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE ?? 'NOT SET',
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? 'set' : 'NOT SET',
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ? 'set' : 'NOT SET',
     NODE_ENV: process.env.NODE_ENV ?? 'NOT SET',
-  }
+  })
 
   // Health check usa Supabase REST (mismo camino que la app real).
   // El postgres directo no se usa en runtime — Drizzle se migró a REST
@@ -53,9 +54,8 @@ export async function GET(req: Request) {
   }
 
   return Response.json({
-    envCheck,
+    status: 'ok',
     dbStatus,
-    demoMode: DEMO_MODE,
     timestamp: new Date().toISOString(),
   })
 }

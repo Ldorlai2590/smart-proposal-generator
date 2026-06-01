@@ -122,7 +122,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     console.error(`[api/services/${id}] PATCH Error:`, msg)
 
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    return Response.json({ error: `Error al actualizar servicio: ${msg}` }, { status: 500 })
+    return Response.json({ error: 'Error al actualizar servicio. Intenta de nuevo.' }, { status: 500 })
   }
 }
 
@@ -158,6 +158,6 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     console.error(`[api/services/${id}] DELETE Error:`, msg)
 
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    return Response.json({ error: `Error al eliminar servicio: ${msg}` }, { status: 500 })
+    return Response.json({ error: 'Error al eliminar servicio. Intenta de nuevo.' }, { status: 500 })
   }
 }
