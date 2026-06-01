@@ -324,7 +324,7 @@ async function handlePDF(
   const html = buildProposalHTML(input.sections, brand)
   const slug = input.proposalId || 'draft'
 
-  if (!process.env.DOCUFORGE_API_KEY) {
+  if (!process.env.DECKLE_API_KEY) {
     console.warn('[export/pdf] DOCUFORGE_API_KEY not set — returning HTML fallback')
     return htmlFallbackResponse(html, slug)
   }
