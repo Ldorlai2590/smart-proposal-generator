@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { WizardProgress } from './WizardProgress'
@@ -16,12 +16,65 @@ const STEP_TITLES = [
   { title: 'Revisa y exporta', subtitle: 'Tu propuesta está lista. Revísala y descárgala.' },
 ]
 
+const LS_KEY = 'spg_wizard_draft'
+const LS_TTL_MS = 24 * 60 * 60 * 1000 // 24h
+
+interface WizardDraft {
+  step: number
+  client: ClientData | null
+  context: ContextData | null
+  proposalId: string
+  savedAt: number
+}
+
+function loadDraft(): WizardDraft | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return null
+    const draft = JSON.parse(raw) as WizardDraft
+    if (Date.now() - draft.savedAt > LS_TTL_MS) {
+      localStorage.removeItem(LS_KEY)
+      return null
+    }
+    return draft
+  } catch {
+    return null
+  }
+}
+
+function saveDraft(draft: Omit<WizardDraft, 'savedAt'>) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ ...draft, savedAt: Date.now() }))
+  } catch { /* quota exceeded or SSR */ }
+}
+
 export function ProposalWizard() {
   const [step, setStep] = useState(1)
   const [client, setClient] = useState<ClientData | null>(null)
   const [context, setContext] = useState<ContextData | null>(null)
   const [sections, setSections] = useState<ProposalSections | null>(null)
   const [proposalId, setProposalId] = useState<string>('')
+
+  // Restore draft from localStorage on mount (steps 1-3 only)
+  useEffect(() => {
+    const draft = loadDraft()
+    if (draft && draft.step < 4) {
+      setStep(draft.step)
+      setClient(draft.client)
+      setContext(draft.context)
+      setProposalId(draft.proposalId)
+    }
+  }, [])
+
+  // Persist wizard state whenever step/client/context changes (except step 4 — already in DB)
+  useEffect(() => {
+    if (step < 4) {
+      saveDraft({ step, client, context, proposalId })
+    } else {
+      // Proposal saved in DB — clear the draft
+      try { localStorage.removeItem(LS_KEY) } catch { /* ignore */ }
+    }
+  }, [step, client, context, proposalId])
 
   const { title, subtitle } = STEP_TITLES[step - 1]
 

@@ -53,7 +53,7 @@ type Section = 'identity' | 'business' | 'branding' | 'assets'
 export default function CompanyPage() {
   const [active, setActive] = useState<Section>('identity')
   const [data, setData] = useState(DEMO_COMPANY)
-  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [diffInput, setDiffInput] = useState('')
 
   // Files
@@ -163,14 +163,19 @@ export default function CompanyPage() {
         }),
       })
       if (!res.ok) {
-        console.error('[company/page] Save failed:', await res.text())
+        const detail = await res.text().catch(() => `HTTP ${res.status}`)
+        console.error('[company/page] Save failed:', detail)
+        setSaved('error')
+        setTimeout(() => setSaved('idle'), 4000)
+        return
       }
       setSaved('saved')
+      setTimeout(() => setSaved('idle'), 2000)
     } catch (err) {
       console.error('[company/page] Save error:', err)
-      setSaved('saved') // still show saved optimistically to avoid confusing UX
+      setSaved('error')
+      setTimeout(() => setSaved('idle'), 4000)
     }
-    setTimeout(() => setSaved('idle'), 2000)
   }
 
   return (
@@ -187,9 +192,13 @@ export default function CompanyPage() {
         <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
           saved === 'saved' ? 'bg-green-50 text-green-700' :
           saved === 'saving' ? 'bg-blue-50 text-blue-700' :
+          saved === 'error' ? 'bg-red-50 text-red-700' :
           'bg-gray-100 text-gray-600'
         }`}>
-          {saved === 'saved' ? '✓ Guardado' : saved === 'saving' ? 'Guardando…' : 'Auto-guardado activo'}
+          {saved === 'saved' ? '✓ Guardado' :
+           saved === 'saving' ? 'Guardando…' :
+           saved === 'error' ? '✗ Error al guardar — intenta de nuevo' :
+           'Sin cambios pendientes'}
         </span>
       </header>
 
@@ -425,23 +434,25 @@ export default function CompanyPage() {
       {active === 'assets' && (
         <div className="space-y-6">
           <Card title="Casos de éxito">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-gray-600">Configura tus casos de éxito para usarlos automáticamente en propuestas</p>
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">0 casos</span>
+              <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">Próximamente</span>
             </div>
-            <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
-              <Plus className="h-4 w-4" /> Agregar caso de éxito
-            </button>
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900">Esta sección estará disponible pronto. La IA ya incluye casos de éxito genéricos basados en tu industria.</p>
+            </div>
           </Card>
 
           <Card title="Testimonios">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-gray-600">Quotes de clientes para construir credibilidad</p>
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">0 testimonios</span>
+              <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">Próximamente</span>
             </div>
-            <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
-              <Plus className="h-4 w-4" /> Agregar testimonio
-            </button>
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900">Esta sección estará disponible pronto.</p>
+            </div>
           </Card>
 
           <Card title="Logos de clientes" subtitle="Logos para mostrar en social proof (próximamente)">
