@@ -1,51 +1,64 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockFetch = vi.fn()
-vi.stubGlobal('fetch', mockFetch)
-vi.stubEnv('DECKLE_API_KEY', 'dk_live_test-key-123')
+const fakePdfBytes = Buffer.from([0x25, 0x50, 0x44, 0x46]) // %PDF magic bytes
 
-describe('PDF export via Deckle', () => {
+const mockPage = {
+  setContent: vi.fn().mockResolvedValue(undefined),
+  pdf: vi.fn().mockResolvedValue(fakePdfBytes),
+}
+
+const mockBrowser = {
+  newPage: vi.fn().mockResolvedValue(mockPage),
+  close: vi.fn().mockResolvedValue(undefined),
+}
+
+vi.mock('puppeteer-core', () => ({
+  default: {
+    launch: vi.fn().mockResolvedValue(mockBrowser),
+  },
+}))
+
+vi.mock('@sparticuz/chromium-min', () => ({
+  default: {
+    args: ['--no-sandbox'],
+    defaultViewport: { width: 1280, height: 720 },
+    executablePath: vi.fn().mockResolvedValue('/usr/bin/chromium'),
+    headless: true,
+  },
+}))
+
+describe('PDF export via headless Chromium', () => {
   beforeEach(() => {
-    mockFetch.mockReset()
     vi.resetModules()
+    mockPage.setContent.mockClear()
+    mockPage.pdf.mockClear()
+    mockBrowser.newPage.mockClear()
+    mockBrowser.close.mockClear()
   })
 
-  it('calls Deckle API with HTML body and returns PDF binary', async () => {
-    const fakePdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]) // %PDF magic bytes
-    // First call: POST /v1/generate → returns URL
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ url: 'https://cdn.getdeckle.dev/pdfs/test.pdf' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    )
-    // Second call: fetch PDF from URL
-    mockFetch.mockResolvedValueOnce(
-      new Response(fakePdfBytes.buffer, {
-        status: 200,
-        headers: { 'Content-Type': 'application/pdf' },
-      })
-    )
-
+  it('launches Chromium, renders HTML, and returns PDF binary', async () => {
     const { generatePDFFromHTML } = await import('@/lib/pdf-docuforge')
     const result = await generatePDFFromHTML('<html><body>Test</body></html>')
 
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('https://api.getdeckle.dev/v1/generate')
-    expect(options.method).toBe('POST')
-    const body = JSON.parse(options.body as string)
-    expect(body.html).toContain('<html>')
+    expect(mockPage.setContent).toHaveBeenCalledWith(
+      '<html><body>Test</body></html>',
+      { waitUntil: 'networkidle0' },
+    )
+    expect(mockPage.pdf).toHaveBeenCalledWith({
+      format: 'A4',
+      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      printBackground: true,
+    })
     expect(result).toBeInstanceOf(Uint8Array)
-    expect(result[0]).toBe(0x25) // %
+    expect(result[0]).toBe(0x25) // % — first byte of %PDF
   })
 
-  it('throws Error when Deckle returns non-2xx', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response('{"error":"invalid key"}', { status: 401 })
-    )
+  it('always closes the browser even when pdf() throws', async () => {
+    mockPage.pdf.mockRejectedValueOnce(new Error('render failed'))
 
     const { generatePDFFromHTML } = await import('@/lib/pdf-docuforge')
-    await expect(generatePDFFromHTML('<html>test</html>')).rejects.toThrow('Deckle 401')
+    await expect(generatePDFFromHTML('<html>test</html>')).rejects.toThrow('render failed')
+
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
   })
 })

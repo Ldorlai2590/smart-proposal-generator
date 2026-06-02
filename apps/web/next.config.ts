@@ -57,6 +57,7 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['@repo/ui'],
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium-min'],
   // No exponer "Next.js" en X-Powered-By
   poweredByHeader: false,
   async headers() {

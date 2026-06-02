@@ -1,35 +1,36 @@
-// PDF generation via Deckle — https://getdeckle.dev
-// Free tier: 1000 PDFs/month, no credit card.
-// Register at https://app.getdeckle.dev/sign-up → get key at https://app.getdeckle.dev/keys
-// Key format: dk_live_sk_...  Set as DECKLE_API_KEY in Vercel.
-export async function generatePDFFromHTML(html: string): Promise<Uint8Array> {
-  const apiKey = process.env.DECKLE_API_KEY
-  if (!apiKey) throw new Error('DECKLE_API_KEY not set')
+// PDF generation via headless Chromium — no external API or registration needed.
+// Uses @sparticuz/chromium-min (no bundled binary) + puppeteer-core.
+// On Vercel/Lambda: Chromium is downloaded to /tmp on first cold start (~50 MB, cached).
+// In local dev: set CHROMIUM_EXECUTABLE_PATH to your local Chrome binary.
+import chromium from '@sparticuz/chromium-min'
+import puppeteer from 'puppeteer-core'
 
-  const res = await fetch('https://api.getdeckle.dev/v1/generate', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      html,
-      options: { format: 'A4', margin: '0.5in' },
-      output: 'url',
-    }),
+// Stable Chromium build compatible with this version of puppeteer-core.
+const CHROMIUM_REMOTE_URL =
+  'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+
+export async function generatePDFFromHTML(html: string): Promise<Uint8Array> {
+  const executablePath =
+    process.env.CHROMIUM_EXECUTABLE_PATH ||
+    (await chromium.executablePath(CHROMIUM_REMOTE_URL))
+
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath,
+    headless: chromium.headless,
   })
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Deckle ${res.status}: ${text}`)
+  try {
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: 'networkidle0' })
+    const pdf = await page.pdf({
+      format: 'A4',
+      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      printBackground: true,
+    })
+    return new Uint8Array(pdf)
+  } finally {
+    await browser.close()
   }
-
-  const json = (await res.json()) as { url?: string }
-  if (!json.url) throw new Error('Deckle returned no PDF URL')
-
-  const pdfRes = await fetch(json.url)
-  if (!pdfRes.ok) throw new Error(`Deckle PDF fetch failed: ${pdfRes.status}`)
-
-  const buffer = await pdfRes.arrayBuffer()
-  return new Uint8Array(buffer)
 }
