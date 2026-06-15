@@ -62,7 +62,7 @@ export async function GET() {
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
     if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado' }, { status: 401 })
 
-    return Response.json({ error: `Error al obtener datos de empresa: ${msg}` }, { status: 500 })
+    return Response.json({ error: 'Error al procesar la solicitud de empresa' }, { status: 500 })
   }
 }
 
@@ -86,7 +86,7 @@ export async function PATCH(req: Request) {
       } catch (provisionErr) {
         const pMsg = provisionErr instanceof Error ? provisionErr.message : String(provisionErr)
         console.error('[api/company] PATCH Error:', pMsg)
-        return Response.json({ error: `Error al guardar datos de empresa: ${pMsg}` }, { status: 500 })
+        return Response.json({ error: 'Error al procesar la solicitud de empresa' }, { status: 500 })
       }
     } else {
       // Genuinely unauthenticated (or other auth failure) → 401.
@@ -154,6 +154,6 @@ export async function PATCH(req: Request) {
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
     if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado' }, { status: 401 })
 
-    return Response.json({ error: `Error al guardar datos de empresa: ${msg}` }, { status: 500 })
+    return Response.json({ error: 'Error al procesar la solicitud de empresa' }, { status: 500 })
   }
 }

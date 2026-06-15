@@ -40,11 +40,11 @@ export async function checkLimit(
 
   const compositeKey = `rl:${ip}:${key}`
 
-  const pipeline = redis.pipeline()
-  pipeline.incr(compositeKey)
-  pipeline.expire(compositeKey, windowSec)
-  const results = await pipeline.exec() as [number, number]
-  const count = results[0]
+  // Only set the TTL when the key is newly created (INCR returns 1). Calling
+  // EXPIRE unconditionally would reset the window on every request, so it would
+  // never roll over and an attacker pacing just under the window is never limited.
+  const count = await redis.incr(compositeKey)
+  if (count === 1) await redis.expire(compositeKey, windowSec)
 
   if (count > limit) {
     return { allowed: false, remaining: 0, resetAt, retryAfter: windowSec }
@@ -60,18 +60,24 @@ export async function checkLimit(
 
 /**
  * Best-effort client IP extraction for Next.js App Router Request.
- * Priority: x-forwarded-for → x-real-ip → cf-connecting-ip → 'unknown'
+ *
+ * Prefers `x-real-ip` (injected by the Vercel edge, not client-controllable).
+ * Falls back to the LAST non-empty entry of `x-forwarded-for` — the first
+ * entries are client-supplied and therefore spoofable, while the proxy appends
+ * the real upstream IP at the end. Finally falls back to 'unknown'.
  */
 export function getClientIp(req: Request): string {
+  const xri = req.headers.get('x-real-ip')
+  if (xri) {
+    const trimmed = xri.trim()
+    if (trimmed) return trimmed
+  }
   const xff = req.headers.get('x-forwarded-for')
   if (xff) {
-    const first = xff.split(',')[0]?.trim()
-    if (first) return first
+    const parts = xff.split(',').map((p) => p.trim()).filter(Boolean)
+    const last = parts[parts.length - 1]
+    if (last) return last
   }
-  const xri = req.headers.get('x-real-ip')
-  if (xri) return xri.trim()
-  const cf = req.headers.get('cf-connecting-ip')
-  if (cf) return cf.trim()
   return 'unknown'
 }
 

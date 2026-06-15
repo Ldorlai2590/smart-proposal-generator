@@ -8,7 +8,8 @@ export async function GET(request: Request) {
   const type = searchParams.get('type') ?? 'signup' // signup, magiclink, recovery, email_change
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
 
   // Handle Supabase OAuth/auth errors early
   if (error) {

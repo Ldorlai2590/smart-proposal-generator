@@ -55,8 +55,10 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url)
     const search = url.searchParams.get('search') ?? ''
-    const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '100'), 500)
-    const page = parseInt(url.searchParams.get('page') ?? '1')
+    const limitRaw = parseInt(url.searchParams.get('limit') ?? '100')
+    const limit = Math.min(Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 100, 500)
+    const pageRaw = parseInt(url.searchParams.get('page') ?? '1')
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
     const offset = (page - 1) * limit
 
     let query = admin
@@ -94,7 +96,7 @@ export async function GET(req: Request) {
     console.error('[api/services] GET Error:', msg)
 
     if (msg === 'Unauthenticated') return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado', detail: msg }, { status: 401 })
+    if (msg === 'Tenant not found') return Response.json({ error: 'Tenant no encontrado' }, { status: 401 })
 
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -168,9 +170,9 @@ export async function POST(req: Request) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[api/services] POST Error:', msg)
 
-    if (msg === 'Unauthenticated') return Response.json({ error: 'No autenticado', detail: msg }, { status: 401 })
+    if (msg === 'Unauthenticated') return Response.json({ error: 'No autenticado' }, { status: 401 })
     if (msg === 'Tenant not found')
-      return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.', detail: msg }, { status: 401 })
+      return Response.json({ error: 'Tenant no encontrado. Cierra sesión y vuelve a iniciar.' }, { status: 401 })
 
     return Response.json({ error: 'Error al crear servicio. Intenta de nuevo.' }, { status: 500 })
   }

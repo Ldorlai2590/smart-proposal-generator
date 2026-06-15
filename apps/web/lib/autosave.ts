@@ -30,12 +30,16 @@ export function useAutoSave({ proposalId, sections, onSaveStart, onSaveEnd }: Au
     const timer = setInterval(async () => {
       onSaveStart?.()
       try {
-        await fetch('/api/proposals/autosave', {
+        const res = await fetch('/api/proposals/autosave', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ proposalId, sections: sectionsRef.current }),
         })
-        onSaveEnd?.(null)
+        if (!res.ok) {
+          onSaveEnd?.(new Error(`autosave failed: ${res.status}`))
+        } else {
+          onSaveEnd?.(null)
+        }
       } catch (err) {
         onSaveEnd?.(err instanceof Error ? err : new Error(String(err)))
       }

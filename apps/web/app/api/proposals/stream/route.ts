@@ -119,13 +119,19 @@ export async function POST(req: Request) {
       )
     }
   } catch (dbErr) {
-    // DB unreachable — fail open so transient Supabase outages don't block generation.
-    // WARNING: in production this bypasses quota; monitor for sustained failures.
-    log.warn('stream_trial_check_failed_fail_open', {
+    // DB unreachable. In production fail CLOSED to avoid silently bypassing quota.
+    // In non-production fail OPEN so transient Supabase outages don't block local dev.
+    log.warn('stream_trial_check_failed', {
       err: dbErr instanceof Error ? dbErr.message : String(dbErr),
       tenantId,
       production: process.env.NODE_ENV === 'production',
     })
+    if (process.env.NODE_ENV === 'production') {
+      return new Response(
+        JSON.stringify({ error: 'service_unavailable' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
   }
 
   // --- Body parsing + validation -------------------------------------------
@@ -153,6 +159,32 @@ export async function POST(req: Request) {
     )
   }
   const input = parsed.data
+
+  // --- Ownership check: clientId must belong to tenant ---------------------
+  // clientId may legitimately be empty in some flows — skip the check then.
+  if (input.clientId) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = createAdminClient()
+      const { data: clientCheck } = await admin
+        .from('clients').select('id')
+        .eq('id', input.clientId).eq('tenant_id', tenantId).maybeSingle()
+      if (!clientCheck) {
+        return Response.json({ error: 'Client not found' }, { status: 404 })
+      }
+    } catch (ownErr) {
+      log.warn('stream_client_check_failed', {
+        err: ownErr instanceof Error ? ownErr.message : String(ownErr),
+        tenantId,
+      })
+      if (process.env.NODE_ENV === 'production') {
+        return new Response(
+          JSON.stringify({ error: 'service_unavailable' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+  }
 
   log.info('stream_start', {
     clientId: input.clientId,

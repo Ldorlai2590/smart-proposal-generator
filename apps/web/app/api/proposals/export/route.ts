@@ -14,7 +14,11 @@ const ExportRequestSchema = z.object({
   // still wants to export from the in-memory sections.
   proposalId: z.string(),
   format: z.enum(['pdf', 'docx', 'email']),
-  sections: z.record(z.string(), z.string()),
+  // Bound section count and size so a user can't OOM Chromium with hundreds of
+  // MB of HTML. Each value ≤ 50k chars; at most 25 sections.
+  sections: z
+    .record(z.string().max(100), z.string().max(50_000))
+    .refine((r) => Object.keys(r).length <= 25, { message: 'too many sections' }),
   recipientEmail: z.string().email().optional(),
 })
 

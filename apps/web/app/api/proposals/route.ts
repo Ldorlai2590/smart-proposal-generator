@@ -89,6 +89,11 @@ export async function POST(req: Request) {
 
     if (!userRow) return Response.json({ error: 'User not found' }, { status: 404 })
 
+    const { data: clientCheck } = await admin
+      .from('clients').select('id')
+      .eq('id', data.client_id).eq('tenant_id', tenantId).maybeSingle()
+    if (!clientCheck) return Response.json({ error: 'Client not found' }, { status: 404 })
+
     const { data: newProposal, error } = await admin
       .from('proposals')
       .insert({
