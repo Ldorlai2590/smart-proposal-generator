@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
+import { requireAuth, ensureTenant } from '@/lib/auth'
 
 // Fields stored in tenants.metadata JSONB (in addition to tenants.name)
 const CompanyMetaSchema = z.object({
@@ -31,7 +32,7 @@ const CompanyMetaSchema = z.object({
 })
 
 const PatchSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().max(200).optional(),
   metadata: CompanyMetaSchema.optional(),
 })
 
@@ -70,8 +71,27 @@ export async function PATCH(req: Request) {
   try {
     const session = await requireAuth()
     tenantId = session.tenantId
-  } catch {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+
+    // Tenant missing → auto-provision for a freshly-authenticated user, then proceed.
+    if (msg === 'Tenant not found') {
+      try {
+        const supabase = await createClient()
+        const { data: { user }, error: userErr } = await supabase.auth.getUser()
+        if (userErr || !user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+        tenantId = await ensureTenant(user.id, user.email ?? '')
+      } catch (provisionErr) {
+        const pMsg = provisionErr instanceof Error ? provisionErr.message : String(provisionErr)
+        console.error('[api/company] PATCH Error:', pMsg)
+        return Response.json({ error: `Error al guardar datos de empresa: ${pMsg}` }, { status: 500 })
+      }
+    } else {
+      // Genuinely unauthenticated (or other auth failure) → 401.
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   let body: unknown
@@ -103,8 +123,13 @@ export async function PATCH(req: Request) {
     const updates: Record<string, unknown> = {
       metadata: { ...existingMeta, ...newMeta },
     }
+    // Trim the name; only update when it's a non-empty value, otherwise leave
+    // the existing tenant name untouched (blank input == "no change").
     if (parsed.data.name !== undefined) {
-      updates.name = parsed.data.name
+      const trimmedName = parsed.data.name.trim()
+      if (trimmedName.length > 0) {
+        updates.name = trimmedName
+      }
     }
 
     const { data: updated, error: updateErr } = await admin

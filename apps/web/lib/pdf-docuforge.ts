@@ -16,14 +16,13 @@ export async function generatePDFFromHTML(html: string): Promise<Uint8Array> {
 
   const browser = await puppeteer.launch({
     args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
     executablePath,
-    headless: chromium.headless,
+    headless: true,
   })
 
   try {
     const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { waitUntil: 'load' })
     const pdf = await page.pdf({
       format: 'A4',
       margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },

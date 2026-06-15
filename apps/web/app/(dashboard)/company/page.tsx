@@ -54,6 +54,8 @@ export default function CompanyPage() {
   const [active, setActive] = useState<Section>('identity')
   const [data, setData] = useState(DEMO_COMPANY)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState<string>('')
+  const [dirty, setDirty] = useState(false)
   const [diffInput, setDiffInput] = useState('')
 
   // Files
@@ -109,6 +111,7 @@ export default function CompanyPage() {
 
   function update<K extends keyof typeof DEMO_COMPANY>(key: K, value: typeof DEMO_COMPANY[K]) {
     setData((d) => ({ ...d, [key]: value }))
+    setDirty(true)
   }
 
   function toggleIndustry(ind: string) {
@@ -128,12 +131,13 @@ export default function CompanyPage() {
 
   async function handleSave() {
     setSaved('saving')
+    setErrorMsg('')
     try {
       const res = await fetch('/api/company', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: data.name,
+          ...(data.name?.trim() ? { name: data.name.trim() } : {}),
           metadata: {
             website: data.website,
             email: data.email,
@@ -163,18 +167,23 @@ export default function CompanyPage() {
         }),
       })
       if (!res.ok) {
-        const detail = await res.text().catch(() => `HTTP ${res.status}`)
-        console.error('[company/page] Save failed:', detail)
+        const j = await res.json().catch(() => null) as { error?: string } | null
+        const raw = j?.error ?? `HTTP ${res.status}`
+        const msg = raw.length > 160 ? `${raw.slice(0, 160)}…` : raw
+        console.error('[company/page] Save failed:', raw)
+        setErrorMsg(msg)
         setSaved('error')
-        setTimeout(() => setSaved('idle'), 4000)
+        setTimeout(() => setSaved('idle'), 6000)
         return
       }
       setSaved('saved')
+      setDirty(false)
       setTimeout(() => setSaved('idle'), 2000)
     } catch (err) {
       console.error('[company/page] Save error:', err)
+      setErrorMsg(err instanceof Error ? err.message : 'Error de red')
       setSaved('error')
-      setTimeout(() => setSaved('idle'), 4000)
+      setTimeout(() => setSaved('idle'), 6000)
     }
   }
 
@@ -189,16 +198,19 @@ export default function CompanyPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Perfil maestro de tu empresa proveedora — la base que el sistema usará para generar propuestas inteligentes.</p>
         </div>
-        <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${
-          saved === 'saved' ? 'bg-green-50 text-green-700' :
-          saved === 'saving' ? 'bg-blue-50 text-blue-700' :
-          saved === 'error' ? 'bg-red-50 text-red-700' :
-          'bg-gray-100 text-gray-600'
-        }`}>
+        <span
+          title={saved === 'error' && errorMsg ? errorMsg : undefined}
+          className={`text-xs px-3 py-1.5 rounded-full font-medium max-w-xs truncate ${
+            saved === 'saved' ? 'bg-green-50 text-green-700' :
+            saved === 'saving' ? 'bg-blue-50 text-blue-700' :
+            saved === 'error' ? 'bg-red-50 text-red-700' :
+            'bg-gray-100 text-gray-600'
+          }`}
+        >
           {saved === 'saved' ? '✓ Guardado' :
            saved === 'saving' ? 'Guardando…' :
-           saved === 'error' ? '✗ Error al guardar — intenta de nuevo' :
-           'Sin cambios pendientes'}
+           saved === 'error' ? `✗ ${errorMsg || 'Error al guardar — intenta de nuevo'}` :
+           dirty ? 'Cambios sin guardar' : 'Sin cambios pendientes'}
         </span>
       </header>
 
@@ -476,7 +488,13 @@ export default function CompanyPage() {
       )}
 
       {/* Sticky save footer */}
-      <div className="sticky bottom-4 mt-8 flex justify-end">
+      <div className="sticky bottom-4 mt-8 flex flex-col items-end gap-2">
+        {saved === 'error' && errorMsg && (
+          <p className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 max-w-md">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="truncate">{errorMsg}</span>
+          </p>
+        )}
         <button
           onClick={handleSave}
           disabled={saved === 'saving'}
