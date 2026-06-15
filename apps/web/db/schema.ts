@@ -3,6 +3,7 @@ import {
   uuid,
   varchar,
   integer,
+  numeric,
   jsonb,
   text,
   timestamp,
@@ -80,6 +81,38 @@ export const clients = pgTable('clients', {
   industry: varchar('industry', { length: 100 }),
   companySize: varchar('company_size', { length: 50 }),
   score: integer('score').default(0),
+
+  // v2 — Persona de contacto (002 / 003)
+  contactName: varchar('contact_name', { length: 255 }),
+  contactRole: varchar('contact_role', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+
+  // v2 — Web + RRSS (TEXT en la migración)
+  website: text('website'),
+  instagram: text('instagram'),
+  facebook: text('facebook'),
+  linkedin: text('linkedin'),
+  tiktok: text('tiktok'),
+
+  // v2 — Datos de empresa
+  country: varchar('country', { length: 100 }),
+  // CHECK: size IN ('micro','pyme','mediana','corporativo')
+  size: varchar('size', { length: 50 }),
+  employeesCount: integer('employees_count'),
+  estimatedRevenue: varchar('estimated_revenue', { length: 100 }),
+
+  // v2 — Análisis IA
+  aiBusinessModel: text('ai_business_model'),
+  aiValueProp: text('ai_value_prop'),
+  // CHECK: ai_digital_maturity BETWEEN 0 AND 100
+  aiDigitalMaturity: integer('ai_digital_maturity'),
+  aiOpportunities: jsonb('ai_opportunities').default([]),
+  aiWeaknesses: jsonb('ai_weaknesses').default([]),
+  aiCommunicationTone: text('ai_communication_tone'),
+  aiCompetitors: jsonb('ai_competitors').default([]),
+  aiExecutiveSummary: text('ai_executive_summary'),
+  aiAnalyzedAt: timestamp('ai_analyzed_at', { withTimezone: true }),
+
   metadata: jsonb('metadata').default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -87,6 +120,42 @@ export const clients = pgTable('clients', {
 
 export type Client = typeof clients.$inferSelect
 export type NewClient = typeof clients.$inferInsert
+
+// ---------------------------------------------------------------------------
+// services — Catálogo de servicios reutilizables
+// ---------------------------------------------------------------------------
+// NOTA: refleja la definición LIVE en supabase/migrations/20260601_services.sql
+//   - company_id es TEXT (ref suelta a branding del tenant, sin FK)
+//   - includes / excludes / deliverables son TEXT[] (no JSONB)
+//   - desired_margin es NUMERIC(5,2)
+export const services = pgTable('services', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => tenants.id, { onDelete: 'cascade' }),
+  // Ref suelta a branding del tenant — sin FK en la DB live
+  companyId: text('company_id'),
+  name: varchar('name', { length: 300 }).notNull(),
+  category: varchar('category', { length: 100 }).default('').notNull(),
+  description: text('description').default(''),
+  objective: text('objective'),
+  scope: text('scope'),
+  includes: text('includes').array().default([]),
+  excludes: text('excludes').array().default([]),
+  durationEstimate: varchar('duration_estimate', { length: 200 }),
+  deliverables: text('deliverables').array().default([]),
+  basePrice: numeric('base_price', { precision: 12, scale: 2 }).default('0').notNull(),
+  currency: varchar('currency', { length: 10 }).default('USD'),
+  customizable: boolean('customizable').default(false),
+  billingType: varchar('billing_type', { length: 50 }).default('one_time'),
+  desiredMargin: numeric('desired_margin', { precision: 5, scale: 2 }),
+  active: boolean('active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+})
+
+export type Service = typeof services.$inferSelect
+export type NewService = typeof services.$inferInsert
 
 // ---------------------------------------------------------------------------
 // proposals
@@ -142,8 +211,13 @@ export type NewExport = typeof exports_.$inferInsert
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
   clients: many(clients),
+  services: many(services),
   proposals: many(proposals),
   exports: many(exports_),
+}))
+
+export const servicesRelations = relations(services, ({ one }) => ({
+  tenant: one(tenants, { fields: [services.tenantId], references: [tenants.id] }),
 }))
 
 export const usersRelations = relations(users, ({ one, many }) => ({

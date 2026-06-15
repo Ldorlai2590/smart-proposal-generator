@@ -1,14 +1,32 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Plus, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Building2, Globe, Mail, Phone, Instagram, Facebook, Linkedin, Save, Plus, X, CheckCircle2, AlertCircle, Award, Quote, MessageCircleQuestion, Trash2 } from 'lucide-react'
 import { DEMO_COMPANY } from '@/lib/demo-v2'
 import { DemoBanner } from '@/components/layout/DemoBanner'
 import { FileUpload, type UploadedFile } from '@/components/ui/file-upload'
 import { CountedTextarea } from '@/components/ui/counted-textarea'
 import { isEmptyState } from '@/lib/demo-mode'
+import { FontPicker } from '@/components/ui/font-picker'
 
 type CompanyData = typeof DEMO_COMPANY
+
+// ── Activos comerciales (persisted in tenants.metadata) ──────────────────────
+type CaseStudy = { client: string; result: string; description: string }
+type Testimonial = { author: string; role?: string; quote: string }
+type Faq = { question: string; answer: string }
+
+const ASSET_LIMITS = {
+  certification: 120,
+  case_client: 200,
+  case_result: 300,
+  case_description: 1000,
+  testimonial_author: 200,
+  testimonial_role: 200,
+  testimonial_quote: 1000,
+  faq_question: 300,
+  faq_answer: 2000,
+} as const
 
 // Field limits (synced with API)
 export const COMPANY_LIMITS = {
@@ -46,7 +64,6 @@ const EMPTY_COMPANY: typeof DEMO_COMPANY = {
 const COUNTRIES = ['Chile', 'México', 'Colombia', 'Argentina', 'Perú', 'Otro']
 const CURRENCIES = ['USD', 'CLP', 'MXN', 'COP', 'ARS', 'PEN'] as const
 const ALL_INDUSTRIES = ['Tecnología', 'SaaS', 'Salud', 'Retail', 'Finanzas', 'Educación', 'Inmobiliario', 'Manufactura', 'Servicios profesionales', 'Logística', 'Alimentación', 'Otros']
-const FONTS = ['Inter', 'Geist', 'Roboto', 'Poppins', 'Montserrat']
 
 type Section = 'identity' | 'business' | 'branding' | 'assets'
 
@@ -57,6 +74,14 @@ export default function CompanyPage() {
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [dirty, setDirty] = useState(false)
   const [diffInput, setDiffInput] = useState('')
+
+  // Activos comerciales — kept in local state because DEMO_COMPANY (the type
+  // source for `data`) doesn't declare these fields. They persist via metadata.
+  const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([])
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [certifications, setCertifications] = useState<string[]>([])
+  const [faqs, setFaqs] = useState<Faq[]>([])
+  const [certInput, setCertInput] = useState('')
 
   // Files
   const [logoFile, setLogoFile] = useState<UploadedFile | null>(null)
@@ -102,6 +127,10 @@ export default function CompanyPage() {
           has_brand_manual: (meta.has_brand_manual as boolean) ?? prev.has_brand_manual,
           has_example_proposal: (meta.has_example_proposal as boolean) ?? prev.has_example_proposal,
         }))
+        if (Array.isArray(meta.case_studies)) setCaseStudies(meta.case_studies as CaseStudy[])
+        if (Array.isArray(meta.testimonials)) setTestimonials(meta.testimonials as Testimonial[])
+        if (Array.isArray(meta.certifications)) setCertifications(meta.certifications as string[])
+        if (Array.isArray(meta.faqs)) setFaqs(meta.faqs as Faq[])
       } catch {
         if (isEmptyState()) setData(EMPTY_COMPANY)
       }
@@ -127,6 +156,65 @@ export default function CompanyPage() {
 
   function removeDifferentiator(idx: number) {
     update('differentiators', (data.differentiators ?? []).filter((_, i) => i !== idx))
+  }
+
+  // ── Activos comerciales helpers ────────────────────────────────────────────
+  // Casos de éxito
+  function addCaseStudy() {
+    if (caseStudies.length >= 10) return
+    setCaseStudies((cs) => [...cs, { client: '', result: '', description: '' }])
+    setDirty(true)
+  }
+  function updateCaseStudy(idx: number, key: keyof CaseStudy, value: string) {
+    setCaseStudies((cs) => cs.map((c, i) => (i === idx ? { ...c, [key]: value } : c)))
+    setDirty(true)
+  }
+  function removeCaseStudy(idx: number) {
+    setCaseStudies((cs) => cs.filter((_, i) => i !== idx))
+    setDirty(true)
+  }
+
+  // Testimonios
+  function addTestimonial() {
+    if (testimonials.length >= 10) return
+    setTestimonials((t) => [...t, { author: '', role: '', quote: '' }])
+    setDirty(true)
+  }
+  function updateTestimonial(idx: number, key: keyof Testimonial, value: string) {
+    setTestimonials((t) => t.map((c, i) => (i === idx ? { ...c, [key]: value } : c)))
+    setDirty(true)
+  }
+  function removeTestimonial(idx: number) {
+    setTestimonials((t) => t.filter((_, i) => i !== idx))
+    setDirty(true)
+  }
+
+  // Certificaciones
+  function addCertification() {
+    const v = certInput.trim()
+    if (!v || certifications.length >= 20) return
+    setCertifications((c) => [...c, v])
+    setCertInput('')
+    setDirty(true)
+  }
+  function removeCertification(idx: number) {
+    setCertifications((c) => c.filter((_, i) => i !== idx))
+    setDirty(true)
+  }
+
+  // FAQ comerciales
+  function addFaq() {
+    if (faqs.length >= 20) return
+    setFaqs((f) => [...f, { question: '', answer: '' }])
+    setDirty(true)
+  }
+  function updateFaq(idx: number, key: keyof Faq, value: string) {
+    setFaqs((f) => f.map((c, i) => (i === idx ? { ...c, [key]: value } : c)))
+    setDirty(true)
+  }
+  function removeFaq(idx: number) {
+    setFaqs((f) => f.filter((_, i) => i !== idx))
+    setDirty(true)
   }
 
   async function handleSave() {
@@ -163,6 +251,10 @@ export default function CompanyPage() {
             font_body: data.font_body,
             has_brand_manual: data.has_brand_manual,
             has_example_proposal: data.has_example_proposal,
+            case_studies: caseStudies,
+            testimonials: testimonials,
+            certifications: certifications,
+            faqs: faqs,
           },
         }),
       })
@@ -390,16 +482,8 @@ export default function CompanyPage() {
 
           <Card title="Tipografías">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Tipografía títulos">
-                <select value={data.font_heading ?? 'Inter'} onChange={(e) => update('font_heading', e.target.value)} className={inputCls}>
-                  {FONTS.map((f) => <option key={f}>{f}</option>)}
-                </select>
-              </Field>
-              <Field label="Tipografía cuerpo">
-                <select value={data.font_body ?? 'Inter'} onChange={(e) => update('font_body', e.target.value)} className={inputCls}>
-                  {FONTS.map((f) => <option key={f}>{f}</option>)}
-                </select>
-              </Field>
+              <FontPicker value={data.font_heading ?? 'Inter'} onChange={(f) => update('font_heading', f)} label="Tipografía títulos" />
+              <FontPicker value={data.font_body ?? 'Inter'} onChange={(f) => update('font_body', f)} label="Tipografía cuerpo" />
             </div>
           </Card>
 
@@ -445,28 +529,97 @@ export default function CompanyPage() {
       {/* Assets Section */}
       {active === 'assets' && (
         <div className="space-y-6">
+          {/* Casos de éxito */}
           <Card title="Casos de éxito">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-gray-600">Configura tus casos de éxito para usarlos automáticamente en propuestas</p>
-              <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">Próximamente</span>
+            <p className="text-xs text-gray-500 mb-3">Resultados concretos que la IA citará como prueba social en tus propuestas. Hasta 10.</p>
+            <div className="space-y-3 mb-3">
+              {caseStudies.map((c, idx) => (
+                <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1D9E75]"><Award className="h-3.5 w-3.5" /> Caso #{idx + 1}</span>
+                    <button onClick={() => removeCaseStudy(idx)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input value={c.client} onChange={(e) => updateCaseStudy(idx, 'client', e.target.value)} maxLength={ASSET_LIMITS.case_client} placeholder="Cliente (ej: Acme SaaS)" className={inputCls} />
+                    <input value={c.result} onChange={(e) => updateCaseStudy(idx, 'result', e.target.value)} maxLength={ASSET_LIMITS.case_result} placeholder="Resultado (ej: +180% leads en 90 días)" className={inputCls} />
+                  </div>
+                  <textarea value={c.description} onChange={(e) => updateCaseStudy(idx, 'description', e.target.value)} maxLength={ASSET_LIMITS.case_description} rows={2} placeholder="Descripción breve del caso..." className={inputCls} />
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-900">Esta sección estará disponible pronto. La IA ya incluye casos de éxito genéricos basados en tu industria.</p>
-            </div>
+            {caseStudies.length < 10 && (
+              <button onClick={addCaseStudy} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar caso</button>
+            )}
+            <p className="text-xs text-gray-400 mt-2">{caseStudies.length}/10 casos</p>
           </Card>
 
+          {/* Testimonios */}
           <Card title="Testimonios">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-gray-600">Quotes de clientes para construir credibilidad</p>
-              <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full font-medium">Próximamente</span>
+            <p className="text-xs text-gray-500 mb-3">Quotes de clientes para construir credibilidad. Hasta 10.</p>
+            <div className="space-y-3 mb-3">
+              {testimonials.map((t, idx) => (
+                <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1D9E75]"><Quote className="h-3.5 w-3.5" /> Testimonio #{idx + 1}</span>
+                    <button onClick={() => removeTestimonial(idx)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                  <textarea value={t.quote} onChange={(e) => updateTestimonial(idx, 'quote', e.target.value)} maxLength={ASSET_LIMITS.testimonial_quote} rows={2} placeholder="“Trabajar con ellos transformó nuestro pipeline...”" className={inputCls} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input value={t.author} onChange={(e) => updateTestimonial(idx, 'author', e.target.value)} maxLength={ASSET_LIMITS.testimonial_author} placeholder="Autor (ej: María Pérez)" className={inputCls} />
+                    <input value={t.role ?? ''} onChange={(e) => updateTestimonial(idx, 'role', e.target.value)} maxLength={ASSET_LIMITS.testimonial_role} placeholder="Cargo / empresa (opcional)" className={inputCls} />
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-900">Esta sección estará disponible pronto.</p>
-            </div>
+            {testimonials.length < 10 && (
+              <button onClick={addTestimonial} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar testimonio</button>
+            )}
+            <p className="text-xs text-gray-400 mt-2">{testimonials.length}/10 testimonios</p>
           </Card>
 
+          {/* Certificaciones */}
+          <Card title="Certificaciones">
+            <p className="text-xs text-gray-500 mb-3">Acreditaciones y partnerships (ej: Google Partner, ISO 9001). Hasta 20.</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {certifications.map((cert, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#e6f7f2] border border-[#1D9E75]/20 text-gray-700 rounded-full">
+                  <Award className="h-3.5 w-3.5 text-[#1D9E75]" />
+                  {cert}
+                  <button onClick={() => removeCertification(idx)} className="text-gray-400 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
+                </span>
+              ))}
+            </div>
+            {certifications.length < 20 && (
+              <div className="flex gap-2">
+                <input value={certInput} onChange={(e) => setCertInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCertification())} maxLength={ASSET_LIMITS.certification} placeholder="Ej: Google Partner" className={inputCls} />
+                <button onClick={addCertification} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar</button>
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-2">{certifications.length}/20 certificaciones · máx {ASSET_LIMITS.certification} chars c/u</p>
+          </Card>
+
+          {/* FAQ comerciales */}
+          <Card title="FAQ comerciales">
+            <p className="text-xs text-gray-500 mb-3">Preguntas frecuentes y sus respuestas para resolver objeciones en propuestas. Hasta 20.</p>
+            <div className="space-y-3 mb-3">
+              {faqs.map((f, idx) => (
+                <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1D9E75]"><MessageCircleQuestion className="h-3.5 w-3.5" /> FAQ #{idx + 1}</span>
+                    <button onClick={() => removeFaq(idx)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                  <input value={f.question} onChange={(e) => updateFaq(idx, 'question', e.target.value)} maxLength={ASSET_LIMITS.faq_question} placeholder="Pregunta (ej: ¿Ofrecen garantía?)" className={inputCls} />
+                  <textarea value={f.answer} onChange={(e) => updateFaq(idx, 'answer', e.target.value)} maxLength={ASSET_LIMITS.faq_answer} rows={2} placeholder="Respuesta..." className={inputCls} />
+                </div>
+              ))}
+            </div>
+            {faqs.length < 20 && (
+              <button onClick={addFaq} className="inline-flex items-center gap-1 px-4 py-2 bg-[#1D9E75] text-white text-sm font-medium rounded-lg hover:bg-[#158a63]"><Plus className="h-4 w-4" /> Agregar FAQ</button>
+            )}
+            <p className="text-xs text-gray-400 mt-2">{faqs.length}/20 preguntas</p>
+          </Card>
+
+          {/* Logos de clientes — placeholder retained (multi-upload out of scope) */}
           <Card title="Logos de clientes" subtitle="Logos para mostrar en social proof (próximamente)">
             <FileUpload
               value={null}
@@ -476,13 +629,6 @@ export default function CompanyPage() {
               hint="PNG, SVG · máx 5MB cada uno"
             />
             <p className="text-xs text-gray-400 mt-2">Múltiples logos disponibles próximamente</p>
-          </Card>
-
-          <Card title="Certificaciones y FAQ comerciales">
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-900">Sección disponible próximamente — la generación automática de propuestas ya considera placeholders.</p>
-            </div>
           </Card>
         </div>
       )}

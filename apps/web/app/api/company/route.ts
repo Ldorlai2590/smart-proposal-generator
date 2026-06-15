@@ -29,6 +29,10 @@ const CompanyMetaSchema = z.object({
   font_body: z.string().max(100).nullable().optional(),
   has_brand_manual: z.boolean().nullable().optional(),
   has_example_proposal: z.boolean().nullable().optional(),
+  certifications: z.array(z.string().max(120)).max(20).nullable().optional(),
+  faqs: z.array(z.object({ question: z.string().max(300), answer: z.string().max(2000) })).max(20).nullable().optional(),
+  case_studies: z.array(z.object({ client: z.string().max(200), result: z.string().max(300), description: z.string().max(1000) })).max(10).nullable().optional(),
+  testimonials: z.array(z.object({ author: z.string().max(200), role: z.string().max(200).nullable().optional(), quote: z.string().max(1000) })).max(10).nullable().optional(),
 })
 
 const PatchSchema = z.object({
