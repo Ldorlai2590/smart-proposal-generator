@@ -42,12 +42,13 @@ describe('PDF export via headless Chromium', () => {
 
     expect(mockPage.setContent).toHaveBeenCalledWith(
       '<html><body>Test</body></html>',
-      { waitUntil: 'networkidle0' },
+      { waitUntil: 'load', timeout: 45_000 },
     )
     expect(mockPage.pdf).toHaveBeenCalledWith({
       format: 'A4',
       margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
       printBackground: true,
+      timeout: 45_000,
     })
     expect(result).toBeInstanceOf(Uint8Array)
     expect(result[0]).toBe(0x25) // % — first byte of %PDF

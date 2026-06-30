@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock must be hoisted before any imports that use @upstash/redis
-const mockExec = vi.fn()
-const mockPipeline = vi.fn(() => ({
-  incr: vi.fn().mockReturnThis(),
-  expire: vi.fn().mockReturnThis(),
-  exec: mockExec,
-}))
-const mockRedisInstance = { pipeline: mockPipeline }
+// Mock must be hoisted before any imports that use @upstash/redis.
+// The limiter calls redis.incr() directly, then redis.expire() only when the
+// key is newly created (incr === 1) — see lib/rate-limit.ts.
+const mockIncr = vi.fn()
+const mockExpire = vi.fn().mockResolvedValue(1)
+const mockRedisInstance = { incr: mockIncr, expire: mockExpire }
 
 vi.mock('@upstash/redis', () => ({
   Redis: vi.fn(() => mockRedisInstance),
@@ -19,12 +17,12 @@ vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-token')
 describe('Redis-backed checkLimit', () => {
   beforeEach(() => {
     vi.resetModules()
-    mockExec.mockReset()
-    mockPipeline.mockClear()
+    mockIncr.mockReset()
+    mockExpire.mockClear()
   })
 
   it('returns allowed:true when count is below limit', async () => {
-    mockExec.mockResolvedValueOnce([2, 1]) // count=2, limit=3
+    mockIncr.mockResolvedValueOnce(2) // count=2, limit=3
 
     const { checkLimit } = await import('@/lib/rate-limit')
     const result = await checkLimit('1.2.3.4', 'proposals:stream', 3, 60)
@@ -34,7 +32,7 @@ describe('Redis-backed checkLimit', () => {
   })
 
   it('returns allowed:false when count exceeds limit', async () => {
-    mockExec.mockResolvedValueOnce([4, 1]) // count=4 > limit=3
+    mockIncr.mockResolvedValueOnce(4) // count=4 > limit=3
 
     const { checkLimit } = await import('@/lib/rate-limit')
     const result = await checkLimit('1.2.3.4', 'proposals:stream', 3, 60)

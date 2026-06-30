@@ -3,9 +3,14 @@ import { z } from 'zod/v4'
 export const runtime = 'nodejs'
 export const maxDuration = 10
 
+// Same caps as the export endpoint (ExportRequestSchema): bound per-section
+// size and key count so an authenticated client cannot inflate the proposals
+// JSONB column or cause OOM on read-back.
 const AutosaveSchema = z.object({
   proposalId: z.string().min(1),
-  sections: z.record(z.string(), z.string()),
+  sections: z
+    .record(z.string().max(100), z.string().max(50_000))
+    .refine((r) => Object.keys(r).length <= 25, { message: 'too many sections' }),
 })
 
 export async function POST(req: Request): Promise<Response> {

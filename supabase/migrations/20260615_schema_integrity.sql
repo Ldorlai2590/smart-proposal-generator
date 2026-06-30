@@ -87,11 +87,18 @@ ALTER TABLE proposal_views
 -- -----------------------------------------------------------------------------
 
 -- exports.proposal_id  → CASCADE (deleting a proposal removes its export rows)
-ALTER TABLE exports
-  DROP CONSTRAINT IF EXISTS exports_proposal_id_fkey;
-ALTER TABLE exports
-  ADD CONSTRAINT exports_proposal_id_fkey
-  FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE;
+--   `exports` may not exist in every environment (it is not created by the web
+--   migrations). Guard with to_regclass so an absent table does NOT abort the
+--   whole transaction — `ALTER TABLE ... IF EXISTS` does not cover a missing table.
+DO $$
+BEGIN
+  IF to_regclass('public.exports') IS NOT NULL THEN
+    ALTER TABLE exports DROP CONSTRAINT IF EXISTS exports_proposal_id_fkey;
+    ALTER TABLE exports
+      ADD CONSTRAINT exports_proposal_id_fkey
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- proposals.client_id  → RESTRICT (block deleting a client that has proposals)
 ALTER TABLE proposals
