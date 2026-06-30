@@ -26,7 +26,10 @@
         "RESEND_API_KEY",
         "EMAIL_FROM",
         "DOCUFORGE_API_KEY",
-        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "CHROMIUM_EXECUTABLE_PATH"
       ]
     },
     "dev": {
