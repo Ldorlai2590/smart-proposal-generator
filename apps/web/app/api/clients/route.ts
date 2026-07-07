@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
+import { opportunityScore } from '@/lib/opportunity-score'
 
 const NewClientSchema = z.object({
   name: z.string().min(1, 'name is required').max(200),
@@ -33,19 +34,25 @@ export async function GET(req: Request) {
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
     const offset = (page - 1) * limit
 
+    const esc = search ? search.replace(/%/g, '\\%').replace(/_/g, '\\_') : ''
+    const orFilter = search ? `name.ilike.%${esc}%,company.ilike.%${esc}%` : null
+
     let query = admin
       .from('clients')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
+    if (orFilter) query = query.or(orFilter)
 
-    if (search) {
-      const esc = search.replace(/%/g, '\\%').replace(/_/g, '\\_')
-      query = query.or(`name.ilike.%${esc}%,company.ilike.%${esc}%`)
-    }
+    // Real total count (previously hardcoded to the page length).
+    let countQuery = admin
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+    if (orFilter) countQuery = countQuery.or(orFilter)
 
-    const { data: rows, error } = await query
+    const [{ data: rows, error }, { count }] = await Promise.all([query, countQuery])
     if (error) throw new Error(error.message)
 
     const data = (rows ?? []).map((r) => ({
@@ -56,11 +63,14 @@ export async function GET(req: Request) {
       email: r.email,
       industry: r.industry,
       company_size: r.company_size,
-      score: r.score ?? 0,
+      // Fall back to a computed score for legacy rows stored as 0/null.
+      score: r.score || opportunityScore(r),
       created_at: r.created_at ?? new Date().toISOString(),
     }))
 
-    return Response.json({ data, total: data.length, items: data, page, per_page: limit, pages: 1 })
+    const total = count ?? data.length
+    const pages = Math.max(1, Math.ceil(total / limit))
+    return Response.json({ data, total, items: data, page, per_page: limit, pages })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[api/clients] GET Error:', msg, err)
@@ -115,6 +125,7 @@ export async function POST(req: Request) {
         linkedin: data.linkedin ?? null,
         tiktok: data.tiktok ?? null,
         metadata: data.metadata ?? null,
+        score: opportunityScore(data),
       })
       .select()
       .single()

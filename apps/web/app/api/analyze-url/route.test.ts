@@ -24,8 +24,8 @@ vi.mock('ai', () => ({
   APICallError: { isInstance: vi.fn(() => false) },
 }))
 
-vi.mock('@/lib/openrouter', () => ({
-  openrouter: vi.fn(() => 'mock-openrouter-model'),
+vi.mock('@ai-sdk/anthropic', () => ({
+  anthropic: vi.fn(() => 'mock-anthropic-model'),
 }))
 
 vi.mock('@/lib/rate-limit', () => ({

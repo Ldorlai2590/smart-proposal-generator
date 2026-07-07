@@ -24,7 +24,6 @@ export async function GET(req: Request) {
   log.info('health_env_check', {
     DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'NOT SET',
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? 'set' : 'NOT SET',
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ? 'set' : 'NOT SET',
     NODE_ENV: process.env.NODE_ENV ?? 'NOT SET',
   })
 

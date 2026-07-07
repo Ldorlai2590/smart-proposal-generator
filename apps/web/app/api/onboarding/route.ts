@@ -29,9 +29,21 @@ export async function POST(req: Request) {
       completedAt: new Date().toISOString(),
     }
 
+    // Merge into existing metadata — a wholesale overwrite would clobber the
+    // company profile / branding / commercial assets stored in the same JSONB.
+    const { data: existing } = await admin
+      .from('tenants')
+      .select('metadata')
+      .eq('id', tenantId)
+      .maybeSingle()
+    const mergedMetadata = {
+      ...((existing?.metadata as Record<string, unknown> | null) ?? {}),
+      ...onboardingMetadata,
+    }
+
     const { error } = await admin
       .from('tenants')
-      .update({ metadata: onboardingMetadata, onboarding_completed: true })
+      .update({ metadata: mergedMetadata, onboarding_completed: true })
       .eq('id', tenantId)
 
     if (error) throw new Error(error.message)

@@ -1,5 +1,5 @@
 import { generateText, APICallError } from 'ai'
-import { openrouter } from '@/lib/openrouter'
+import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
@@ -189,7 +189,7 @@ export async function POST(req: Request) {
   // incompatibilities (zod-to-json-schema@3 vs Zod v4, NoObjectGeneratedError on Vercel).
   try {
     const { text } = await generateText({
-      model: openrouter('anthropic/claude-3-5-haiku'),
+      model: anthropic('claude-haiku-4-5-20251001'),
       maxTokens: 1024,
       prompt: `Analiza este sitio web de la empresa "${company ?? 'desconocida'}" (industria: ${industry ?? 'no especificada'}) y extrae insights estructurados para personalizar una propuesta comercial B2B en LATAM.
 

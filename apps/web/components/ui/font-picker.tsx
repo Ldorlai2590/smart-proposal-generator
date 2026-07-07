@@ -8,6 +8,7 @@ import {
   type FontCategory,
   type FontOption,
 } from '@/lib/fonts'
+import { loadGoogleFont } from '@/lib/load-google-font'
 
 export interface FontPickerProps {
   value: string
@@ -56,6 +57,18 @@ export function FontPicker({ value, onChange, className, label }: FontPickerProp
   useEffect(() => {
     if (open) inputRef.current?.focus()
   }, [open])
+
+  // Ensure the currently-selected font is available for the trigger preview.
+  useEffect(() => {
+    loadGoogleFont(value)
+  }, [value])
+
+  // Load webfonts for the fonts currently shown so their previews render in
+  // their own typeface (not a system fallback). Search narrows the set.
+  useEffect(() => {
+    if (!open) return
+    for (const f of results) loadGoogleFont(f.name)
+  }, [open, results])
 
   // Click-away + Escape to close.
   useEffect(() => {

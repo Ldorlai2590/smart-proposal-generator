@@ -1,11 +1,24 @@
 'use client'
 
-import { use } from 'react'
+import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Edit2, Tag, Clock, CheckCircle2, XCircle, Package } from 'lucide-react'
-import { getServiceById } from '@/lib/demo-v2'
+import { ArrowLeft, Edit2, Tag, Clock, CheckCircle2, XCircle, Package, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
-import { notFound } from 'next/navigation'
+
+interface ServiceDetail {
+  id: string
+  name: string
+  category: string
+  description: string
+  objective?: string
+  scope?: string
+  includes: string[]
+  excludes: string[]
+  duration_estimate?: string
+  deliverables: string[]
+  base_price: number
+  billing_type: string
+}
 
 const BILLING_LABELS: Record<string, string> = {
   monthly: 'Mensual recurrente',
@@ -16,9 +29,45 @@ const BILLING_LABELS: Record<string, string> = {
 
 export default function ServiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const service = getServiceById(id)
+  const [service, setService] = useState<ServiceDetail | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  if (!service) return notFound()
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/services/${id}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data: ServiceDetail) => {
+        if (!cancelled) setService(data)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 text-[#1D9E75] animate-spin" />
+      </div>
+    )
+  }
+
+  if (!service) {
+    return (
+      <div className="max-w-4xl">
+        <Link href="/services" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4">
+          <ArrowLeft className="h-4 w-4" /> Volver al catálogo
+        </Link>
+        <div className="bg-white border border-gray-100 rounded-2xl p-8 text-center text-gray-500">
+          Servicio no encontrado.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-4xl">

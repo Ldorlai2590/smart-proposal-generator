@@ -2,6 +2,23 @@ import nodemailer from 'nodemailer'
 import { z } from 'zod/v4'
 import { sanitizeHTML } from '@/lib/sanitize'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { FONTS } from '@/lib/fonts'
+
+// Only names present in the curated catalog are allowed into the export HTML/URL,
+// so a poisoned tenants.metadata value can't inject CSS or a rogue <link> URL.
+const FONT_BY_NAME = new Map(FONTS.map((f) => [f.name, f]))
+
+interface ResolvedFont {
+  name: string
+  google: boolean
+}
+
+function safeFont(raw: unknown): ResolvedFont | null {
+  if (typeof raw !== 'string') return null
+  const f = FONT_BY_NAME.get(raw.trim())
+  if (!f) return null
+  return { name: f.name, google: f.source === 'google' }
+}
 
 // Puppeteer, Chromium, and Nodemailer require Node.js APIs — must be nodejs runtime.
 export const runtime = 'nodejs'
@@ -53,12 +70,16 @@ interface BrandConfig {
   companyName: string
   primaryColor: string
   logoUrl: string | null
+  fontHeading: ResolvedFont | null
+  fontBody: ResolvedFont | null
 }
 
 const DEFAULT_BRAND: BrandConfig = {
   companyName: 'Smart Proposal Generator',
   primaryColor: '#1D9E75',
   logoUrl: null,
+  fontHeading: null,
+  fontBody: null,
 }
 
 /** Validate a CSS color so we don't inject arbitrary strings into the stylesheet. */
@@ -104,6 +125,8 @@ async function loadBranding(tenantId: string): Promise<BrandConfig> {
       companyName: (typeof data.name === 'string' && data.name) || DEFAULT_BRAND.companyName,
       primaryColor: safeColor(meta.primary_color) ?? DEFAULT_BRAND.primaryColor,
       logoUrl: safeUrl(meta.logo_url),
+      fontHeading: safeFont(meta.font_heading),
+      fontBody: safeFont(meta.font_body),
     }
   } catch (err) {
     console.error('[export/branding] Failed to load branding:', err)
@@ -143,12 +166,31 @@ function buildProposalHTML(sections: Record<string, string>, brand: BrandConfig)
     ? `<img src="${safeLogo}" alt="${safeCompany} logo" class="brand-logo" />`
     : ''
 
+  // ── Typography ──
+  // Font names are catalog-validated (safeFont), so they're safe to inline into
+  // CSS and a Google Fonts URL. Chromium fetches the <link> when rendering the PDF,
+  // so the tenant's chosen font actually appears in the output (not just the picker).
+  const FALLBACK = `'Helvetica Neue', Helvetica, Arial, sans-serif`
+  const headingStack = brand.fontHeading ? `'${brand.fontHeading.name}', ${FALLBACK}` : FALLBACK
+  const bodyStack = brand.fontBody ? `'${brand.fontBody.name}', ${FALLBACK}` : FALLBACK
+  const googleFamilies = [...new Set(
+    [brand.fontHeading, brand.fontBody]
+      .filter((f): f is ResolvedFont => !!f && f.google)
+      .map((f) => f.name),
+  )]
+  const fontLink = googleFamilies.length
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="stylesheet" href="https://fonts.googleapis.com/css2?${googleFamilies
+        .map((n) => `family=${encodeURIComponent(n).replace(/%20/g, '+')}:wght@400;500;600;700`)
+        .join('&')}&display=swap" />`
+    : ''
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Propuesta Comercial — ${safeCompany}</title>
+  ${fontLink}
   <style>
     /* Force colors + images in PDF generators that respect this hint. */
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -157,7 +199,7 @@ function buildProposalHTML(sections: Record<string, string>, brand: BrandConfig)
     @page { size: A4; margin: 0; }
 
     body {
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-family: ${bodyStack};
       font-size: 14px;
       line-height: 1.6;
       color: #1a1a2e;
@@ -192,6 +234,7 @@ function buildProposalHTML(sections: Record<string, string>, brand: BrandConfig)
     }
 
     .proposal-header h1 {
+      font-family: ${headingStack};
       font-size: 28px;
       font-weight: 700;
       color: ${color};
@@ -213,6 +256,7 @@ function buildProposalHTML(sections: Record<string, string>, brand: BrandConfig)
     }
 
     .proposal-section h2 {
+      font-family: ${headingStack};
       font-size: 16px;
       font-weight: 700;
       color: ${color};
@@ -357,6 +401,7 @@ async function handleDOCX(
       input.sections,
       brand.companyName,
       brand.primaryColor,
+      { heading: brand.fontHeading?.name, body: brand.fontBody?.name },
     )
     return new Response(Buffer.from(docxBytes), {
       status: 200,

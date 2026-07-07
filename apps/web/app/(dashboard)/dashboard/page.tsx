@@ -29,6 +29,7 @@ interface Proposal {
   status: 'draft' | 'sent' | 'accepted' | 'rejected'
   value: string
   date: string
+  createdAt: string
   budget?: number
 }
 
@@ -63,6 +64,7 @@ function mapApiProposal(p: ApiProposal): Proposal {
     status,
     value: formatBudget(p.context?.budget),
     date: formatDateRelative(p.created_at),
+    createdAt: p.created_at,
     budget: p.context?.budget,
   }
 }
@@ -301,7 +303,7 @@ export default function DashboardPage() {
         {loading ? (
           <SkeletonChart />
         ) : proposals.length > 0 ? (
-          <ClosingRateDonut />
+          <ClosingRateDonut proposals={proposals} />
         ) : null}
       </div>
 
@@ -309,7 +311,7 @@ export default function DashboardPage() {
       {loading ? (
         <SkeletonChart className="mb-6" />
       ) : proposals.length > 0 ? (
-        <ProposalsBarChart />
+        <ProposalsBarChart proposals={proposals} />
       ) : null}
 
       {/* Empty analytics state */}

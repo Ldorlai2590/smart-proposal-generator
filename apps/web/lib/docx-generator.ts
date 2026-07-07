@@ -29,7 +29,7 @@ const SECTION_META: { key: string; label: string }[] = [
 // Parses TipTap HTML into a list of { type, text, runs } blocks.
 // Handles: <p>, <h1-h3>, <li>, <strong>, <em>, <br>.
 // Falls back to plain text for unknown tags.
-function htmlToBlocks(html: string): Array<{ type: 'paragraph' | 'bullet'; runs: TextRun[] }> {
+export function htmlToBlocks(html: string): Array<{ type: 'paragraph' | 'bullet'; runs: TextRun[] }> {
   // Decode HTML entities
   const decode = (s: string) =>
     s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
@@ -74,11 +74,14 @@ function htmlToBlocks(html: string): Array<{ type: 'paragraph' | 'bullet'; runs:
 
     const tag = match[1].replace(/<([a-z0-9]+).*/i, '$1').toLowerCase()
     const inner = match[2]
+    // Skip block-level elements with no real text (e.g. <p></p>). Previously this
+    // filtered on TextRun.options (which docx v9 does not expose), so the predicate
+    // was always false and EVERY body block was dropped — DOCX exports lost all content.
+    const plain = decode(inner.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim()
+    if (!plain) continue
     const runs = parseInline(inner)
     const type = tag === 'li' ? 'bullet' : 'paragraph'
-    if (runs.some(r => (r as any).options?.text?.trim())) {
-      blocks.push({ type, runs })
-    }
+    blocks.push({ type, runs })
   }
 
   // Fallback: no block tags found — treat entire content as one paragraph
@@ -94,13 +97,18 @@ export async function generateDOCXFromSections(
   sections: Record<string, string>,
   companyName = 'Smart Proposal Generator',
   primaryColor = '1D9E75',
+  fonts: { heading?: string; body?: string } = {},
 ): Promise<Uint8Array> {
   const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
+  // Word renders these font names if installed on the reader's machine and
+  // substitutes a close match otherwise (webfonts can't be embedded in .docx).
+  const headingFont = fonts.heading || 'Calibri'
+  const bodyFont = fonts.body || 'Calibri'
 
   const children: Paragraph[] = [
     // Cover title
     new Paragraph({
-      children: [new TextRun({ text: 'Propuesta Comercial', bold: true, size: 52, color: primaryColor.replace('#', '') })],
+      children: [new TextRun({ text: 'Propuesta Comercial', bold: true, size: 52, font: headingFont, color: primaryColor.replace('#', '') })],
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
     }),
@@ -123,7 +131,7 @@ export async function generateDOCXFromSections(
     // Section heading with colored left border via shading
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: label.toUpperCase(), bold: true, size: 24, color: primaryColor.replace('#', '') })],
+        children: [new TextRun({ text: label.toUpperCase(), bold: true, size: 24, font: headingFont, color: primaryColor.replace('#', '') })],
         heading: HeadingLevel.HEADING_2,
         spacing: { before: 400, after: 160 },
         border: {
@@ -164,7 +172,7 @@ export async function generateDOCXFromSections(
     styles: {
       default: {
         document: {
-          run: { font: 'Calibri', size: 24 },
+          run: { font: bodyFont, size: 24 },
         },
       },
     },

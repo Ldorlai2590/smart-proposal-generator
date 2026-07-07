@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { openrouter } from '@/lib/openrouter'
+import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod/v4'
 import { checkLimit, getClientIp } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
@@ -21,9 +21,8 @@ const RATE_LIMIT_KEY = 'proposals:stream'
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_SEC = 60
 
-// streamText replaces streamObject — OpenRouter's OpenAI-compatible tool-calling
-// mode silently produces 0 bytes for Anthropic models. streamText + explicit JSON
-// prompt is simpler and works with any OpenRouter model.
+// generateText + explicit JSON prompt (instead of streamObject/tool-calling) keeps
+// the model-agnostic path we validated: the model returns a single JSON blob we parse.
 
 const ServiceSchema = z.object({
   name: z.string(),
@@ -63,6 +62,63 @@ const RequestSchema = z.object({
   tono: z.enum(['formal', 'consultivo', 'directo']).default('consultivo'),
   websiteAnalysis: WebsiteAnalysisSchema.optional(),
 })
+
+/**
+ * Builds a context block from the tenant's company profile + commercial assets
+ * (stored in tenants.metadata by /company). Grounds the proposal in the agency's
+ * REAL differentiators, case studies and testimonials instead of invented ones.
+ */
+function buildCompanyContext(
+  name: string | null | undefined,
+  meta: Record<string, unknown>,
+): { block: string; hasCases: boolean } {
+  const lines: string[] = []
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  const arr = (v: unknown) => (Array.isArray(v) ? v : [])
+
+  if (name) lines.push(`Nombre de la agencia: ${name}`)
+  if (str(meta.what_we_do)) lines.push(`Qué hacemos: ${str(meta.what_we_do)}`)
+  if (str(meta.purpose)) lines.push(`Propósito: ${str(meta.purpose)}`)
+  if (str(meta.ideal_clients)) lines.push(`Clientes ideales: ${str(meta.ideal_clients)}`)
+
+  const diffs = arr(meta.differentiators).filter((d): d is string => typeof d === 'string' && !!d.trim())
+  if (diffs.length) lines.push(`Diferenciadores: ${diffs.join('; ')}`)
+  const industries = arr(meta.focus_industries).filter((d): d is string => typeof d === 'string' && !!d.trim())
+  if (industries.length) lines.push(`Industrias foco: ${industries.join(', ')}`)
+  const certs = arr(meta.certifications).filter((d): d is string => typeof d === 'string' && !!d.trim())
+  if (certs.length) lines.push(`Certificaciones: ${certs.join(', ')}`)
+
+  const cases = arr(meta.case_studies).filter(
+    (c): c is Record<string, unknown> => !!c && typeof c === 'object',
+  )
+  if (cases.length) {
+    lines.push('Casos de éxito REALES (cítalos textualmente, NO inventes otros):')
+    cases.forEach((c, i) => {
+      lines.push(
+        `  ${i + 1}. Cliente: ${str(c.client) ?? 'N/D'} — Resultado: ${str(c.result) ?? 'N/D'}. ${str(c.description) ?? ''}`.trim(),
+      )
+    })
+  }
+
+  const tests = arr(meta.testimonials).filter(
+    (t): t is Record<string, unknown> => !!t && typeof t === 'object' && !!str((t as Record<string, unknown>).quote),
+  )
+  if (tests.length) {
+    lines.push('Testimonios REALES:')
+    tests.forEach((t, i) => {
+      const role = str(t.role)
+      lines.push(`  ${i + 1}. "${str(t.quote)}" — ${str(t.author) ?? ''}${role ? `, ${role}` : ''}`)
+    })
+  }
+
+  if (lines.length === 0) return { block: '', hasCases: false }
+  return {
+    block:
+      '\n\nPERFIL DE TU EMPRESA (la agencia que presenta la propuesta) — usa estos datos REALES para dar credibilidad:\n' +
+      lines.join('\n'),
+    hasCases: cases.length > 0,
+  }
+}
 
 export async function POST(req: Request) {
   const log = logger.withRequestId(req)
@@ -193,6 +249,27 @@ export async function POST(req: Request) {
     services: input.services?.length ?? 0,
   })
 
+  // Load the tenant's company profile + commercial assets to ground the proposal.
+  let companyContext = ''
+  let hasRealCases = false
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const admin = createAdminClient()
+    const { data: tenant } = await admin
+      .from('tenants')
+      .select('name, metadata')
+      .eq('id', tenantId)
+      .maybeSingle()
+    const meta = (tenant?.metadata as Record<string, unknown> | null) ?? {}
+    const ctx = buildCompanyContext(tenant?.name as string | null | undefined, meta)
+    companyContext = ctx.block
+    hasRealCases = ctx.hasCases
+  } catch (ctxErr) {
+    log.warn('stream_company_context_failed', {
+      err: ctxErr instanceof Error ? ctxErr.message : String(ctxErr),
+    })
+  }
+
   const formalityGuide: Record<string, string> = {
     ejecutivo: 'Tono ejecutivo para C-level. Frases cortas, foco en impacto de negocio.',
     cercano: 'Tono cercano y conversacional. Como un asesor de confianza.',
@@ -256,7 +333,7 @@ ESTRUCTURA DE 14 SECCIONES (genera todas, en orden):
 
 ESPECIALIDAD: Propuestas multi-servicio. Cada servicio con descripción + alcance + entregables + precio.
 
-Empresa: ${input.company} | Industria: ${input.industry}${websiteContext}`
+Empresa: ${input.company} | Industria: ${input.industry}${websiteContext}${companyContext}`
 
   // Build services text
   const servicesText = (() => {
@@ -287,17 +364,19 @@ ${input.timeline ? `Timeline deseado: ${input.timeline}` : ''}
 
 IMPORTANTE:
 - En la sección "inversion", incluye tabla HTML con cada servicio (precio, cantidad, descuento, subtotal) y un total al final.
-- En "casosExito", inventa un caso plausible si no hay info real (cliente similar, problema similar, resultado medible).
+- ${hasRealCases
+    ? 'En "casosExito", usa EXCLUSIVAMENTE los casos de éxito REALES del perfil de tu empresa (no inventes datos ni clientes).'
+    : 'En "casosExito", inventa un caso plausible si no hay info real (cliente similar, problema similar, resultado medible).'}
 - En "ctaFinal", invita a coordinar reunión de 15 min con sentido de urgencia sutil.`
 
   // --- LLM call wrapped in try/catch + timeout -----------------------------
   // generateText (blocking) instead of streamText: Vercel freezes the function
-  // as soon as a streaming Response is returned, killing the OpenRouter round-trip
+  // as soon as a streaming Response is returned, killing the Anthropic round-trip
   // before any chunks arrive. Blocking here keeps the function alive until we have
   // the full JSON, then we return it as a plain-text response that useObject can parse.
   try {
     const { text } = await generateText({
-      model: openrouter('anthropic/claude-3-5-haiku'),
+      model: anthropic('claude-haiku-4-5-20251001'),
       maxTokens: 4500,
       abortSignal: AbortSignal.timeout(STREAM_TIMEOUT_MS),
       system: system + '\n\nFORMATO DE RESPUESTA: Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin bloques de código, sin texto adicional) con exactamente estas 14 claves: portada, contextoCliente, diagnostico, oportunidad, solucion, alcance, incluyeNoIncluye, metodologia, cronograma, casosExito, diferenciadores, inversion, proximosPasos, ctaFinal.',

@@ -1,11 +1,25 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import { Zap, Calendar, ArrowRight, Mail, Phone } from 'lucide-react'
-import { findByShareToken, DEMO_COMPANY } from '@/lib/demo-v2'
+import { Zap, Calendar, ArrowRight, Mail, Phone, Loader2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { sanitizeHTML } from '@/lib/sanitize'
 import type { PartialProposalSections, ProposalSectionKey } from '@/lib/schemas/proposal'
+
+interface PublicProposal {
+  title: string
+  client_name: string
+  sections: PartialProposalSections
+  sent_at: string | null
+  budget: number | null
+}
+
+interface PublicCompany {
+  name: string
+  country: string
+  email: string
+  phone: string
+}
 
 // ─── Section metadata ────────────────────────────────────────────────────────
 //
@@ -49,14 +63,35 @@ const ALL_SECTIONS: SectionMeta[] = [HERO_SECTION, ...BODY_SECTIONS, CTA_SECTION
 
 export default function PublicProposalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
-  const proposal = findByShareToken(token)
+  const [proposal, setProposal] = useState<PublicProposal | null>(null)
+  const [company, setCompany] = useState<PublicCompany | null>(null)
+  const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('cover')
+
+  // Fetch the shared proposal from the public API (real proposal by UUID, or a
+  // curated demo token). No auth — access is gated by the unguessable token.
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/p/${encodeURIComponent(token)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data: { proposal: PublicProposal; company: PublicCompany }) => {
+        if (cancelled) return
+        setProposal(data.proposal)
+        setCompany(data.company)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   useEffect(() => {
     if (!proposal) return
-    // TODO Phase 3: enviar evento 'view' a /api/p/[token]/track con device + geo
-
-    // IntersectionObserver to highlight current section
+    // IntersectionObserver to highlight current section in the ToC
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -70,7 +105,15 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       if (el) observer.observe(el)
     })
     return () => observer.disconnect()
-  }, [proposal, token])
+  }, [proposal])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Loader2 className="h-8 w-8 text-[#1D9E75] animate-spin" />
+      </div>
+    )
+  }
 
   if (!proposal) {
     return (
@@ -84,6 +127,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
     )
   }
 
+  const co: PublicCompany = company ?? { name: 'SmartSPG', country: '', email: '', phone: '' }
   const sections: PartialProposalSections = proposal.sections ?? {}
 
   return (
@@ -93,7 +137,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-[#1D9E75]" />
-            <span className="font-bold text-gray-900">{DEMO_COMPANY.name}</span>
+            <span className="font-bold text-gray-900">{co.name}</span>
           </div>
           <p className="text-sm text-gray-500 hidden md:block">
             Propuesta para <span className="font-semibold text-gray-900">{proposal.client_name}</span>
@@ -132,9 +176,11 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                   <Calendar className="h-3.5 w-3.5" />
                   Enviada {formatDate(proposal.sent_at ?? new Date(), 'es-CL')} · Válida 30 días
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full">
-                  {DEMO_COMPANY.country}
-                </span>
+                {co.country && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full">
+                    {co.country}
+                  </span>
+                )}
               </div>
             </div>
           </section>
@@ -180,16 +226,16 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               </button>
 
               <div className="flex items-center justify-center gap-4 mt-8 text-sm text-white/80 flex-wrap">
-                {DEMO_COMPANY.email && (
-                  <a href={`mailto:${DEMO_COMPANY.email}`} className="inline-flex items-center gap-1.5 hover:text-white">
+                {co.email && (
+                  <a href={`mailto:${co.email}`} className="inline-flex items-center gap-1.5 hover:text-white">
                     <Mail className="h-3.5 w-3.5" />
-                    {DEMO_COMPANY.email}
+                    {co.email}
                   </a>
                 )}
-                {DEMO_COMPANY.phone && (
-                  <a href={`tel:${DEMO_COMPANY.phone}`} className="inline-flex items-center gap-1.5 hover:text-white">
+                {co.phone && (
+                  <a href={`tel:${co.phone}`} className="inline-flex items-center gap-1.5 hover:text-white">
                     <Phone className="h-3.5 w-3.5" />
-                    {DEMO_COMPANY.phone}
+                    {co.phone}
                   </a>
                 )}
               </div>
