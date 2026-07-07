@@ -67,6 +67,21 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
   const [company, setCompany] = useState<PublicCompany | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('cover')
+  const [accepting, setAccepting] = useState(false)
+  const [accepted, setAccepted] = useState(false)
+
+  async function handleAccept() {
+    if (accepting || accepted) return
+    setAccepting(true)
+    try {
+      const res = await fetch(`/api/p/${encodeURIComponent(token)}/accept`, { method: 'POST' })
+      if (res.ok) setAccepted(true)
+    } catch {
+      /* keep the button clickable so the user can retry */
+    } finally {
+      setAccepting(false)
+    }
+  }
 
   // Fetch the shared proposal from the public API (real proposal by UUID, or a
   // curated demo token). No auth — access is gated by the unguessable token.
@@ -221,9 +236,19 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                 </p>
               )}
 
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[#1D9E75] font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                Aceptar propuesta <ArrowRight className="h-4 w-4" />
-              </button>
+              {accepted ? (
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 text-white font-semibold rounded-xl border border-white/40">
+                  ✓ Propuesta aceptada — ¡gracias!
+                </div>
+              ) : (
+                <button
+                  onClick={handleAccept}
+                  disabled={accepting}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[#1D9E75] font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-70 transition-colors"
+                >
+                  {accepting ? 'Enviando…' : 'Aceptar propuesta'} <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
 
               <div className="flex items-center justify-center gap-4 mt-8 text-sm text-white/80 flex-wrap">
                 {co.email && (

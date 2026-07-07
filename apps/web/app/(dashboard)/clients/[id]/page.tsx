@@ -16,6 +16,8 @@ import {
   Send,
   Edit3,
   ChevronRight,
+  Trash2,
+  X,
 } from 'lucide-react'
 
 
@@ -103,6 +105,80 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  const [showEdit, setShowEdit] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [form, setForm] = useState({ name: '', company: '', email: '', industry: '', company_size: '' })
+
+  function openEdit() {
+    if (!client) return
+    setForm({
+      name: client.name ?? '',
+      company: client.company ?? '',
+      email: client.email ?? '',
+      industry: client.industry ?? '',
+      company_size: client.company_size ?? '',
+    })
+    setActionError(null)
+    setShowEdit(true)
+  }
+
+  async function saveEdit() {
+    setBusy(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        setActionError('No se pudo guardar. Revisa los datos.')
+        return
+      }
+      const updated = await res.json()
+      setClient((c) =>
+        c
+          ? {
+              ...c,
+              name: updated.name ?? c.name,
+              company: updated.company ?? null,
+              email: updated.email ?? null,
+              industry: updated.industry ?? null,
+              company_size: updated.company_size ?? null,
+            }
+          : c,
+      )
+      setShowEdit(false)
+    } catch {
+      setActionError('Error de red.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function doDelete() {
+    setBusy(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' })
+      if (res.status === 409) {
+        setActionError('No se puede eliminar: el cliente tiene propuestas asociadas.')
+        return
+      }
+      if (!res.ok && res.status !== 204) {
+        setActionError('No se pudo eliminar.')
+        return
+      }
+      router.push('/clients')
+    } catch {
+      setActionError('Error de red.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   useEffect(() => {
     if (!clientId) return
     setLoading(true)
@@ -178,14 +254,84 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
-        <Link
-          href={`/proposals/new?client=${client.id}`}
-          className="inline-flex items-center gap-2 bg-[#1D9E75] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#158a63] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Crear propuesta
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openEdit}
+            className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            <Edit3 className="h-4 w-4" />
+            Editar
+          </button>
+          <button
+            onClick={() => { setActionError(null); setConfirmDelete(true) }}
+            className="inline-flex items-center justify-center border border-gray-200 text-gray-500 h-10 w-10 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+            aria-label="Eliminar cliente"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <Link
+            href={`/proposals/new?client=${client.id}`}
+            className="inline-flex items-center gap-2 bg-[#1D9E75] text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-[#158a63] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Crear propuesta
+          </Link>
+        </div>
       </div>
+
+      {/* Edit modal */}
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !busy && setShowEdit(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Editar cliente</h2>
+              <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-3">
+              {([
+                ['name', 'Nombre'],
+                ['company', 'Empresa'],
+                ['email', 'Email'],
+                ['industry', 'Industria'],
+                ['company_size', 'Tamaño (empleados)'],
+              ] as const).map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                  <input
+                    value={form[key]}
+                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/40 focus:border-[#1D9E75]"
+                  />
+                </div>
+              ))}
+              {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setShowEdit(false)} disabled={busy} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-60">Cancelar</button>
+              <button onClick={saveEdit} disabled={busy || !form.name.trim()} className="px-4 py-2 rounded-lg bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#158a63] disabled:opacity-60">
+                {busy ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !busy && setConfirmDelete(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Eliminar cliente</h2>
+            <p className="text-sm text-gray-500 mb-4">¿Seguro que quieres eliminar a <strong>{client.name}</strong>? Esta acción no se puede deshacer.</p>
+            {actionError && <p className="text-sm text-red-600 mb-3">{actionError}</p>}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmDelete(false)} disabled={busy} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-60">Cancelar</button>
+              <button onClick={doDelete} disabled={busy} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60">
+                {busy ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column: Client info + Score */}

@@ -52,7 +52,8 @@ export async function GET(_req: Request, { params }: RouteContext) {
         id: p.id,
         title: p.title,
         status: p.status,
-        budget: (p.context as { budget?: number } | null)?.budget ?? null,
+        // The detail page reads `value` (numeric) for its totals.
+        value: (p.context as { budget?: number } | null)?.budget ?? 0,
         created_at: p.created_at,
       })),
     })
